@@ -17,6 +17,6 @@
 
 ## 4. Publication
 
-- [ ] 4.1 Run the local checks, create and push the public
+- [x] 4.1 Run the local checks, create and push the public
   `mattgotteiner/games` repository, enable Pages through GitHub Actions, and
   verify the deployed shell at desktop and phone viewport sizes.
