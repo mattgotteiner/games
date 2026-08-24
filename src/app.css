@@ -1,0 +1,118 @@
+.app-shell {
+  width: min(100%, 72rem);
+  min-height: 100dvh;
+  margin: 0 auto;
+  padding:
+    max(2rem, env(safe-area-inset-top))
+    max(1.25rem, env(safe-area-inset-right))
+    max(2rem, env(safe-area-inset-bottom))
+    max(1.25rem, env(safe-area-inset-left));
+}
+
+.app-header {
+  max-width: 42rem;
+  padding: clamp(1.5rem, 6vw, 4.5rem) 0 clamp(2rem, 7vw, 5rem);
+}
+
+.app-kicker {
+  margin: 0 0 0.75rem;
+  color: #67e8f9;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+h1,
+h2,
+p {
+  margin-top: 0;
+}
+
+h1 {
+  margin-bottom: 1rem;
+  font-size: clamp(3rem, 14vw, 6.5rem);
+  line-height: 0.9;
+  letter-spacing: -0.06em;
+}
+
+.app-intro {
+  max-width: 34rem;
+  margin-bottom: 0;
+  color: #bac7d9;
+  font-size: clamp(1rem, 3vw, 1.25rem);
+  line-height: 1.6;
+}
+
+.catalog {
+  padding: clamp(1.25rem, 4vw, 2rem);
+  border: 1px solid #24344b;
+  border-radius: 1.5rem;
+  background: #0d1a2d;
+  box-shadow: 0 1.5rem 4rem rgb(0 0 0 / 20%);
+}
+
+.catalog-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid #24344b;
+}
+
+.catalog-heading h2 {
+  margin-bottom: 0;
+  font-size: clamp(1.25rem, 4vw, 1.75rem);
+}
+
+.game-count {
+  flex: 0 0 auto;
+  color: #8fa1b9;
+  font-size: 0.875rem;
+}
+
+.empty-state {
+  display: grid;
+  min-height: clamp(12rem, 36dvh, 20rem);
+  place-content: center;
+  padding: 2rem 1rem;
+  text-align: center;
+}
+
+.empty-state p {
+  max-width: 28rem;
+  margin-right: auto;
+  margin-bottom: 0;
+  margin-left: auto;
+  color: #8fa1b9;
+  line-height: 1.6;
+}
+
+.empty-state .empty-state-title {
+  margin-bottom: 0.5rem;
+  color: #f8fafc;
+  font-size: clamp(1.4rem, 5vw, 2rem);
+  font-weight: 750;
+}
+
+.game-list {
+  margin: 0;
+  padding: 1.5rem 0 0;
+  list-style: none;
+}
+
+@media (max-height: 30rem) and (orientation: landscape) {
+  .app-header {
+    padding: 0.5rem 0 1.5rem;
+  }
+
+  h1 {
+    font-size: clamp(2.75rem, 14vh, 4rem);
+  }
+
+  .empty-state {
+    min-height: 8rem;
+  }
+}
+
