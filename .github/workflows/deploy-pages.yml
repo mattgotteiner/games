@@ -41,6 +41,12 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Test offline shell
+        run: npm run test:e2e
+
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v6
 

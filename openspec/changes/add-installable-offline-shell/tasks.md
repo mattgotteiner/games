@@ -1,6 +1,6 @@
 ## 1. Locally Verified Installable Offline Shell
 
-- [ ] 1.1 Add the PWA dependency, original manifest icons, `/games/`-scoped
+- [x] 1.1 Add the PWA dependency, original manifest icons, `/games/`-scoped
   manifest and generated service worker, automatic registration, and a focused
   Playwright production-browser test; preserve the honest empty catalog, run
   the existing checks, and prove that the built shell becomes controlled and
