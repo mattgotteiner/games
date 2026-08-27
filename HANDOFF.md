@@ -24,23 +24,35 @@ All four tasks are complete. The public repository and deployed shell are live:
 - Application: `https://mattgotteiner.github.io/games/`
 - Published commit: `aa3d9be`
 
-The deployed application is a responsive Preact, TypeScript, and Vite shell
-with application identity and an honest "No games yet" catalog state. CI and
-GitHub Pages deployment are configured. The `main` branch is synchronized with
-`origin/main`.
+The deployed application is a responsive, installable Preact, TypeScript, and
+Vite shell with application identity and an honest "No games yet" catalog
+state. CI and GitHub Pages deployment are configured. The `main` branch is
+synchronized with `origin/main`.
 
 ## Resume
 
 The completed `publish-mobile-game-shell` change is ready to archive.
 
-Planning is complete and strictly valid for the next change:
+Implementation is in progress for:
 
 `openspec/changes/add-installable-offline-shell`
 
-Review its proposal, offline-installation delta spec, design, and two
-end-to-end-testable tasks. When approved, apply
-`add-installable-offline-shell`; do not apply the original 41-task bootstrap
-change.
+Task 1 is complete. Task 2 has passed CI, deployed, and been verified through
+the public URL, including a desktop Chromium offline reload. Published commit:
+`8590a9f`.
+
+The only remaining acceptance step requires a supported physical phone:
+
+1. Visit `https://mattgotteiner.github.io/games/` while online.
+2. Add or install Games from the supported browser.
+3. Launch the installed app and confirm the Games identity and standalone
+   display.
+4. Disable the phone's network connectivity, close the app, and reopen it.
+5. Confirm that "No games yet" appears without a network error.
+
+After that succeeds, mark task 2 complete, validate the change strictly, and
+archive `add-installable-offline-shell`. Do not apply the original 41-task
+bootstrap change.
 
 ## Completed First Increment
 
@@ -50,8 +62,8 @@ change.
 - UI: Responsive application identity and honest empty catalog state
 - Testing: Type checking, production build, and one component test
 - Automation: Minimal CI plus GitHub Pages deployment from `main`
-- Explicitly deferred: Games, routing, installability, offline caching,
-  persistence, Playwright, and a generalized game runtime
+- Explicitly deferred: Games, routing, persistence, and a generalized game
+  runtime
 
 ## Completed Apply Scope
 
@@ -89,11 +101,13 @@ not as its own completion checkpoint.
 ## Next Increment
 
 Plan and implement each product increment as a separate OpenSpec change. The
-next change is `add-installable-offline-shell`.
+current change is `add-installable-offline-shell`.
 
-The next increment adds manifest metadata, shell-only caching, offline reload
-coverage, and physical-phone verification. It must preserve the honest empty
-catalog and must not add a game, persistence, or generalized game runtime.
+The increment adds manifest metadata, shell-only caching, offline reload
+coverage, and physical-phone verification. Its implementation, CI, deployment,
+and public desktop verification are complete; physical-phone verification
+remains. It preserves the honest empty catalog and does not add a game,
+persistence, or generalized game runtime.
 
 Its two implementation seams are:
 
