@@ -10,7 +10,7 @@ Do not apply that change first. It combines repository setup, offline behavior,
 a reusable game platform, Block Drop, extensive testing, and publication in one
 41-task increment.
 
-Planning is complete for the smaller first OpenSpec change:
+The smaller first OpenSpec change is complete:
 
 `publish-mobile-game-shell`
 
@@ -18,29 +18,31 @@ First-change location:
 
 `openspec/changes/publish-mobile-game-shell`
 
-All required artifacts are complete and pass strict OpenSpec validation:
+All four tasks are complete. The public repository and deployed shell are live:
 
-- `proposal.md`
-- `design.md`
-- `specs/mobile-game-shell/spec.md`
-- `tasks.md`
+- Repository: `https://github.com/mattgotteiner/games`
+- Application: `https://mattgotteiner.github.io/games/`
+- Published commit: `aa3d9be`
 
-No application code has been implemented yet.
+The deployed application is a responsive Preact, TypeScript, and Vite shell
+with application identity and an honest "No games yet" catalog state. CI and
+GitHub Pages deployment are configured. The `main` branch is synchronized with
+`origin/main`.
 
 ## Resume
 
-Open Copilot CLI in this repository and run:
+The completed `publish-mobile-game-shell` change is ready to archive.
 
-`/openspec-apply-change publish-mobile-game-shell`
+Planning is complete and strictly valid for the next change:
 
-Alternatively, ask:
+`openspec/changes/add-installable-offline-shell`
 
-`Apply the publish-mobile-game-shell change.`
+Review its proposal, offline-installation delta spec, design, and two
+end-to-end-testable tasks. When approved, apply
+`add-installable-offline-shell`; do not apply the original 41-task bootstrap
+change.
 
-Do not use `/opsx-apply`; the installed skill in this workspace is
-`/openspec-apply-change`.
-
-## First Increment
+## Completed First Increment
 
 - Public repository: `mattgotteiner/games`
 - Deployment: GitHub Pages at the `/games/` repository path
@@ -51,7 +53,7 @@ Do not use `/opsx-apply`; the installed skill in this workspace is
 - Explicitly deferred: Games, routing, installability, offline caching,
   persistence, Playwright, and a generalized game runtime
 
-## Expected Apply Scope
+## Completed Apply Scope
 
 The apply workflow contains four tasks:
 
@@ -60,11 +62,10 @@ The apply workflow contains four tasks:
 3. Add CI and GitHub Pages deployment.
 4. Publish the repository and verify the deployed shell.
 
-## Implementation Checkpoints
+## Implementation History
 
-Implement the four tasks as validated increments rather than one large batch.
-Do not assume that type checking, unit tests, or a successful build prove the
-real application path.
+The four tasks were implemented as validated increments rather than one large
+batch. The deployed application was checked through the real public path.
 
 For future OpenSpec planning, define top-level task boundaries only at seams
 that can be validated end to end. Work that cannot produce an independently
@@ -85,26 +86,28 @@ not as its own completion checkpoint.
    Actions run as proof; verify the identity, "No games yet" state, styles, and
    assets at desktop and phone portrait and landscape sizes.
 
-If a checkpoint fails, fix and revalidate that increment before building later
-work on top of it. Complete all four tasks in this change unless a concrete
-blocker or an approval boundary prevents continuation.
+## Next Increment
 
-## After the First Increment
+Plan and implement each product increment as a separate OpenSpec change. The
+next change is `add-installable-offline-shell`.
 
-Stop after the deployed empty shell is verified. Do not fold the next product
-increment into the current apply workflow.
+The next increment adds manifest metadata, shell-only caching, offline reload
+coverage, and physical-phone verification. It must preserve the honest empty
+catalog and must not add a game, persistence, or generalized game runtime.
 
-Create and review separate OpenSpec changes in this order:
+Its two implementation seams are:
 
-1. **Installable offline shell:** Add manifest metadata, shell-only caching, an
-   offline reload test, and physical-phone verification.
-2. **Minimal Block Drop:** Add only the deterministic core, Canvas rendering,
+1. Produce and locally exercise the installable production artifact through a
+   real browser, including an offline reload under `/games/`.
+2. Run that seam in CI, deploy it, then install and reopen it offline on a
+   supported physical phone.
+
+Continue with separate OpenSpec changes in this order:
+
+1. **Minimal Block Drop:** Add only the deterministic core, Canvas rendering,
    keyboard/touch controls, and the smallest mount/destroy boundary discovered
    from the real game.
-3. **Block Drop hardening:** Add scoring, levels, persistence, lifecycle
+2. **Block Drop hardening:** Add scoring, levels, persistence, lifecycle
    hardening, broader tests, and release tagging.
-4. **Shared platform abstractions:** Defer until a second game exposes concrete
+3. **Shared platform abstractions:** Defer until a second game exposes concrete
    duplication or incompatible needs.
-
-GitHub publication requires valid GitHub authentication and permission to
-create repositories under `mattgotteiner`.
