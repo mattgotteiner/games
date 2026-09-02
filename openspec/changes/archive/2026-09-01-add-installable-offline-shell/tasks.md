@@ -8,8 +8,8 @@
 
 ## 2. Deployed Phone Installation
 
-- [ ] 2.1 Run the offline browser seam in CI before Pages deployment, publish
+- [x] 2.1 Run the offline browser seam in CI before Pages deployment, publish
   the validated artifact, confirm the public site remains correct online, then
   install it from the public URL on a supported physical phone and prove that
   it launches with the Games identity and reopens to "No games yet" while the
-  phone is offline.
+  phone is offline. Verified on iPhone Air with Safari.

@@ -31,28 +31,21 @@ synchronized with `origin/main`.
 
 ## Resume
 
-The completed `publish-mobile-game-shell` change is ready to archive.
+The completed `publish-mobile-game-shell` change remains ready to archive.
 
-Implementation is in progress for:
+The `add-installable-offline-shell` change is complete and archived at:
 
-`openspec/changes/add-installable-offline-shell`
+`openspec/changes/archive/2026-09-01-add-installable-offline-shell`
 
-Task 1 is complete. Task 2 has passed CI, deployed, and been verified through
-the public URL, including a desktop Chromium offline reload. Published commit:
-`8590a9f`.
+Both tasks are complete. The implementation passed CI, deployed, and was
+verified through the public URL, including desktop Chromium offline reload and
+physical-phone installation and offline reopening on iPhone Air with Safari.
+The synchronized main capability spec is at:
 
-The only remaining acceptance step requires a supported physical phone:
+`openspec/specs/offline-installation/spec.md`
 
-1. Visit `https://mattgotteiner.github.io/games/` while online.
-2. Add or install Games from the supported browser.
-3. Launch the installed app and confirm the Games identity and standalone
-   display.
-4. Disable the phone's network connectivity, close the app, and reopen it.
-5. Confirm that "No games yet" appears without a network error.
-
-After that succeeds, mark task 2 complete, validate the change strictly, and
-archive `add-installable-offline-shell`. Do not apply the original 41-task
-bootstrap change.
+The next product increment is a separate OpenSpec change for Minimal Block
+Drop. Do not apply the original 41-task bootstrap change.
 
 ## Completed First Increment
 
@@ -101,12 +94,9 @@ not as its own completion checkpoint.
 ## Next Increment
 
 Plan and implement each product increment as a separate OpenSpec change. The
-current change is `add-installable-offline-shell`.
-
-The increment adds manifest metadata, shell-only caching, offline reload
-coverage, and physical-phone verification. Its implementation, CI, deployment,
-and public desktop verification are complete; physical-phone verification
-remains. It preserves the honest empty catalog and does not add a game,
+completed and archived `add-installable-offline-shell` increment added manifest
+metadata, shell-only caching, offline reload coverage, and physical-phone
+verification. It preserves the honest empty catalog and does not add a game,
 persistence, or generalized game runtime.
 
 Its two implementation seams are:
