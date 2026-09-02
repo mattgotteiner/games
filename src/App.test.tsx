@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/preact'
+import { act, fireEvent, render, screen } from '@testing-library/preact'
 import { describe, expect, it, vi } from 'vitest'
 import { App } from './App'
 import {
@@ -55,5 +55,35 @@ describe('App', () => {
     expect(screen.getByText('Game over')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Restart game' }))
     expect(dispatch).toHaveBeenCalledWith('restart')
+  })
+
+  it('displays score semantically through play, game over, and restart', () => {
+    let publish: ((state: ReturnType<typeof createGame>) => void) | undefined
+    const playing = { ...createGame(5), score: 7 }
+    const factory: BlockDropControllerFactory = (
+      _canvas,
+      _container,
+      onStateChange,
+    ) => {
+      publish = onStateChange
+      return {
+        dispatch: vi.fn(),
+        destroy: vi.fn(),
+        getState: () => playing,
+      }
+    }
+
+    render(<BlockDrop onReturn={vi.fn()} controllerFactory={factory} />)
+    expect(screen.getByText('Score: 7')).toBeInTheDocument()
+
+    act(() =>
+      publish?.({ ...playing, active: null, status: 'game-over', score: 42 }),
+    )
+    expect(screen.getByText('Game over')).toBeInTheDocument()
+    expect(screen.getByText('Score: 42')).toBeInTheDocument()
+
+    act(() => publish?.(createGame(5)))
+    expect(screen.getByText('Playing')).toBeInTheDocument()
+    expect(screen.getByText('Score: 0')).toBeInTheDocument()
   })
 })

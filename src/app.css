@@ -177,7 +177,8 @@ button {
   background: #1e3049;
 }
 
-.game-status {
+.game-status,
+.game-score {
   margin: 0.25rem 0 0;
   color: #bac7d9;
   font-weight: 700;

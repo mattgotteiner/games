@@ -1,6 +1,6 @@
 ## 1. Deterministic Score Seam
 
-- [ ] 1.1 Add score to immutable game state; award successful soft-drop rows,
+- [x] 1.1 Add score to immutable game state; award successful soft-drop rows,
   hard-drop distance, and simultaneous line clears using the specified fixed
   values; reset on restart and preserve the final game-over value; display the
   score semantically and verify focused rules and component tests cover every

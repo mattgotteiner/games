@@ -29,6 +29,7 @@ export interface BlockDropState {
   readonly randomState: number
   readonly initialSeed: number
   readonly status: GameStatus
+  readonly score: number
 }
 
 export interface Point {
@@ -202,18 +203,32 @@ export function createGame(seed: number): BlockDropState {
     randomState: seed >>> 0,
     initialSeed: seed >>> 0,
     status: 'playing',
+    score: 0,
   })
 }
 
-function clearFullRows(board: Board): Board {
+const LINE_CLEAR_SCORES: Readonly<Record<number, number>> = {
+  1: 100,
+  2: 300,
+  3: 500,
+  4: 800,
+}
+
+function clearFullRows(board: Board): {
+  readonly board: Board
+  readonly rowsCleared: number
+} {
   const remaining = board.filter((row) => row.some((cell) => cell === null))
-  const cleared = BOARD_HEIGHT - remaining.length
-  return [
-    ...Array.from({ length: cleared }, () =>
-      Array<Cell>(BOARD_WIDTH).fill(null),
-    ),
-    ...remaining,
-  ]
+  const rowsCleared = BOARD_HEIGHT - remaining.length
+  return {
+    board: [
+      ...Array.from({ length: rowsCleared }, () =>
+        Array<Cell>(BOARD_WIDTH).fill(null),
+      ),
+      ...remaining,
+    ],
+    rowsCleared,
+  }
 }
 
 function lockActive(state: BlockDropState): BlockDropState {
@@ -225,11 +240,13 @@ function lockActive(state: BlockDropState): BlockDropState {
   for (const { x, y } of getPieceCells(state.active)) {
     board[y][x] = state.active.type
   }
+  const cleared = clearFullRows(board)
 
   return spawnNext({
     ...state,
-    board: clearFullRows(board),
+    board: cleared.board,
     active: null,
+    score: state.score + (LINE_CLEAR_SCORES[cleared.rowsCleared] ?? 0),
   })
 }
 
@@ -258,13 +275,20 @@ function hardDrop(state: BlockDropState): BlockDropState {
   }
 
   let dropped = state
+  let distance = 0
   while (true) {
     const moved = tryActive(dropped, (piece) => ({ ...piece, y: piece.y + 1 }))
     if (moved === dropped) {
-      return lockActive(dropped)
+      return lockActive({ ...dropped, score: dropped.score + distance * 2 })
     }
     dropped = moved
+    distance += 1
   }
+}
+
+function softDrop(state: BlockDropState): BlockDropState {
+  const moved = tryActive(state, (piece) => ({ ...piece, y: piece.y + 1 }))
+  return moved === state ? lockActive(state) : { ...moved, score: state.score + 1 }
 }
 
 export function restart(state: BlockDropState): BlockDropState {
@@ -293,7 +317,7 @@ export function applyAction(
         rotation: (piece.rotation + 1) % 4,
       }))
     case 'soft-drop':
-      return stepGravity(state)
+      return softDrop(state)
     case 'hard-drop':
       return hardDrop(state)
   }

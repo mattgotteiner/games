@@ -40,16 +40,22 @@ export function BlockDrop({
       Pick<BlockDropController, 'dispatch' | 'destroy' | 'getState'> | null
     >(null)
   const [status, setStatus] = useState<GameStatus>('playing')
+  const [score, setScore] = useState(0)
 
   useEffect(() => {
     if (canvasRef.current === null || boardRef.current === null) return
     const controller = controllerFactory(
       canvasRef.current,
       boardRef.current,
-      (state) => setStatus(state.status),
+      (state) => {
+        setStatus(state.status)
+        setScore(state.score)
+      },
     )
     setController(controller)
-    setStatus(controller.getState().status)
+    const initialState = controller.getState()
+    setStatus(initialState.status)
+    setScore(initialState.score)
     return () => {
       controller.destroy()
     }
@@ -68,6 +74,9 @@ export function BlockDrop({
           <h1 id="block-drop-heading">Block Drop</h1>
           <p class="game-status" aria-live="polite">
             {status === 'playing' ? 'Playing' : 'Game over'}
+          </p>
+          <p class="game-score" aria-live="polite">
+            Score: {score}
           </p>
         </div>
       </header>

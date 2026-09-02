@@ -37,6 +37,7 @@ function stateWith(
     randomState: 123,
     initialSeed: 123,
     status: 'playing',
+    score: 0,
   }
 }
 
@@ -144,18 +145,94 @@ describe('descent and locking', () => {
   })
 })
 
+describe('scoring', () => {
+  it('starts at zero and awards only successful manual drop rows', () => {
+    const initial = createGame(8)
+    const gravity = stepGravity(initial)
+    const soft = applyAction(gravity, 'soft-drop')
+    const blocked = stateWith({ type: 'O', rotation: 0, x: 3, y: 18 })
+
+    expect(initial.score).toBe(0)
+    expect(gravity.score).toBe(0)
+    expect(soft.score).toBe(1)
+    expect(applyAction(blocked, 'soft-drop').score).toBe(0)
+  })
+
+  it('awards two points for each hard-drop row', () => {
+    const initial = stateWith({ type: 'O', rotation: 0, x: 3, y: 0 })
+
+    expect(applyAction(initial, 'hard-drop').score).toBe(36)
+  })
+
+  it.each([
+    [1, 100],
+    [2, 300],
+    [3, 500],
+    [4, 800],
+  ])('awards %i simultaneous line clears exactly %i points', (count, award) => {
+    const rows = createEmptyBoard().map((row) => [...row])
+    for (let y = BOARD_HEIGHT - count; y < BOARD_HEIGHT; y += 1) {
+      for (let x = 0; x < BOARD_WIDTH; x += 1) {
+        if (x !== 4) rows[y][x] = 'J'
+      }
+    }
+    const initial = stateWith(
+      { type: 'I', rotation: 1, x: 2, y: 16 },
+      rows,
+    )
+
+    expect(stepGravity(initial).score).toBe(award)
+  })
+
+  it('adds hard-drop and line-clear points in the same transition', () => {
+    const rows = createEmptyBoard().map((row) => [...row])
+    for (let y = 16; y < BOARD_HEIGHT; y += 1) {
+      for (let x = 0; x < BOARD_WIDTH; x += 1) {
+        if (x !== 4) rows[y][x] = 'J'
+      }
+    }
+    const initial = stateWith(
+      { type: 'I', rotation: 1, x: 2, y: 0 },
+      rows,
+    )
+
+    expect(applyAction(initial, 'hard-drop').score).toBe(832)
+  })
+
+  it('preserves soft-drop points when the following lock clears lines', () => {
+    const rows = createEmptyBoard().map((row) => [...row])
+    for (let y = 16; y < BOARD_HEIGHT; y += 1) {
+      for (let x = 0; x < BOARD_WIDTH; x += 1) {
+        if (x !== 4) rows[y][x] = 'J'
+      }
+    }
+    const initial = stateWith(
+      { type: 'I', rotation: 1, x: 2, y: 15 },
+      rows,
+    )
+    const softDropped = applyAction(initial, 'soft-drop')
+
+    expect(softDropped.score).toBe(1)
+    expect(applyAction(softDropped, 'soft-drop').score).toBe(801)
+  })
+})
+
 describe('game lifecycle', () => {
   it('ends the game when the next piece cannot spawn and ignores gameplay', () => {
     const next: ActivePiece = { type: 'T', rotation: 0, x: 3, y: 0 }
     const spawnCell = getPieceCells(next)[0]
-    const initial = stateWith(
-      { type: 'O', rotation: 0, x: 3, y: 18 },
-      boardWith([[spawnCell.x, spawnCell.y, 'Z']]),
-      ['T'],
-    )
+    const initial = {
+      ...stateWith(
+        { type: 'O', rotation: 0, x: 3, y: 18 },
+        boardWith([[spawnCell.x, spawnCell.y, 'Z']]),
+        ['T'],
+      ),
+      score: 321,
+    }
     const gameOver = stepGravity(initial)
 
     expect(gameOver.status).toBe('game-over')
+    expect(gameOver.score).toBe(initial.score)
     expect(gameOver.active).toBeNull()
     expect(stepGravity(gameOver)).toBe(gameOver)
     expect(applyAction(gameOver, 'left')).toBe(gameOver)
@@ -164,6 +241,7 @@ describe('game lifecycle', () => {
   it('restarts with a fresh empty board and active piece', () => {
     const playing = createGame(77)
     const dirty = applyAction(playing, 'hard-drop')
+    expect(dirty.score).toBeGreaterThan(0)
     const gameOver: BlockDropState = {
       ...dirty,
       active: null,
@@ -177,6 +255,7 @@ describe('game lifecycle', () => {
     )
     expect(fresh.active).not.toBeNull()
     expect(fresh.status).toBe('playing')
+    expect(fresh.score).toBe(0)
     expect(applyAction(gameOver, 'restart')).toEqual(fresh)
   })
 })
