@@ -102,6 +102,136 @@ h1 {
   list-style: none;
 }
 
+.game-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+  padding: clamp(1rem, 4vw, 2rem);
+  border-radius: 1rem;
+  background: linear-gradient(135deg, #142743, #112038);
+}
+
+.game-card h3 {
+  margin: 0 0 0.5rem;
+  font-size: clamp(1.5rem, 5vw, 2.25rem);
+}
+
+.game-card p {
+  margin-bottom: 0;
+  color: #bac7d9;
+}
+
+.game-card .game-card-kicker {
+  margin-bottom: 0.35rem;
+  color: #67e8f9;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+button {
+  min-height: 2.75rem;
+  border: 0;
+  border-radius: 0.75rem;
+  padding: 0.7rem 1rem;
+  color: #07111f;
+  background: #67e8f9;
+  font-weight: 800;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.game-shell {
+  display: grid;
+  padding-top: max(1rem, env(safe-area-inset-top));
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+.block-drop {
+  display: grid;
+  min-height: calc(100dvh - 2rem);
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 1rem;
+}
+
+.game-header {
+  display: flex;
+  align-items: center;
+  gap: clamp(1rem, 4vw, 2rem);
+}
+
+.game-header h1 {
+  margin: 0;
+  font-size: clamp(2rem, 8vw, 4rem);
+}
+
+.game-header .app-kicker {
+  margin-bottom: 0.25rem;
+}
+
+.return-button {
+  flex: 0 0 auto;
+  color: #f8fafc;
+  background: #1e3049;
+}
+
+.game-status {
+  margin: 0.25rem 0 0;
+  color: #bac7d9;
+  font-weight: 700;
+}
+
+.game-layout {
+  display: grid;
+  min-height: 0;
+  grid-template-rows: minmax(12rem, 1fr) auto;
+  gap: 1rem;
+}
+
+.board-frame {
+  display: grid;
+  min-height: 0;
+  place-items: center;
+}
+
+.board-frame canvas {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  border: 2px solid #2d4768;
+  border-radius: 0.5rem;
+  box-shadow: 0 1rem 3rem rgb(0 0 0 / 35%);
+}
+
+.game-controls {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(3rem, 1fr));
+  gap: 0.55rem;
+}
+
+.control-hard-drop,
+.control-restart {
+  grid-column: span 2;
+}
+
+.key-help {
+  grid-column: 1 / -1;
+  margin: 0.15rem 0 0;
+  color: #8fa1b9;
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+@media (max-width: 32rem) {
+  .game-card {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+}
+
 @media (max-height: 30rem) and (orientation: landscape) {
   .app-header {
     padding: 0.5rem 0 1.5rem;
@@ -114,5 +244,35 @@ h1 {
   .empty-state {
     min-height: 8rem;
   }
-}
 
+  .game-shell {
+    padding: 0.5rem max(0.75rem, env(safe-area-inset-right)) 0.5rem
+      max(0.75rem, env(safe-area-inset-left));
+  }
+
+  .block-drop {
+    min-height: calc(100dvh - 1rem);
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+  }
+
+  .game-header {
+    width: 9rem;
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .game-header h1 {
+    font-size: clamp(1.8rem, 9vh, 2.6rem);
+  }
+
+  .game-layout {
+    grid-template-columns: minmax(8rem, 1fr) minmax(10rem, 0.75fr);
+    grid-template-rows: minmax(0, 1fr);
+  }
+
+  .game-controls {
+    align-content: center;
+    grid-template-columns: repeat(2, minmax(3rem, 1fr));
+  }
+}

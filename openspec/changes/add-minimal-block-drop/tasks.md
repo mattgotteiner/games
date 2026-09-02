@@ -9,7 +9,7 @@
 
 ## 2. Playable Catalog Seam
 
-- [ ] 2.1 Replace the empty catalog with one concrete Block Drop entry and add
+- [x] 2.1 Replace the empty catalog with one concrete Block Drop entry and add
   catalog launch/return, the responsive high-DPI Canvas controller and renderer,
   semantic game state, equivalent keyboard and visible touch controls, and
   idempotent mount/destroy cleanup; verify component and browser tests exercise

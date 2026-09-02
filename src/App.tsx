@@ -1,13 +1,28 @@
 import './app.css'
+import { useState } from 'preact/hooks'
+import {
+  BlockDrop,
+  type BlockDropControllerFactory,
+} from './games/block-drop/BlockDrop'
 
-type Game = Readonly<{
-  id: string
-  title: string
-}>
+export function App({
+  blockDropControllerFactory,
+}: {
+  readonly blockDropControllerFactory?: BlockDropControllerFactory
+}) {
+  const [view, setView] = useState<'catalog' | 'block-drop'>('catalog')
 
-const games: readonly Game[] = []
+  if (view === 'block-drop') {
+    return (
+      <div class="app-shell game-shell">
+        <BlockDrop
+          onReturn={() => setView('catalog')}
+          controllerFactory={blockDropControllerFactory}
+        />
+      </div>
+    )
+  }
 
-export function App() {
   return (
     <div class="app-shell">
       <header class="app-header">
@@ -24,22 +39,22 @@ export function App() {
           <div class="catalog-heading">
             <h2 id="catalog-heading">Game catalog</h2>
             <span class="game-count">
-              {games.length} {games.length === 1 ? 'game' : 'games'}
+              1 game
             </span>
           </div>
 
-          {games.length === 0 ? (
-            <div class="empty-state">
-              <p class="empty-state-title">No games yet</p>
-              <p>New games will appear here when they are ready to play.</p>
-            </div>
-          ) : (
-            <ul class="game-list">
-              {games.map((game) => (
-                <li key={game.id}>{game.title}</li>
-              ))}
-            </ul>
-          )}
+          <ul class="game-list">
+            <li class="game-card">
+              <div>
+                <p class="game-card-kicker">Puzzle</p>
+                <h3>Block Drop</h3>
+                <p>Shape a clear path through a bright stack of falling blocks.</p>
+              </div>
+              <button type="button" onClick={() => setView('block-drop')}>
+                Play Block Drop
+              </button>
+            </li>
+          </ul>
         </section>
       </main>
     </div>
