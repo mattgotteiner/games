@@ -44,8 +44,21 @@ The synchronized main capability spec is at:
 
 `openspec/specs/offline-installation/spec.md`
 
-The next product increment is a separate OpenSpec change for Minimal Block
-Drop. Do not apply the original 41-task bootstrap change.
+The `add-minimal-block-drop` change is complete and archived at:
+
+`openspec/changes/archive/2026-09-01-add-minimal-block-drop`
+
+All three tasks are complete. The local application now presents Block Drop as
+its first game with deterministic rules, responsive Canvas rendering,
+keyboard/touch controls, explicit session cleanup, and production offline
+coverage. The synchronized capability spec is at:
+
+`openspec/specs/block-drop/spec.md`
+
+`npm run check` passes with 17 unit/component tests and two Chromium production
+flows. The local commits have not been pushed or deployed. The next product
+increment is a separate OpenSpec change for Block Drop hardening. Do not apply
+the original 41-task bootstrap change.
 
 ## Completed First Increment
 
@@ -94,24 +107,15 @@ not as its own completion checkpoint.
 ## Next Increment
 
 Plan and implement each product increment as a separate OpenSpec change. The
-completed and archived `add-installable-offline-shell` increment added manifest
-metadata, shell-only caching, offline reload coverage, and physical-phone
-verification. It preserves the honest empty catalog and does not add a game,
-persistence, or generalized game runtime.
-
-Its two implementation seams are:
-
-1. Produce and locally exercise the installable production artifact through a
-   real browser, including an offline reload under `/games/`.
-2. Run that seam in CI, deploy it, then install and reopen it offline on a
-   supported physical phone.
+completed and archived `add-minimal-block-drop` increment added the
+deterministic rules core, responsive Canvas rendering, keyboard/touch controls,
+the smallest concrete mount/destroy boundary, and offline production coverage.
+It deliberately omits scoring, levels, persistence, pause/resume, lock delay,
+advanced rotation kicks, and generalized platform abstractions.
 
 Continue with separate OpenSpec changes in this order:
 
-1. **Minimal Block Drop:** Add only the deterministic core, Canvas rendering,
-   keyboard/touch controls, and the smallest mount/destroy boundary discovered
-   from the real game.
-2. **Block Drop hardening:** Add scoring, levels, persistence, lifecycle
+1. **Block Drop hardening:** Add scoring, levels, persistence, lifecycle
    hardening, broader tests, and release tagging.
-3. **Shared platform abstractions:** Defer until a second game exposes concrete
+2. **Shared platform abstractions:** Defer until a second game exposes concrete
    duplication or incompatible needs.
