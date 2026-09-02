@@ -34,6 +34,7 @@ describe('BlockDropController', () => {
   let disconnect: ReturnType<typeof vi.fn>
   let cancelFrame: ReturnType<typeof vi.fn<(handle: number) => void>>
   let frameCallback: FrameRequestCallback
+  let pixelRatio: number
 
   beforeEach(() => {
     canvas = document.createElement('canvas')
@@ -53,6 +54,7 @@ describe('BlockDropController', () => {
     })
     disconnect = vi.fn()
     cancelFrame = vi.fn<(handle: number) => void>()
+    pixelRatio = 2
   })
 
   function createController(initialState = createGame(41)) {
@@ -63,7 +65,7 @@ describe('BlockDropController', () => {
       onStateChange,
       {
         initialState,
-        devicePixelRatio: () => 2,
+        devicePixelRatio: () => pixelRatio,
         requestFrame: vi.fn((callback: FrameRequestCallback) => {
           frameCallback = callback
           return 17
@@ -111,6 +113,11 @@ describe('BlockDropController', () => {
     resizeCallback([], {} as ResizeObserver)
     expect(canvas.width).toBe(200)
     expect(canvas.height).toBe(400)
+
+    pixelRatio = 3
+    frameCallback(0)
+    expect(canvas.width).toBe(300)
+    expect(canvas.height).toBe(600)
     controller.destroy()
   })
 

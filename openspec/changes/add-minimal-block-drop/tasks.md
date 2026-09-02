@@ -18,7 +18,7 @@
 
 ## 3. Production Offline Seam
 
-- [ ] 3.1 Extend the production Playwright flow to establish service-worker
+- [x] 3.1 Extend the production Playwright flow to establish service-worker
   control under `/games/`, remove connectivity, launch Block Drop, and prove a
   gameplay action still renders without a network error; run the repository's
   complete locked `npm run check` command and confirm the generated application

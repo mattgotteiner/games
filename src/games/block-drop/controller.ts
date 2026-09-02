@@ -50,6 +50,7 @@ export class BlockDropController {
   private previousTime: number | null = null
   private elapsed = 0
   private destroyed = false
+  private pixelRatio = 1
   private readonly context: CanvasRenderingContext2D
   private readonly requestFrame: typeof requestAnimationFrame
   private readonly cancelFrame: typeof cancelAnimationFrame
@@ -126,6 +127,9 @@ export class BlockDropController {
   private readonly tick = (time: number): void => {
     if (this.destroyed) return
 
+    if (Math.max(1, this.devicePixelRatio()) !== this.pixelRatio) {
+      this.resize()
+    }
     if (this.previousTime !== null && this.state.status === 'playing') {
       this.elapsed += Math.min(Math.max(time - this.previousTime, 0), MAX_FRAME_MS)
       let changed = false
@@ -147,11 +151,15 @@ export class BlockDropController {
     const availableWidth = Math.max(1, bounds.width)
     const containerHeight =
       bounds.height > 1 ? bounds.height : availableWidth * 2
-    const viewportHeight = Math.max(1, window.innerHeight - bounds.top - 8)
+    const viewportHeight = Math.max(
+      1,
+      window.innerHeight - Math.max(0, bounds.top) - 8,
+    )
     const availableHeight = Math.min(containerHeight, viewportHeight)
     const cssHeight = Math.max(1, Math.min(availableHeight, availableWidth * 2))
     const cssWidth = cssHeight / 2
     const ratio = Math.max(1, this.devicePixelRatio())
+    this.pixelRatio = ratio
 
     this.canvas.style.width = `${cssWidth}px`
     this.canvas.style.height = `${cssHeight}px`
@@ -162,9 +170,9 @@ export class BlockDropController {
 
   private publish(): void {
     this.draw(
-      this.canvas.width / Math.max(1, this.devicePixelRatio()),
-      this.canvas.height / Math.max(1, this.devicePixelRatio()),
-      Math.max(1, this.devicePixelRatio()),
+      this.canvas.width / this.pixelRatio,
+      this.canvas.height / this.pixelRatio,
+      this.pixelRatio,
     )
     this.onStateChange(this.state)
   }

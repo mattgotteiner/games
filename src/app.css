@@ -200,9 +200,10 @@ button {
   display: block;
   max-width: 100%;
   max-height: 100%;
-  border: 2px solid #2d4768;
   border-radius: 0.5rem;
-  box-shadow: 0 1rem 3rem rgb(0 0 0 / 35%);
+  box-shadow:
+    0 0 0 2px #2d4768,
+    0 1rem 3rem rgb(0 0 0 / 35%);
 }
 
 .game-controls {
