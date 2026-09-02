@@ -3,7 +3,14 @@ import {
   BlockDropController,
   type BlockDropControllerOptions,
 } from './controller'
-import type { BlockDropState, GameAction, GameStatus } from './rules'
+import {
+  getInitialPieceCells,
+  type BlockDropState,
+  type GameAction,
+  type GameStatus,
+  type Tetromino,
+} from './rules'
+import { TETROMINO_COLORS } from './piece-metadata'
 
 export type BlockDropControllerFactory = (
   canvas: HTMLCanvasElement,
@@ -29,6 +36,34 @@ const controls: ReadonlyArray<readonly [GameAction, string, string]> = [
   ['restart', 'Restart game', 'Restart'],
 ]
 
+function NextPiece({ type }: { readonly type: Tetromino }) {
+  const occupied = new Set(
+    getInitialPieceCells(type).map(({ x, y }) => `${x},${y}`),
+  )
+
+  return (
+    <section class="next-piece" aria-label={`Next piece: ${type} tetromino`}>
+      <p class="next-piece-label">Next: {type}</p>
+      <div class="next-piece-grid" aria-hidden="true">
+        {Array.from({ length: 16 }, (_, index) => {
+          const filled = occupied.has(`${index % 4},${Math.floor(index / 4)}`)
+          return (
+            <span
+              class={`next-piece-cell${filled ? ' is-filled' : ''}`}
+              style={
+                filled
+                  ? { backgroundColor: TETROMINO_COLORS[type] }
+                  : undefined
+              }
+              key={index}
+            />
+          )
+        })}
+      </div>
+    </section>
+  )
+}
+
 export function BlockDrop({
   onReturn,
   controllerFactory = createBlockDropController,
@@ -41,6 +76,7 @@ export function BlockDrop({
     >(null)
   const [status, setStatus] = useState<GameStatus>('playing')
   const [score, setScore] = useState(0)
+  const [next, setNext] = useState<Tetromino>('I')
 
   useEffect(() => {
     if (canvasRef.current === null || boardRef.current === null) return
@@ -50,12 +86,14 @@ export function BlockDrop({
       (state) => {
         setStatus(state.status)
         setScore(state.score)
+        setNext(state.next)
       },
     )
     setController(controller)
     const initialState = controller.getState()
     setStatus(initialState.status)
     setScore(initialState.score)
+    setNext(initialState.next)
     return () => {
       controller.destroy()
     }
@@ -78,6 +116,7 @@ export function BlockDrop({
           <p class="game-score" aria-live="polite">
             Score: {score}
           </p>
+          <NextPiece type={next} />
         </div>
       </header>
 

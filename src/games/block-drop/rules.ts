@@ -25,6 +25,7 @@ export interface ActivePiece {
 export interface BlockDropState {
   readonly board: Board
   readonly active: ActivePiece | null
+  readonly next: Tetromino
   readonly bag: ReadonlyArray<Tetromino>
   readonly randomState: number
   readonly initialSeed: number
@@ -82,6 +83,10 @@ const SHAPES: Readonly<Record<Tetromino, ReadonlyArray<Point>>> = {
   ],
 }
 
+export function getInitialPieceCells(type: Tetromino): ReadonlyArray<Point> {
+  return SHAPES[type]
+}
+
 const SHAPE_SIZE: Readonly<Record<Tetromino, number>> = {
   I: 4,
   J: 3,
@@ -124,10 +129,10 @@ export function shuffleBag(seed: number): {
 
 function rotatedCells(type: Tetromino, rotation: number): ReadonlyArray<Point> {
   if (type === 'O') {
-    return SHAPES.O
+    return getInitialPieceCells(type)
   }
 
-  let cells = SHAPES[type]
+  let cells = getInitialPieceCells(type)
   const size = SHAPE_SIZE[type]
   for (let turn = 0; turn < rotation % 4; turn += 1) {
     cells = cells.map(({ x, y }) => ({ x: size - 1 - y, y: x }))
@@ -162,7 +167,9 @@ function spawnPiece(type: Tetromino): ActivePiece {
   }
 }
 
-function drawPiece(state: BlockDropState): {
+function drawPiece(
+  state: Pick<BlockDropState, 'bag' | 'randomState'>,
+): {
   readonly type: Tetromino
   readonly bag: ReadonlyArray<Tetromino>
   readonly randomState: number
@@ -182,10 +189,11 @@ function drawPiece(state: BlockDropState): {
 
 function spawnNext(state: BlockDropState): BlockDropState {
   const drawn = drawPiece(state)
-  const active = spawnPiece(drawn.type)
+  const active = spawnPiece(state.next)
   const next = {
     ...state,
     active,
+    next: drawn.type,
     bag: drawn.bag,
     randomState: drawn.randomState,
   }
@@ -196,11 +204,13 @@ function spawnNext(state: BlockDropState): BlockDropState {
 }
 
 export function createGame(seed: number): BlockDropState {
+  const first = drawPiece({ bag: [], randomState: seed >>> 0 })
   return spawnNext({
     board: createEmptyBoard(),
     active: null,
-    bag: [],
-    randomState: seed >>> 0,
+    next: first.type,
+    bag: first.bag,
+    randomState: first.randomState,
     initialSeed: seed >>> 0,
     status: 'playing',
     score: 0,

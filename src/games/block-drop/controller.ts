@@ -9,19 +9,10 @@ import {
   type GameAction,
   type Tetromino,
 } from './rules'
+import { TETROMINO_COLORS } from './piece-metadata'
 
 const GRAVITY_MS = 700
 const MAX_FRAME_MS = GRAVITY_MS * 2
-
-const COLORS: Readonly<Record<Tetromino, string>> = {
-  I: '#38bdf8',
-  J: '#818cf8',
-  L: '#fb923c',
-  O: '#facc15',
-  S: '#4ade80',
-  T: '#c084fc',
-  Z: '#fb7185',
-}
 
 export const KEY_ACTIONS: Readonly<Record<string, GameAction>> = {
   ArrowLeft: 'left',
@@ -235,7 +226,7 @@ export class BlockDropController {
     offsetY: number,
   ): void {
     const inset = Math.max(1, size * 0.08)
-    this.context.fillStyle = COLORS[type]
+    this.context.fillStyle = TETROMINO_COLORS[type]
     this.context.fillRect(
       offsetX + x * size + inset,
       offsetY + y * size + inset,

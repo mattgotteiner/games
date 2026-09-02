@@ -6,6 +6,7 @@ import {
   applyAction,
   createEmptyBoard,
   createGame,
+  getInitialPieceCells,
   getPieceCells,
   restart,
   shuffleBag,
@@ -29,10 +30,12 @@ function stateWith(
   active: ActivePiece,
   board: Board = createEmptyBoard(),
   bag: ReadonlyArray<Tetromino> = ['T'],
+  next: Tetromino = 'T',
 ): BlockDropState {
   return {
     board,
     active,
+    next,
     bag,
     randomState: 123,
     initialSeed: 123,
@@ -64,6 +67,32 @@ describe('seeded pieces', () => {
       actions.reduce((state, action) => applyAction(state, action), createGame(42))
 
     expect(play()).toEqual(play())
+  })
+
+  it('promotes the exact preview and stays seeded across a bag boundary', () => {
+    let state = createGame(42)
+    const active: Tetromino[] = []
+    const previews: Tetromino[] = []
+
+    for (let index = 0; index < 9; index += 1) {
+      active.push(state.active?.type as Tetromino)
+      previews.push(state.next)
+      state = applyAction({ ...state, board: createEmptyBoard() }, 'hard-drop')
+    }
+
+    expect(active).toEqual(['S', 'O', 'Z', 'T', 'L', 'I', 'J', 'J', 'T'])
+    expect(previews).toEqual(['O', 'Z', 'T', 'L', 'I', 'J', 'J', 'T', 'L'])
+    expect(active.slice(1)).toEqual(previews.slice(0, -1))
+  })
+
+  it('exposes each initial piece as four local cells in a four-cell square', () => {
+    for (const type of TETROMINOES) {
+      const cells = getInitialPieceCells(type)
+      expect(cells).toHaveLength(4)
+      expect(cells.every(({ x, y }) => x >= 0 && x < 4 && y >= 0 && y < 4)).toBe(
+        true,
+      )
+    }
   })
 })
 

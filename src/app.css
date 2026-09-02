@@ -178,10 +178,32 @@ button {
 }
 
 .game-status,
-.game-score {
+.game-score,
+.next-piece-label {
   margin: 0.25rem 0 0;
   color: #bac7d9;
   font-weight: 700;
+}
+
+.next-piece {
+  margin-top: 0.5rem;
+}
+
+.next-piece-grid {
+  display: grid;
+  width: 4.5rem;
+  aspect-ratio: 1;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.12rem;
+}
+
+.next-piece-cell {
+  border-radius: 0.15rem;
+  background: rgb(148 163 184 / 10%);
+}
+
+.next-piece-cell.is-filled {
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 24%);
 }
 
 .game-layout {

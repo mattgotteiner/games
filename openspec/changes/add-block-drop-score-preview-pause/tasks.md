@@ -8,7 +8,7 @@
 
 ## 2. Next-Piece Preview Seam
 
-- [ ] 2.1 Keep one deterministic generated piece ahead of the active piece
+- [x] 2.1 Keep one deterministic generated piece ahead of the active piece
   across bag boundaries, expose shared initial-orientation shape/color metadata,
   and render an accessible four-by-four next-piece visualization; verify unit
   tests prove exact active/preview promotion and seeded sequencing while

@@ -5,7 +5,7 @@ import {
   BlockDrop,
   type BlockDropControllerFactory,
 } from './games/block-drop/BlockDrop'
-import { createGame } from './games/block-drop/rules'
+import { applyAction, createGame } from './games/block-drop/rules'
 
 describe('App', () => {
   it('launches Block Drop, routes touch actions, and returns with cleanup', () => {
@@ -85,5 +85,47 @@ describe('App', () => {
     act(() => publish?.(createGame(5)))
     expect(screen.getByText('Playing')).toBeInTheDocument()
     expect(screen.getByText('Score: 0')).toBeInTheDocument()
+  })
+
+  it('renders an accessible four-by-four preview and updates it after a lock', () => {
+    let publish: ((state: ReturnType<typeof createGame>) => void) | undefined
+    const initial = createGame(42)
+    const factory: BlockDropControllerFactory = (
+      _canvas,
+      _container,
+      onStateChange,
+    ) => {
+      publish = onStateChange
+      return {
+        dispatch: vi.fn(),
+        destroy: vi.fn(),
+        getState: () => initial,
+      }
+    }
+
+    const { container } = render(
+      <BlockDrop onReturn={vi.fn()} controllerFactory={factory} />,
+    )
+    expect(
+      screen.getByRole('region', {
+        name: `Next piece: ${initial.next} tetromino`,
+      }),
+    ).toHaveTextContent(`Next: ${initial.next}`)
+    expect(container.querySelectorAll('.next-piece-cell')).toHaveLength(16)
+    expect(
+      container.querySelectorAll('.next-piece-cell.is-filled'),
+    ).toHaveLength(4)
+
+    const locked = applyAction(initial, 'hard-drop')
+    act(() => publish?.(locked))
+
+    expect(
+      screen.getByRole('region', {
+        name: `Next piece: ${locked.next} tetromino`,
+      }),
+    ).toHaveTextContent(`Next: ${locked.next}`)
+    expect(
+      container.querySelectorAll('.next-piece-cell.is-filled'),
+    ).toHaveLength(4)
   })
 })

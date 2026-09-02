@@ -11,6 +11,14 @@ test('plays Block Drop with touch and keyboard across phone orientations', async
     page.getByRole('heading', { level: 1, name: 'Block Drop' }),
   ).toBeVisible()
   await expect(page.getByText('Playing')).toBeVisible()
+  const preview = page.getByRole('region', {
+    name: /Next piece: [IJLOSTZ] tetromino/,
+  })
+  await expect(preview).toBeVisible()
+  await expect(preview.locator('.next-piece-cell')).toHaveCount(16)
+  await expect(preview.locator('.next-piece-cell.is-filled')).toHaveCount(4)
+  const initialPreview = await preview.getAttribute('aria-label')
+  const initialPreviewGrid = await preview.locator('.next-piece-grid').innerHTML()
 
   const canvas = page.getByRole('img', { name: 'Block Drop board' })
   await expect(canvas).toBeVisible()
@@ -26,6 +34,13 @@ test('plays Block Drop with touch and keyboard across phone orientations', async
   await page.getByRole('button', { name: 'Move right' }).click()
   const touchBoard = await captureBoard()
   expect(touchBoard).not.toBe(keyboardBoard)
+
+  await page.keyboard.press('Space')
+  await expect(preview).not.toHaveAttribute('aria-label', initialPreview!)
+  await expect(preview.locator('.next-piece-cell.is-filled')).toHaveCount(4)
+  expect(await preview.locator('.next-piece-grid').innerHTML()).not.toBe(
+    initialPreviewGrid,
+  )
 
   const portraitBox = await canvas.boundingBox()
   expect(portraitBox).not.toBeNull()
