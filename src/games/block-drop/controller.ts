@@ -111,6 +111,17 @@ export class BlockDropController {
   private readonly handleKeyDown = (event: KeyboardEvent): void => {
     const action = KEY_ACTIONS[event.key]
     if (action === undefined) return
+    const target = event.target
+    if (
+      action !== 'pause' &&
+      action !== 'restart' &&
+      target instanceof Element &&
+      target.closest(
+        'button, input, select, textarea, a[href], [contenteditable="true"]',
+      ) !== null
+    ) {
+      return
+    }
     event.preventDefault()
     this.dispatch(action)
   }

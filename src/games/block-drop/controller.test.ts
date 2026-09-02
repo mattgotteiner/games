@@ -103,6 +103,21 @@ describe('BlockDropController', () => {
     controller.destroy()
   })
 
+  it('leaves gameplay keys available to focused controls while keeping global shortcuts', () => {
+    const { controller } = createController()
+    const button = document.createElement('button')
+    document.body.append(button)
+    const before = controller.getState()
+
+    expect(fireEvent.keyDown(button, { key: ' ' })).toBe(true)
+    expect(controller.getState()).toBe(before)
+
+    expect(fireEvent.keyDown(button, { key: 'p' })).toBe(false)
+    expect(controller.getState().status).toBe('paused')
+    button.remove()
+    controller.destroy()
+  })
+
   it('freezes paused time and gives resume a fresh gravity interval', () => {
     const { controller } = createController()
     frameCallback(0)
