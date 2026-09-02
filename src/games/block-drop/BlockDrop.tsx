@@ -107,7 +107,7 @@ export function BlockDrop({
         <button class="return-button" type="button" onClick={onReturn}>
           ← Catalog
         </button>
-        <div>
+        <div class="game-details">
           <p class="app-kicker">Falling-block puzzle</p>
           <h1 id="block-drop-heading">Block Drop</h1>
           <p class="game-status" aria-live="polite">

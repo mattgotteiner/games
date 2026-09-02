@@ -1,5 +1,36 @@
 import { expect, test } from '@playwright/test'
 
+async function expectGameFitsViewport(page: import('@playwright/test').Page) {
+  const elements = [
+    page.getByRole('img', { name: 'Block Drop board' }),
+    page.getByText(/^Score:/),
+    page.getByText(/^(Playing|Paused|Game over)$/),
+    page.getByRole('region', { name: /Next piece:/ }),
+    page.locator('.game-controls'),
+  ]
+
+  for (const element of elements) {
+    const box = await element.boundingBox()
+    expect(box).not.toBeNull()
+    expect(box!.x).toBeGreaterThanOrEqual(0)
+    expect(box!.y).toBeGreaterThanOrEqual(0)
+    expect(box!.x + box!.width).toBeLessThanOrEqual(
+      await page.evaluate(() => window.innerWidth),
+    )
+    expect(box!.y + box!.height).toBeLessThanOrEqual(
+      await page.evaluate(() => window.innerHeight),
+    )
+  }
+
+  const canvasBox = await elements[0].boundingBox()
+  expect(canvasBox!.width / canvasBox!.height).toBeCloseTo(0.5, 2)
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollHeight <= window.innerHeight,
+    ),
+  ).toBe(true)
+}
+
 test('plays Block Drop with touch and keyboard across phone orientations', async ({
   page,
 }) => {
@@ -66,15 +97,13 @@ test('plays Block Drop with touch and keyboard across phone orientations', async
   await expect(page.getByText('Playing')).toBeVisible()
   await expect(page.getByText('Score: 0')).toBeVisible()
 
-  const portraitBox = await canvas.boundingBox()
-  expect(portraitBox).not.toBeNull()
-  expect(portraitBox!.width).toBeLessThanOrEqual(390)
-  expect(portraitBox!.height).toBeLessThanOrEqual(844)
+  await expectGameFitsViewport(page)
 
   await page.setViewportSize({ width: 844, height: 390 })
-  await expect
-    .poll(async () => (await canvas.boundingBox())?.height)
-    .toBeLessThanOrEqual(390)
+  await expect.poll(async () => (await canvas.boundingBox())?.height).toBeLessThan(
+    390,
+  )
+  await expectGameFitsViewport(page)
 
   await page.getByRole('button', { name: /catalog/i }).click()
   await expect(

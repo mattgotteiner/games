@@ -25,7 +25,7 @@
 
 ## 4. Production Integration
 
-- [ ] 4.1 Fit score, preview, state, and controls with the complete board at
+- [x] 4.1 Fit score, preview, state, and controls with the complete board at
   phone portrait and short landscape sizes, extend the service-worker-controlled
   production flow to exercise score, preview, and pause while offline, and run
   the repository's locked `npm run check` command.

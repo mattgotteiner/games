@@ -65,7 +65,13 @@ test('launches Block Drop from the repository-scoped app offline', async ({
   ).toBeVisible()
   const canvas = page.getByRole('img', { name: 'Block Drop board' })
   const moveLeft = page.getByRole('button', { name: 'Move left' })
+  const score = page.getByText(/^Score:/)
+  const preview = page.getByRole('region', { name: /Next piece:/ })
   await expect(moveLeft).toBeEnabled()
+  await expect(score).toHaveText('Score: 0')
+  await expect(preview).toBeVisible()
+  await expect(preview.locator('.next-piece-cell.is-filled')).toHaveCount(4)
+  const initialPreview = await preview.getAttribute('aria-label')
   const before = await canvas.evaluate((element: HTMLCanvasElement) =>
     element.toDataURL(),
   )
@@ -76,4 +82,29 @@ test('launches Block Drop from the repository-scoped app offline', async ({
       canvas.evaluate((element: HTMLCanvasElement) => element.toDataURL()),
     )
     .not.toBe(before)
+
+  await page.getByRole('button', { name: 'Soft drop' }).click()
+  await expect(score).toHaveText('Score: 1')
+  await page.getByRole('button', { name: 'Hard drop' }).click()
+  await expect(score).not.toHaveText('Score: 1')
+  await expect(preview).not.toHaveAttribute('aria-label', initialPreview!)
+
+  await page.getByRole('button', { name: 'Pause game' }).click()
+  await expect(page.getByText('Paused')).toBeVisible()
+  await expect(moveLeft).toBeDisabled()
+  const pausedBoard = await canvas.evaluate((element: HTMLCanvasElement) =>
+    element.toDataURL(),
+  )
+  const pausedScore = await score.textContent()
+  const pausedPreview = await preview.getAttribute('aria-label')
+  await page.waitForTimeout(900)
+  expect(
+    await canvas.evaluate((element: HTMLCanvasElement) => element.toDataURL()),
+  ).toBe(pausedBoard)
+  await expect(score).toHaveText(pausedScore!)
+  await expect(preview).toHaveAttribute('aria-label', pausedPreview!)
+
+  await page.getByRole('button', { name: 'Resume game' }).click()
+  await expect(page.getByText('Playing')).toBeVisible()
+  await expect(moveLeft).toBeEnabled()
 })
