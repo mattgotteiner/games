@@ -1,22 +1,52 @@
 import './app.css'
-import { useState } from 'preact/hooks'
+import { useEffect, useState } from 'preact/hooks'
+import {
+  parseGameUrl,
+  urlForView,
+  type AppView,
+} from './game-navigation'
 import {
   BlockDrop,
   type BlockDropControllerFactory,
 } from './games/block-drop/BlockDrop'
+
+function currentUrl(): URL {
+  return new URL(window.location.href)
+}
 
 export function App({
   blockDropControllerFactory,
 }: {
   readonly blockDropControllerFactory?: BlockDropControllerFactory
 }) {
-  const [view, setView] = useState<'catalog' | 'block-drop'>('catalog')
+  const [view, setView] = useState<AppView>(
+    () => parseGameUrl(currentUrl()).view,
+  )
+
+  useEffect(() => {
+    const syncFromUrl = () => {
+      const parsed = parseGameUrl(currentUrl())
+      if (parsed.hasInvalidGame) {
+        window.history.replaceState(null, '', urlForView(currentUrl(), 'catalog'))
+      }
+      setView(parsed.view)
+    }
+
+    syncFromUrl()
+    window.addEventListener('popstate', syncFromUrl)
+    return () => window.removeEventListener('popstate', syncFromUrl)
+  }, [])
+
+  const navigate = (nextView: AppView) => {
+    window.history.pushState(null, '', urlForView(currentUrl(), nextView))
+    setView(nextView)
+  }
 
   if (view === 'block-drop') {
     return (
       <div class="app-shell game-shell">
         <BlockDrop
-          onReturn={() => setView('catalog')}
+          onReturn={() => navigate('catalog')}
           controllerFactory={blockDropControllerFactory}
         />
       </div>
@@ -50,7 +80,7 @@ export function App({
                 <h3>Block Drop</h3>
                 <p>Shape a clear path through a bright stack of falling blocks.</p>
               </div>
-              <button type="button" onClick={() => setView('block-drop')}>
+              <button type="button" onClick={() => navigate('block-drop')}>
                 Play Block Drop
               </button>
             </li>

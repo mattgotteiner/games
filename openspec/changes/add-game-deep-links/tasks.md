@@ -7,7 +7,7 @@
 
 ## 2. Application History Integration
 
-- [ ] 2.1 Initialize the mounted view from the current URL, push canonical URLs
+- [x] 2.1 Initialize the mounted view from the current URL, push canonical URLs
   for launch and catalog return, replace invalid game selections, and react to
   `popstate`; verify component tests cover direct entry, URL updates,
   Back/Forward-equivalent transitions, controller cleanup, canonicalization, and

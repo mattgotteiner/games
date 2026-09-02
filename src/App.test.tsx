@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen } from '@testing-library/preact'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { App } from './App'
 import {
   BlockDrop,
@@ -8,6 +8,10 @@ import {
 import { applyAction, createGame } from './games/block-drop/rules'
 
 describe('App', () => {
+  beforeEach(() => {
+    window.history.replaceState(null, '', '/games/')
+  })
+
   it('launches Block Drop, routes touch actions, and returns with cleanup', () => {
     const dispatch = vi.fn()
     const destroy = vi.fn()
@@ -26,6 +30,8 @@ describe('App', () => {
     ).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Play Block Drop' }))
 
+    expect(window.location.pathname).toBe('/games/')
+    expect(window.location.search).toBe('?game=block-drop')
     expect(screen.getByRole('heading', { name: 'Block Drop' })).toBeInTheDocument()
     expect(screen.getByText('Playing')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Move left' }))
@@ -35,7 +41,67 @@ describe('App', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /catalog/i }))
     expect(destroy).toHaveBeenCalledOnce()
+    expect(window.location.search).toBe('')
     expect(screen.getByRole('button', { name: 'Play Block Drop' })).toBeInTheDocument()
+  })
+
+  it('opens a valid deep link directly', () => {
+    window.history.replaceState(null, '', '/games/?theme=dark&game=block-drop#play')
+    render(<App blockDropControllerFactory={() => ({
+      dispatch: vi.fn(),
+      destroy: vi.fn(),
+      getState: () => createGame(5),
+    })} />)
+
+    expect(screen.getByRole('heading', { name: 'Block Drop' })).toBeInTheDocument()
+    expect(window.location.href).toContain('/games/?theme=dark&game=block-drop#play')
+  })
+
+  it('canonicalizes invalid game links without losing unrelated URL data', () => {
+    window.history.replaceState(
+      null,
+      '',
+      '/games/?theme=dark&game=unknown&mode=compact#catalog',
+    )
+    render(<App />)
+
+    expect(screen.getByRole('heading', { name: 'Games' })).toBeInTheDocument()
+    expect(window.location.pathname).toBe('/games/')
+    expect(window.location.search).toBe('?theme=dark&mode=compact')
+    expect(window.location.hash).toBe('#catalog')
+  })
+
+  it('follows history URLs and destroys game resources on catalog navigation', () => {
+    const destroy = vi.fn()
+    const factory: BlockDropControllerFactory = () => ({
+      dispatch: vi.fn(),
+      destroy,
+      getState: () => createGame(5),
+    })
+    render(<App blockDropControllerFactory={factory} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Play Block Drop' }))
+
+    window.history.replaceState(null, '', '/games/')
+    fireEvent.popState(window)
+    expect(destroy).toHaveBeenCalledOnce()
+    expect(screen.getByRole('heading', { name: 'Games' })).toBeInTheDocument()
+
+    window.history.replaceState(null, '', '/games/?game=block-drop')
+    fireEvent.popState(window)
+    expect(screen.getByRole('heading', { name: 'Block Drop' })).toBeInTheDocument()
+  })
+
+  it('removes its history listener when unmounted', () => {
+    const removeEventListener = vi.spyOn(window, 'removeEventListener')
+    const { unmount } = render(<App />)
+
+    unmount()
+
+    expect(removeEventListener).toHaveBeenCalledWith(
+      'popstate',
+      expect.any(Function),
+    )
+    removeEventListener.mockRestore()
   })
 
   it('shows game over semantically with restart available', () => {
