@@ -17,7 +17,7 @@
 
 ## 3. Pause and Resume Seam
 
-- [ ] 3.1 Add deterministic paused state and pause action, ignore gameplay
+- [x] 3.1 Add deterministic paused state and pause action, ignore gameplay
   actions while paused, reset controller gravity timing across pause/resume,
   and add equivalent visible and `P` keyboard controls with semantic status;
   verify rules, controller, component, and browser tests prove frozen state and

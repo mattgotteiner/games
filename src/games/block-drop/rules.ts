@@ -6,13 +6,14 @@ export const TETROMINOES = ['I', 'J', 'L', 'O', 'S', 'T', 'Z'] as const
 export type Tetromino = (typeof TETROMINOES)[number]
 export type Cell = Tetromino | null
 export type Board = ReadonlyArray<ReadonlyArray<Cell>>
-export type GameStatus = 'playing' | 'game-over'
+export type GameStatus = 'playing' | 'paused' | 'game-over'
 export type GameAction =
   | 'left'
   | 'right'
   | 'rotate'
   | 'soft-drop'
   | 'hard-drop'
+  | 'pause'
   | 'restart'
 
 export interface ActivePiece {
@@ -272,7 +273,7 @@ function tryActive(
 }
 
 export function stepGravity(state: BlockDropState): BlockDropState {
-  if (state.status === 'game-over' || state.active === null) {
+  if (state.status !== 'playing' || state.active === null) {
     return state
   }
   const moved = tryActive(state, (piece) => ({ ...piece, y: piece.y + 1 }))
@@ -311,6 +312,16 @@ export function applyAction(
 ): BlockDropState {
   if (action === 'restart') {
     return restart(state)
+  }
+  if (action === 'pause') {
+    if (state.status === 'game-over') return state
+    return {
+      ...state,
+      status: state.status === 'playing' ? 'paused' : 'playing',
+    }
+  }
+  if (state.status === 'paused') {
+    return state
   }
   if (state.status === 'game-over') {
     return state

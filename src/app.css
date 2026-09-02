@@ -236,6 +236,7 @@ button {
 }
 
 .control-hard-drop,
+.control-pause,
 .control-restart {
   grid-column: span 2;
 }

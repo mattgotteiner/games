@@ -42,6 +42,30 @@ test('plays Block Drop with touch and keyboard across phone orientations', async
     initialPreviewGrid,
   )
 
+  const pause = page.getByRole('button', { name: 'Pause game' })
+  await pause.click()
+  await expect(page.getByText('Paused')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Move left' })).toBeDisabled()
+  await expect(page.getByRole('button', { name: 'Hard drop' })).toBeDisabled()
+  await expect(page.getByRole('button', { name: 'Restart game' })).toBeEnabled()
+  const pausedBoard = await captureBoard()
+  await page.waitForTimeout(900)
+  await page.keyboard.press('ArrowLeft')
+  await page.keyboard.press('Space')
+  expect(await captureBoard()).toBe(pausedBoard)
+
+  await page.keyboard.press('p')
+  await expect(page.getByText('Playing')).toBeVisible()
+  const resumedBoard = await captureBoard()
+  await page.waitForTimeout(400)
+  expect(await captureBoard()).toBe(resumedBoard)
+  await expect.poll(captureBoard, { timeout: 1_000 }).not.toBe(resumedBoard)
+
+  await page.getByRole('button', { name: 'Pause game' }).click()
+  await page.getByRole('button', { name: 'Restart game' }).click()
+  await expect(page.getByText('Playing')).toBeVisible()
+  await expect(page.getByText('Score: 0')).toBeVisible()
+
   const portraitBox = await canvas.boundingBox()
   expect(portraitBox).not.toBeNull()
   expect(portraitBox!.width).toBeLessThanOrEqual(390)

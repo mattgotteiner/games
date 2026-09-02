@@ -1,7 +1,12 @@
 import { fireEvent } from '@testing-library/preact'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { BlockDropController } from './controller'
-import { createEmptyBoard, createGame, type BlockDropState } from './rules'
+import {
+  applyAction,
+  createEmptyBoard,
+  createGame,
+  type BlockDropState,
+} from './rules'
 
 function canvasContext(): CanvasRenderingContext2D {
   return {
@@ -98,6 +103,45 @@ describe('BlockDropController', () => {
     controller.destroy()
   })
 
+  it('freezes paused time and gives resume a fresh gravity interval', () => {
+    const { controller } = createController()
+    frameCallback(0)
+    frameCallback(500)
+    const beforePause = controller.getState()
+
+    fireEvent.keyDown(window, { key: 'p' })
+    expect(controller.getState().status).toBe('paused')
+    frameCallback(10_000)
+    frameCallback(20_000)
+    expect(controller.getState().active).toEqual(beforePause.active)
+
+    fireEvent.keyDown(window, { key: 'P' })
+    expect(controller.getState().status).toBe('playing')
+    frameCallback(30_000)
+    frameCallback(30_699)
+    expect(controller.getState().active).toEqual(beforePause.active)
+    frameCallback(30_700)
+    expect(controller.getState().active?.y).toBe(
+      (beforePause.active?.y ?? 0) + 1,
+    )
+    controller.destroy()
+  })
+
+  it('restarts while paused and clears gravity timing', () => {
+    const initial = createGame(41)
+    const { controller } = createController(applyAction(initial, 'soft-drop'))
+    frameCallback(0)
+    frameCallback(600)
+    controller.dispatch('pause')
+    controller.dispatch('restart')
+
+    expect(controller.getState()).toEqual(initial)
+    frameCallback(10_000)
+    frameCallback(10_699)
+    expect(controller.getState().active).toEqual(initial.active)
+    controller.destroy()
+  })
+
   it('sizes the backing canvas for DPR and responds to resize observation', () => {
     const { controller } = createController()
     expect(canvas.width).toBe(360)
@@ -146,6 +190,7 @@ describe('BlockDropController', () => {
     expect(cancelFrame).toHaveBeenCalledWith(17)
     expect(disconnect).toHaveBeenCalledOnce()
     fireEvent.keyDown(window, { key: 'ArrowLeft' })
+    fireEvent.keyDown(window, { key: 'p' })
     vi.mocked(container.getBoundingClientRect).mockReturnValue({
       ...container.getBoundingClientRect(),
       width: 100,

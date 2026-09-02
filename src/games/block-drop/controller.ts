@@ -20,6 +20,8 @@ export const KEY_ACTIONS: Readonly<Record<string, GameAction>> = {
   ArrowUp: 'rotate',
   ArrowDown: 'soft-drop',
   ' ': 'hard-drop',
+  p: 'pause',
+  P: 'pause',
   r: 'restart',
   R: 'restart',
 }
@@ -87,7 +89,7 @@ export class BlockDropController {
   dispatch(action: GameAction): void {
     if (this.destroyed) return
     this.state = applyAction(this.state, action)
-    if (action === 'restart') {
+    if (action === 'restart' || action === 'pause') {
       this.elapsed = 0
       this.previousTime = null
     }

@@ -247,6 +247,32 @@ describe('scoring', () => {
 })
 
 describe('game lifecycle', () => {
+  it('toggles pause deterministically and freezes every gameplay transition', () => {
+    const playing = { ...createGame(77), score: 12 }
+    const paused = applyAction(playing, 'pause')
+
+    expect(paused).toEqual({ ...playing, status: 'paused' })
+    for (const action of [
+      'left',
+      'right',
+      'rotate',
+      'soft-drop',
+      'hard-drop',
+    ] as const) {
+      expect(applyAction(paused, action)).toBe(paused)
+    }
+    expect(stepGravity(paused)).toBe(paused)
+    expect(applyAction(paused, 'pause')).toEqual(playing)
+  })
+
+  it('restarts from pause into the deterministic initial state', () => {
+    const initial = createGame(77)
+    const changed = applyAction(initial, 'soft-drop')
+    const paused = applyAction(changed, 'pause')
+
+    expect(applyAction(paused, 'restart')).toEqual(initial)
+  })
+
   it('ends the game when the next piece cannot spawn and ignores gameplay', () => {
     const next: ActivePiece = { type: 'T', rotation: 0, x: 3, y: 0 }
     const spawnCell = getPieceCells(next)[0]
@@ -265,6 +291,7 @@ describe('game lifecycle', () => {
     expect(gameOver.active).toBeNull()
     expect(stepGravity(gameOver)).toBe(gameOver)
     expect(applyAction(gameOver, 'left')).toBe(gameOver)
+    expect(applyAction(gameOver, 'pause')).toBe(gameOver)
   })
 
   it('restarts with a fresh empty board and active piece', () => {

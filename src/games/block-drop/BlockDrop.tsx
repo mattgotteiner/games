@@ -27,13 +27,12 @@ export interface BlockDropProps {
 const createBlockDropController: BlockDropControllerFactory = (...args) =>
   new BlockDropController(...args)
 
-const controls: ReadonlyArray<readonly [GameAction, string, string]> = [
+const gameplayControls: ReadonlyArray<readonly [GameAction, string, string]> = [
   ['left', 'Move left', '←'],
   ['right', 'Move right', '→'],
   ['rotate', 'Rotate clockwise', '↻'],
   ['soft-drop', 'Soft drop', '↓'],
   ['hard-drop', 'Hard drop', 'Drop'],
-  ['restart', 'Restart game', 'Restart'],
 ]
 
 function NextPiece({ type }: { readonly type: Tetromino }) {
@@ -100,6 +99,7 @@ export function BlockDrop({
   }, [controllerFactory])
 
   const act = (action: GameAction) => controller?.dispatch(action)
+  const paused = status === 'paused'
 
   return (
     <main class="block-drop" aria-labelledby="block-drop-heading">
@@ -111,7 +111,11 @@ export function BlockDrop({
           <p class="app-kicker">Falling-block puzzle</p>
           <h1 id="block-drop-heading">Block Drop</h1>
           <p class="game-status" aria-live="polite">
-            {status === 'playing' ? 'Playing' : 'Game over'}
+            {status === 'playing'
+              ? 'Playing'
+              : status === 'paused'
+                ? 'Paused'
+                : 'Game over'}
           </p>
           <p class="game-score" aria-live="polite">
             Score: {score}
@@ -129,20 +133,38 @@ export function BlockDrop({
           />
         </div>
         <div class="game-controls" aria-label="Block Drop controls">
-          {controls.map(([action, label, text]) => (
+          {gameplayControls.map(([action, label, text]) => (
             <button
               class={`control control-${action}`}
               type="button"
               aria-label={label}
-              disabled={controller === null}
+              disabled={controller === null || paused}
               onClick={() => act(action)}
               key={action}
             >
               {text}
             </button>
           ))}
+          <button
+            class="control control-pause"
+            type="button"
+            aria-label={paused ? 'Resume game' : 'Pause game'}
+            disabled={controller === null || status === 'game-over'}
+            onClick={() => act('pause')}
+          >
+            {paused ? 'Resume' : 'Pause'}
+          </button>
+          <button
+            class="control control-restart"
+            type="button"
+            aria-label="Restart game"
+            disabled={controller === null}
+            onClick={() => act('restart')}
+          >
+            Restart
+          </button>
           <p class="key-help">
-            Keys: arrows move and rotate, Space drops, R restarts.
+            Keys: arrows move and rotate, Space drops, P pauses, R restarts.
           </p>
         </div>
       </div>

@@ -57,6 +57,40 @@ describe('App', () => {
     expect(dispatch).toHaveBeenCalledWith('restart')
   })
 
+  it('shows pause state, disables gameplay, and keeps resume and restart available', () => {
+    let publish: ((state: ReturnType<typeof createGame>) => void) | undefined
+    const initial = createGame(5)
+    const dispatch = vi.fn()
+    const factory: BlockDropControllerFactory = (
+      _canvas,
+      _container,
+      onStateChange,
+    ) => {
+      publish = onStateChange
+      return {
+        dispatch,
+        destroy: vi.fn(),
+        getState: () => initial,
+      }
+    }
+
+    render(<BlockDrop onReturn={vi.fn()} controllerFactory={factory} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Pause game' }))
+    expect(dispatch).toHaveBeenCalledWith('pause')
+
+    act(() => publish?.({ ...initial, status: 'paused' }))
+    expect(screen.getByText('Paused')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Move left' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Hard drop' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Resume game' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Restart game' })).toBeEnabled()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Resume game' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Restart game' }))
+    expect(dispatch).toHaveBeenNthCalledWith(2, 'pause')
+    expect(dispatch).toHaveBeenNthCalledWith(3, 'restart')
+  })
+
   it('displays score semantically through play, game over, and restart', () => {
     let publish: ((state: ReturnType<typeof createGame>) => void) | undefined
     const playing = { ...createGame(5), score: 7 }
