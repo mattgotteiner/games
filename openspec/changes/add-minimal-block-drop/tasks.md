@@ -1,6 +1,6 @@
 ## 1. Deterministic Rules Seam
 
-- [ ] 1.1 Implement the immutable seeded Block Drop rules core for the
+- [x] 1.1 Implement the immutable seeded Block Drop rules core for the
   ten-by-twenty board, seven-piece shuffled bags, movement, clockwise rotation,
   gravity, soft and hard drop, locking, simultaneous row clearing, spawning,
   game over, and restart; verify focused unit tests prove bag completeness,
