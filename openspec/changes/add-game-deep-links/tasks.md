@@ -1,6 +1,6 @@
 ## 1. URL Navigation Boundary
 
-- [ ] 1.1 Add typed parsing and URL mutation helpers for catalog and supported
+- [x] 1.1 Add typed parsing and URL mutation helpers for catalog and supported
   game selections; preserve pathname, unrelated parameters, and fragments; verify
   focused unit tests cover valid, absent, empty, invalid, and repository-scoped
   URLs.
