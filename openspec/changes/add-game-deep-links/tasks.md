@@ -15,7 +15,7 @@
 
 ## 3. Production and Offline Verification
 
-- [ ] 3.1 Extend browser coverage for direct repository-scoped entry and
+- [x] 3.1 Extend browser coverage for direct repository-scoped entry and
   Back/Forward navigation, extend the service-worker-controlled flow for offline
   deep-link loads and history traversal, and run the repository's locked
   `npm run check` command.

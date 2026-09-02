@@ -55,14 +55,29 @@ test('launches Block Drop from the repository-scoped app offline', async ({
   expect(new URL(serviceWorker.scriptURL).pathname).toBe('/games/sw.js')
 
   await context.setOffline(true)
-  await page.reload()
-
-  await expect(page.getByRole('heading', { level: 1, name: 'Games' })).toBeVisible()
-  await page.getByRole('button', { name: 'Play Block Drop' }).click()
+  await page.goto('./?game=block-drop')
 
   await expect(
     page.getByRole('heading', { level: 1, name: 'Block Drop' }),
   ).toBeVisible()
+  await expect(page).toHaveURL(/\/games\/\?game=block-drop$/)
+
+  await page.getByRole('button', { name: /catalog/i }).click()
+  await expect(
+    page.getByRole('button', { name: 'Play Block Drop' }),
+  ).toBeVisible()
+  await expect(page).toHaveURL(/\/games\/$/)
+
+  await page.goBack()
+  await expect(
+    page.getByRole('heading', { level: 1, name: 'Block Drop' }),
+  ).toBeVisible()
+  await page.goForward()
+  await expect(
+    page.getByRole('button', { name: 'Play Block Drop' }),
+  ).toBeVisible()
+  await page.goBack()
+
   const canvas = page.getByRole('img', { name: 'Block Drop board' })
   const moveLeft = page.getByRole('button', { name: 'Move left' })
   const score = page.getByText(/^Score:/)

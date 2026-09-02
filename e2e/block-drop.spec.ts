@@ -66,6 +66,7 @@ test('plays Block Drop with touch and keyboard across phone orientations', async
   const touchBoard = await captureBoard()
   expect(touchBoard).not.toBe(keyboardBoard)
 
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur())
   await page.keyboard.press('Space')
   await expect(preview).not.toHaveAttribute('aria-label', initialPreview!)
   await expect(preview.locator('.next-piece-cell.is-filled')).toHaveCount(4)
@@ -80,6 +81,7 @@ test('plays Block Drop with touch and keyboard across phone orientations', async
   await expect(page.getByRole('button', { name: 'Hard drop' })).toBeDisabled()
   await expect(page.getByRole('button', { name: 'Restart game' })).toBeEnabled()
   const pausedBoard = await captureBoard()
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur())
   await page.waitForTimeout(900)
   await page.keyboard.press('ArrowLeft')
   await page.keyboard.press('Space')
@@ -108,5 +110,36 @@ test('plays Block Drop with touch and keyboard across phone orientations', async
   await page.getByRole('button', { name: /catalog/i }).click()
   await expect(
     page.getByRole('button', { name: 'Play Block Drop' }),
+  ).toBeVisible()
+})
+
+test('opens Block Drop directly and follows browser history', async ({ page }) => {
+  await page.goto('./?theme=dark#catalog')
+  await page.getByRole('button', { name: 'Play Block Drop' }).click()
+
+  await expect(page).toHaveURL(
+    /\/games\/\?theme=dark&game=block-drop#catalog$/,
+  )
+  await expect(
+    page.getByRole('heading', { level: 1, name: 'Block Drop' }),
+  ).toBeVisible()
+
+  await page.goBack()
+  await expect(page).toHaveURL(/\/games\/\?theme=dark#catalog$/)
+  await expect(
+    page.getByRole('button', { name: 'Play Block Drop' }),
+  ).toBeVisible()
+
+  await page.goForward()
+  await expect(
+    page.getByRole('heading', { level: 1, name: 'Block Drop' }),
+  ).toBeVisible()
+
+  await page.reload()
+  await expect(page).toHaveURL(
+    /\/games\/\?theme=dark&game=block-drop#catalog$/,
+  )
+  await expect(
+    page.getByRole('heading', { level: 1, name: 'Block Drop' }),
   ).toBeVisible()
 })
