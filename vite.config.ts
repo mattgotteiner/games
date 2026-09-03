@@ -37,7 +37,10 @@ export default defineConfig({
           },
         ],
       },
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
+      workbox: {
+        clientsClaim: true,
+      },
     }),
   ],
 })

@@ -1,8 +1,14 @@
 import { render } from 'preact'
 import { registerSW } from 'virtual:pwa-register'
 import { App } from './App'
+import { createApplicationUpdateController } from './application-update'
 import './global.css'
 
-registerSW({ immediate: true })
+const applicationUpdateController = createApplicationUpdateController(
+  (options) => registerSW(options),
+)
 
-render(<App />, document.getElementById('app')!)
+render(
+  <App applicationUpdateController={applicationUpdateController} />,
+  document.getElementById('app')!,
+)

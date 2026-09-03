@@ -1,11 +1,28 @@
 import { act, fireEvent, render, screen } from '@testing-library/preact'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { App } from './App'
+import type {
+  ApplicationUpdateController,
+  ApplicationUpdateStatus,
+} from './application-update'
 import {
   BlockDrop,
   type BlockDropControllerFactory,
 } from './games/block-drop/BlockDrop'
 import { applyAction, createGame } from './games/block-drop/rules'
+
+function updateController(
+  status: ApplicationUpdateStatus,
+): ApplicationUpdateController {
+  return {
+    getStatus: () => status,
+    start: vi.fn(),
+    subscribe: (listener) => {
+      listener(status)
+      return vi.fn()
+    },
+  }
+}
 
 describe('App', () => {
   beforeEach(() => {
@@ -55,6 +72,30 @@ describe('App', () => {
 
     expect(screen.getByRole('heading', { name: 'Block Drop' })).toBeInTheDocument()
     expect(window.location.href).toContain('/games/?theme=dark&game=block-drop#play')
+  })
+
+  it('keeps update status visible in the catalog and an active game', () => {
+    render(
+      <App
+        applicationUpdateController={updateController('downloading')}
+        blockDropControllerFactory={() => ({
+          dispatch: vi.fn(),
+          destroy: vi.fn(),
+          getState: () => createGame(5),
+        })}
+      />,
+    )
+
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'This copy is out of date',
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Play Block Drop' }))
+
+    expect(screen.getByRole('heading', { name: 'Block Drop' })).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Downloading the latest version',
+    )
+    expect(screen.getByRole('button', { name: 'Move left' })).toBeEnabled()
   })
 
   it('canonicalizes invalid game links without losing unrelated URL data', () => {
