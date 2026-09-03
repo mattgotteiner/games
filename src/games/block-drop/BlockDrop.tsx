@@ -2,10 +2,10 @@ import { useEffect, useRef, useState } from 'preact/hooks'
 import {
   BlockDropController,
   type BlockDropControllerOptions,
+  type BlockDropStateListener,
 } from './controller'
 import {
   getInitialPieceCells,
-  type BlockDropState,
   type GameAction,
   type GameStatus,
   type Tetromino,
@@ -15,7 +15,7 @@ import { TETROMINO_COLORS } from './piece-metadata'
 export type BlockDropControllerFactory = (
   canvas: HTMLCanvasElement,
   container: HTMLElement,
-  onStateChange: (state: BlockDropState) => void,
+  onStateChange: BlockDropStateListener,
   options?: BlockDropControllerOptions,
 ) => Pick<BlockDropController, 'dispatch' | 'destroy' | 'getState'>
 
@@ -27,12 +27,13 @@ export interface BlockDropProps {
 const createBlockDropController: BlockDropControllerFactory = (...args) =>
   new BlockDropController(...args)
 
-const gameplayControls: ReadonlyArray<readonly [GameAction, string, string]> = [
-  ['left', 'Move left', '←'],
-  ['right', 'Move right', '→'],
-  ['rotate', 'Rotate clockwise', '↻'],
-  ['soft-drop', 'Soft drop', '↓'],
-  ['hard-drop', 'Hard drop', 'Drop'],
+const movementControls: ReadonlyArray<
+  readonly [GameAction, string, string, string]
+> = [
+  ['left', 'Move left', '←', 'Left'],
+  ['rotate', 'Rotate clockwise', '↻', 'Rotate'],
+  ['right', 'Move right', '→', 'Right'],
+  ['soft-drop', 'Soft drop', '↓', 'Down'],
 ]
 
 function NextPiece({ type }: { readonly type: Tetromino }) {
@@ -42,7 +43,7 @@ function NextPiece({ type }: { readonly type: Tetromino }) {
 
   return (
     <section class="next-piece" aria-label={`Next piece: ${type} tetromino`}>
-      <p class="next-piece-label">Next: {type}</p>
+      <p class="hud-label">Next</p>
       <div class="next-piece-grid" aria-hidden="true">
         {Array.from({ length: 16 }, (_, index) => {
           const filled = occupied.has(`${index % 4},${Math.floor(index / 4)}`)
@@ -59,6 +60,7 @@ function NextPiece({ type }: { readonly type: Tetromino }) {
           )
         })}
       </div>
+      <p class="next-piece-name">{type} tetromino</p>
     </section>
   )
 }
@@ -76,16 +78,18 @@ export function BlockDrop({
   const [status, setStatus] = useState<GameStatus>('playing')
   const [score, setScore] = useState(0)
   const [next, setNext] = useState<Tetromino>('I')
+  const [clearing, setClearing] = useState(false)
 
   useEffect(() => {
     if (canvasRef.current === null || boardRef.current === null) return
     const controller = controllerFactory(
       canvasRef.current,
       boardRef.current,
-      (state) => {
+      (state, presentation) => {
         setStatus(state.status)
         setScore(state.score)
         setNext(state.next)
+        setClearing(presentation?.clearing ?? false)
       },
     )
     setController(controller)
@@ -100,69 +104,118 @@ export function BlockDrop({
 
   const act = (action: GameAction) => controller?.dispatch(action)
   const paused = status === 'paused'
+  const gameplayDisabled =
+    controller === null || paused || clearing || status === 'game-over'
+  const statusText = clearing
+    ? 'Clearing lines'
+    : status === 'playing'
+      ? 'Playing'
+      : status === 'paused'
+        ? 'Paused'
+        : 'Game over'
 
   return (
     <main class="block-drop" aria-labelledby="block-drop-heading">
       <header class="game-header">
-        <button class="return-button" type="button" onClick={onReturn}>
+        <button
+          class="button-quiet return-button"
+          type="button"
+          onClick={onReturn}
+        >
           ← Catalog
         </button>
-        <div class="game-details">
+        <div class="game-title">
           <p class="app-kicker">Falling-block puzzle</p>
           <h1 id="block-drop-heading">Block Drop</h1>
-          <p class="game-status" aria-live="polite">
-            {status === 'playing'
-              ? 'Playing'
-              : status === 'paused'
-                ? 'Paused'
-                : 'Game over'}
-          </p>
-          <p class="game-score" aria-live="polite">
-            Score: {score}
-          </p>
-          <NextPiece type={next} />
         </div>
       </header>
 
       <div class="game-layout">
-        <div class="board-frame" ref={boardRef}>
-          <canvas
-            ref={canvasRef}
-            aria-label="Block Drop board"
-            role="img"
-          />
-        </div>
-        <div class="game-controls" aria-label="Block Drop controls">
-          {gameplayControls.map(([action, label, text]) => (
-            <button
-              class={`control control-${action}`}
-              type="button"
-              aria-label={label}
-              disabled={controller === null || paused}
-              onClick={() => act(action)}
-              key={action}
+        <div class="game-stage">
+          <div class="board-frame" ref={boardRef}>
+            <canvas
+              ref={canvasRef}
+              aria-label="Block Drop board"
+              role="img"
+            />
+          </div>
+          <aside class="game-hud" aria-label="Game information">
+            <p
+              class="game-score"
+              aria-label={`Score: ${score}`}
+              aria-live="polite"
             >
-              {text}
+              <span class="hud-label">Score</span>
+              <strong class="game-score-value">{score}</strong>
+            </p>
+            <NextPiece type={next} />
+            <p
+              class={`game-status status-${clearing ? 'clearing' : status}`}
+              aria-live="polite"
+            >
+              <span class="status-dot" aria-hidden="true" />
+              {statusText}
+            </p>
+          </aside>
+        </div>
+
+        <div class="game-controls" aria-label="Block Drop controls">
+          <div
+            class="control-group movement-controls"
+            role="group"
+            aria-label="Movement controls"
+          >
+            {movementControls.map(([action, label, symbol, caption]) => (
+              <button
+                class={`button-control control-${action}`}
+                type="button"
+                aria-label={label}
+                disabled={gameplayDisabled}
+                onClick={() => act(action)}
+                key={action}
+              >
+                <span class="control-symbol" aria-hidden="true">
+                  {symbol}
+                </span>
+                <span class="control-caption">{caption}</span>
+              </button>
+            ))}
+          </div>
+          <div
+            class="control-group action-controls"
+            role="group"
+            aria-label="Game actions"
+          >
+            <button
+              class="button-primary control-hard-drop"
+              type="button"
+              aria-label="Hard drop"
+              disabled={gameplayDisabled}
+              onClick={() => act('hard-drop')}
+            >
+              Drop
             </button>
-          ))}
-          <button
-            class="control control-pause"
-            type="button"
-            aria-label={paused ? 'Resume game' : 'Pause game'}
-            disabled={controller === null || status === 'game-over'}
-            onClick={() => act('pause')}
-          >
-            {paused ? 'Resume' : 'Pause'}
-          </button>
-          <button
-            class="control control-restart"
-            type="button"
-            aria-label="Restart game"
-            disabled={controller === null}
-            onClick={() => act('restart')}
-          >
-            Restart
-          </button>
+            <button
+              class="button-secondary control-pause"
+              type="button"
+              aria-label={paused ? 'Resume game' : 'Pause game'}
+              disabled={
+                controller === null || status === 'game-over' || clearing
+              }
+              onClick={() => act('pause')}
+            >
+              {paused ? 'Resume' : 'Pause'}
+            </button>
+            <button
+              class="button-quiet control-restart"
+              type="button"
+              aria-label="Restart game"
+              disabled={controller === null}
+              onClick={() => act('restart')}
+            >
+              Restart
+            </button>
+          </div>
           <p class="key-help">
             Keys: arrows move and rotate, Space drops, P pauses, R restarts.
           </p>

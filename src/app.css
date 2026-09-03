@@ -1,5 +1,5 @@
 .app-shell {
-  width: min(100%, 72rem);
+  width: min(100%, 78rem);
   min-height: 100dvh;
   margin: 0 auto;
   padding:
@@ -194,15 +194,60 @@ h1 {
 }
 
 button {
+  min-width: 2.75rem;
   min-height: 2.75rem;
-  border: 0;
-  border-radius: 0.75rem;
-  padding: 0.7rem 1rem;
-  color: #07111f;
-  background: #67e8f9;
+  border: 1px solid transparent;
+  border-radius: 0.8rem;
+  padding: 0.65rem 1rem;
   font-weight: 800;
+  line-height: 1.1;
   cursor: pointer;
   touch-action: manipulation;
+  transition:
+    color 120ms ease,
+    background-color 120ms ease,
+    border-color 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.button-primary {
+  color: #07111f;
+  background: #67e8f9;
+  box-shadow: 0 0.4rem 1.2rem rgb(34 211 238 / 18%);
+}
+
+.button-secondary {
+  border-color: #3e5c82;
+  color: #eff6ff;
+  background: #1e3049;
+}
+
+.button-quiet {
+  border-color: #2d4768;
+  color: #cbd5e1;
+  background: #101f34;
+}
+
+.button-control {
+  display: grid;
+  min-width: 0;
+  place-items: center;
+  gap: 0.1rem;
+  border-color: #355373;
+  padding: 0.35rem;
+  color: #e0f2fe;
+  background: #162942;
+}
+
+button:active:not(:disabled) {
+  box-shadow: inset 0 0 0 999px rgb(7 17 31 / 18%);
+}
+
+button:disabled {
+  border-style: dashed;
+  opacity: 0.46;
+  cursor: not-allowed;
+  filter: saturate(0.35);
 }
 
 .game-shell {
@@ -214,76 +259,59 @@ button {
 
 .block-drop {
   display: grid;
-  min-height: calc(100dvh - 2rem);
+  height: calc(100dvh - 2rem);
+  min-height: 0;
   grid-template-rows: auto minmax(0, 1fr);
-  gap: 1rem;
+  gap: clamp(0.65rem, 2vw, 1rem);
 }
 
 .game-header {
   display: flex;
   align-items: center;
-  gap: clamp(1rem, 4vw, 2rem);
+  gap: clamp(0.75rem, 3vw, 1.5rem);
+}
+
+.game-title {
+  min-width: 0;
 }
 
 .game-header h1 {
   margin: 0;
-  font-size: clamp(2rem, 8vw, 4rem);
+  font-size: clamp(2rem, 5vw, 3.35rem);
+  line-height: 0.95;
 }
 
 .game-header .app-kicker {
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.2rem;
 }
 
 .return-button {
   flex: 0 0 auto;
-  color: #f8fafc;
-  background: #1e3049;
-}
-
-.game-status,
-.game-score,
-.next-piece-label {
-  margin: 0.25rem 0 0;
-  color: #bac7d9;
-  font-weight: 700;
-}
-
-.next-piece {
-  margin-top: 0.5rem;
-}
-
-.next-piece-grid {
-  display: grid;
-  width: 4.5rem;
-  aspect-ratio: 1;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 0.12rem;
-}
-
-.next-piece-cell {
-  border-radius: 0.15rem;
-  background: rgb(148 163 184 / 10%);
-}
-
-.next-piece-cell.is-filled {
-  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 24%);
-}
-
-.game-details {
-  min-width: 0;
 }
 
 .game-layout {
   display: grid;
   min-height: 0;
   grid-template-rows: minmax(12rem, 1fr) auto;
-  gap: 1rem;
+  gap: clamp(0.65rem, 2vw, 1rem);
+}
+
+.game-stage {
+  display: grid;
+  min-height: 0;
+  grid-template-areas: "board hud";
+  grid-template-columns: minmax(12rem, 1fr) clamp(11rem, 19vw, 14rem);
+  gap: clamp(0.75rem, 2vw, 1.25rem);
 }
 
 .board-frame {
   display: grid;
   min-height: 0;
+  grid-area: board;
   place-items: center;
+  border: 1px solid rgb(45 71 104 / 55%);
+  border-radius: 1rem;
+  background: radial-gradient(circle at 50% 45%, #132641, #091525 70%);
 }
 
 .board-frame canvas {
@@ -292,28 +320,225 @@ button {
   max-height: 100%;
   border-radius: 0.5rem;
   box-shadow:
-    0 0 0 2px #2d4768,
+    0 0 0 2px #3a5b83,
     0 1rem 3rem rgb(0 0 0 / 35%);
+}
+
+.game-hud {
+  display: flex;
+  min-width: 0;
+  grid-area: hud;
+  flex-direction: column;
+  justify-content: center;
+  gap: clamp(0.8rem, 2vh, 1.35rem);
+  border: 1px solid #2d4768;
+  border-radius: 1rem;
+  padding: clamp(0.85rem, 2vw, 1.25rem);
+  background:
+    linear-gradient(160deg, rgb(25 48 79 / 96%), rgb(12 27 47 / 96%));
+  box-shadow: 0 1rem 2.5rem rgb(0 0 0 / 22%);
+}
+
+.hud-label {
+  display: block;
+  margin: 0 0 0.25rem;
+  color: #7dd3fc;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.game-score {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.game-score-value {
+  display: block;
+  overflow: hidden;
+  color: #f8fafc;
+  font-size: clamp(3rem, 7vw, 5rem);
+  line-height: 0.9;
+  letter-spacing: -0.06em;
+  text-overflow: ellipsis;
+}
+
+.next-piece {
+  display: grid;
+  justify-items: start;
+}
+
+.next-piece-grid {
+  display: grid;
+  width: clamp(6rem, 10vw, 8rem);
+  aspect-ratio: 1;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.18rem;
+}
+
+.next-piece-cell {
+  border-radius: 0.22rem;
+  background: rgb(148 163 184 / 10%);
+}
+
+.next-piece-cell.is-filled {
+  box-shadow:
+    inset 0 0 0 1px rgb(255 255 255 / 28%),
+    0 0.25rem 0.65rem rgb(0 0 0 / 22%);
+}
+
+.next-piece-name {
+  margin: 0.35rem 0 0;
+  color: #dbeafe;
+  font-size: 0.8rem;
+  font-weight: 750;
+}
+
+.game-status {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0;
+  color: #cbd5e1;
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.status-dot {
+  width: 0.6rem;
+  height: 0.6rem;
+  flex: 0 0 auto;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  background: #4ade80;
+}
+
+.status-paused .status-dot {
+  background: #fbbf24;
+}
+
+.status-game-over .status-dot {
+  background: #fb7185;
+}
+
+.status-clearing .status-dot {
+  background: #f8fafc;
+  animation: clear-status-pulse 180ms ease-in-out infinite alternate;
+}
+
+@keyframes clear-status-pulse {
+  to {
+    box-shadow: 0 0 0 0.3rem rgb(125 211 252 / 24%);
+  }
 }
 
 .game-controls {
   display: grid;
-  grid-template-columns: repeat(4, minmax(3rem, 1fr));
+  grid-template-columns: minmax(0, 1.15fr) minmax(15rem, 0.85fr);
   gap: 0.55rem;
 }
 
-.control-hard-drop,
-.control-pause,
-.control-restart {
-  grid-column: span 2;
+.control-group {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.movement-controls {
+  grid-template-columns: repeat(4, minmax(3rem, 1fr));
+}
+
+.action-controls {
+  grid-template-columns: repeat(3, minmax(4rem, 1fr));
+}
+
+.control-symbol {
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+.control-caption {
+  font-size: 0.65rem;
+  font-weight: 800;
 }
 
 .key-help {
   grid-column: 1 / -1;
-  margin: 0.15rem 0 0;
+  margin: 0.05rem 0 0;
   color: #8fa1b9;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   text-align: center;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .button-primary:hover:not(:disabled) {
+    background: #a5f3fc;
+    box-shadow: 0 0.5rem 1.4rem rgb(34 211 238 / 28%);
+  }
+
+  .button-secondary:hover:not(:disabled),
+  .button-control:hover:not(:disabled) {
+    border-color: #67e8f9;
+    background: #254260;
+  }
+
+  .button-quiet:hover:not(:disabled) {
+    border-color: #5b789d;
+    color: #f8fafc;
+    background: #192d47;
+  }
+}
+
+@media (max-width: 42rem) {
+  .game-stage {
+    grid-template-areas:
+      "hud"
+      "board";
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(10rem, 1fr);
+  }
+
+  .game-hud {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: auto auto;
+    gap: 0.3rem 1rem;
+    padding: 0.65rem 0.85rem;
+  }
+
+  .game-score {
+    grid-column: 1;
+    grid-row: 1;
+    align-self: end;
+  }
+
+  .game-score-value {
+    font-size: clamp(2.6rem, 12vw, 3.6rem);
+  }
+
+  .next-piece {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    align-self: center;
+  }
+
+  .next-piece-grid {
+    width: clamp(4.25rem, 16vw, 5.25rem);
+  }
+
+  .next-piece-name {
+    display: none;
+  }
+
+  .game-status {
+    grid-column: 1;
+    grid-row: 2;
+    align-self: start;
+  }
+
+  .game-controls {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 @media (max-width: 32rem) {
@@ -323,30 +548,21 @@ button {
     gap: 1.25rem;
   }
 
+  .play-button {
+    width: 100%;
+  }
+
   .game-header {
-    align-items: flex-start;
-    gap: 0.75rem;
+    align-items: center;
+    gap: 0.65rem;
   }
 
-  .game-details {
-    display: grid;
-    flex: 1;
-    grid-template-columns: minmax(0, 1fr) auto;
-    column-gap: 0.5rem;
+  .game-header h1 {
+    font-size: clamp(1.9rem, 9vw, 2.6rem);
   }
 
-  .game-details > :not(.next-piece) {
-    grid-column: 1;
-  }
-
-  .game-details .next-piece {
-    grid-column: 2;
-    grid-row: 1 / span 4;
-    margin-top: 0;
-  }
-
-  .game-details .next-piece-grid {
-    width: clamp(3.5rem, 18vw, 4.5rem);
+  .game-header .app-kicker {
+    font-size: 0.65rem;
   }
 }
 
@@ -373,38 +589,90 @@ button {
   }
 
   .block-drop {
-    min-height: calc(100dvh - 1rem);
-    grid-template-columns: auto minmax(0, 1fr);
+    height: calc(100dvh - 1rem);
+    grid-template-columns: clamp(6.25rem, 17vw, 8.5rem) minmax(0, 1fr);
     grid-template-rows: minmax(0, 1fr);
   }
 
   .game-header {
-    width: 9rem;
     align-items: flex-start;
     flex-direction: column;
   }
 
-  .game-details {
-    display: block;
+  .game-header h1 {
+    font-size: clamp(1.8rem, 9vh, 2.5rem);
   }
 
-  .game-header h1 {
-    font-size: clamp(1.8rem, 9vh, 2.6rem);
+  .return-button {
+    padding-right: 0.55rem;
+    padding-left: 0.55rem;
+    font-size: 0.8rem;
   }
 
   .game-layout {
-    grid-template-columns: minmax(8rem, 1fr) minmax(10rem, 0.75fr);
+    grid-template-columns: minmax(0, 1fr) clamp(8.5rem, 24vw, 11rem);
     grid-template-rows: minmax(0, 1fr);
+  }
+
+  .game-stage {
+    grid-template-areas: "board hud";
+    grid-template-columns: minmax(4.5rem, 1fr) clamp(5.5rem, 16vw, 8rem);
+    grid-template-rows: minmax(0, 1fr);
+    gap: 0.5rem;
+  }
+
+  .game-hud {
+    display: flex;
+    padding: 0.55rem;
+  }
+
+  .game-score-value {
+    font-size: clamp(2.25rem, 11vh, 3rem);
+  }
+
+  .next-piece-grid {
+    width: clamp(3.25rem, 18vh, 4.75rem);
+  }
+
+  .next-piece-name {
+    display: block;
+    font-size: 0.65rem;
   }
 
   .game-controls {
     align-content: center;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .movement-controls {
     grid-template-columns: repeat(2, minmax(3rem, 1fr));
+  }
+
+  .action-controls {
+    grid-template-columns: repeat(2, minmax(4rem, 1fr));
+  }
+
+  .control-hard-drop {
+    grid-column: 1 / -1;
+  }
+
+  .key-help {
+    display: none;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .application-update-indicator {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+
+  .application-update-indicator,
+  .status-clearing .status-dot {
     animation: none;
   }
 }

@@ -4,6 +4,7 @@ import {
   BOARD_WIDTH,
   TETROMINOES,
   applyAction,
+  applyActionWithEvents,
   createEmptyBoard,
   createGame,
   getInitialPieceCells,
@@ -11,6 +12,7 @@ import {
   restart,
   shuffleBag,
   stepGravity,
+  stepGravityWithEvents,
   type ActivePiece,
   type BlockDropState,
   type Board,
@@ -171,6 +173,36 @@ describe('descent and locking', () => {
 
     expect(cleared.board.flat().every((cell) => cell === null)).toBe(true)
     expect(cleared.board).toHaveLength(BOARD_HEIGHT)
+  })
+
+  it('reports exact completed rows with the board before collapse', () => {
+    const rows = createEmptyBoard().map((row) => [...row])
+    for (const y of [18, 19]) {
+      for (let x = 0; x < BOARD_WIDTH; x += 1) {
+        if (x !== 4 && x !== 5) rows[y][x] = 'J'
+      }
+    }
+    const initial = stateWith(
+      { type: 'O', rotation: 0, x: 3, y: 18 },
+      rows,
+    )
+
+    const result = stepGravityWithEvents(initial)
+
+    expect(result.lineClear?.rows).toEqual([18, 19])
+    expect(result.lineClear?.board[18].every((cell) => cell !== null)).toBe(true)
+    expect(result.lineClear?.board[19].every((cell) => cell !== null)).toBe(true)
+    expect(result.state).toEqual(stepGravity(initial))
+    expect(result.state.score).toBe(300)
+  })
+
+  it('omits clear metadata for transitions that do not complete a row', () => {
+    const initial = createGame(8)
+
+    expect(stepGravityWithEvents(initial)).toEqual({
+      state: stepGravity(initial),
+    })
+    expect(applyActionWithEvents(initial, 'hard-drop').lineClear).toBeUndefined()
   })
 })
 

@@ -34,6 +34,16 @@ export interface BlockDropState {
   readonly score: number
 }
 
+export interface LineClearEvent {
+  readonly rows: ReadonlyArray<number>
+  readonly board: Board
+}
+
+export interface BlockDropTransition {
+  readonly state: BlockDropState
+  readonly lineClear?: LineClearEvent
+}
+
 export interface Point {
   readonly x: number
   readonly y: number
@@ -227,24 +237,30 @@ const LINE_CLEAR_SCORES: Readonly<Record<number, number>> = {
 
 function clearFullRows(board: Board): {
   readonly board: Board
-  readonly rowsCleared: number
+  readonly completedRows: ReadonlyArray<number>
 } {
+  const completedRows = board.flatMap((row, y) =>
+    row.every((cell) => cell !== null) ? [y] : [],
+  )
   const remaining = board.filter((row) => row.some((cell) => cell === null))
-  const rowsCleared = BOARD_HEIGHT - remaining.length
   return {
     board: [
-      ...Array.from({ length: rowsCleared }, () =>
+      ...Array.from({ length: completedRows.length }, () =>
         Array<Cell>(BOARD_WIDTH).fill(null),
       ),
       ...remaining,
     ],
-    rowsCleared,
+    completedRows,
   }
 }
 
-function lockActive(state: BlockDropState): BlockDropState {
+function transition(state: BlockDropState): BlockDropTransition {
+  return { state }
+}
+
+function lockActive(state: BlockDropState): BlockDropTransition {
   if (state.active === null) {
-    return state
+    return transition(state)
   }
 
   const board = state.board.map((row) => [...row])
@@ -252,13 +268,23 @@ function lockActive(state: BlockDropState): BlockDropState {
     board[y][x] = state.active.type
   }
   const cleared = clearFullRows(board)
-
-  return spawnNext({
+  const nextState = spawnNext({
     ...state,
     board: cleared.board,
     active: null,
-    score: state.score + (LINE_CLEAR_SCORES[cleared.rowsCleared] ?? 0),
+    score:
+      state.score + (LINE_CLEAR_SCORES[cleared.completedRows.length] ?? 0),
   })
+
+  return cleared.completedRows.length === 0
+    ? transition(nextState)
+    : {
+        state: nextState,
+        lineClear: {
+          rows: cleared.completedRows,
+          board,
+        },
+      }
 }
 
 function tryActive(
@@ -272,17 +298,23 @@ function tryActive(
   return isValidPiece(state.board, active) ? { ...state, active } : state
 }
 
-export function stepGravity(state: BlockDropState): BlockDropState {
+export function stepGravityWithEvents(
+  state: BlockDropState,
+): BlockDropTransition {
   if (state.status !== 'playing' || state.active === null) {
-    return state
+    return transition(state)
   }
   const moved = tryActive(state, (piece) => ({ ...piece, y: piece.y + 1 }))
-  return moved === state ? lockActive(state) : moved
+  return moved === state ? lockActive(state) : transition(moved)
 }
 
-function hardDrop(state: BlockDropState): BlockDropState {
+export function stepGravity(state: BlockDropState): BlockDropState {
+  return stepGravityWithEvents(state).state
+}
+
+function hardDrop(state: BlockDropState): BlockDropTransition {
   if (state.active === null) {
-    return state
+    return transition(state)
   }
 
   let dropped = state
@@ -297,9 +329,11 @@ function hardDrop(state: BlockDropState): BlockDropState {
   }
 }
 
-function softDrop(state: BlockDropState): BlockDropState {
+function softDrop(state: BlockDropState): BlockDropTransition {
   const moved = tryActive(state, (piece) => ({ ...piece, y: piece.y + 1 }))
-  return moved === state ? lockActive(state) : { ...moved, score: state.score + 1 }
+  return moved === state
+    ? lockActive(state)
+    : transition({ ...moved, score: state.score + 1 })
 }
 
 export function restart(state: BlockDropState): BlockDropState {
@@ -310,33 +344,46 @@ export function applyAction(
   state: BlockDropState,
   action: GameAction,
 ): BlockDropState {
+  return applyActionWithEvents(state, action).state
+}
+
+export function applyActionWithEvents(
+  state: BlockDropState,
+  action: GameAction,
+): BlockDropTransition {
   if (action === 'restart') {
-    return restart(state)
+    return transition(restart(state))
   }
   if (action === 'pause') {
-    if (state.status === 'game-over') return state
-    return {
+    if (state.status === 'game-over') return transition(state)
+    return transition({
       ...state,
       status: state.status === 'playing' ? 'paused' : 'playing',
-    }
+    })
   }
   if (state.status === 'paused') {
-    return state
+    return transition(state)
   }
   if (state.status === 'game-over') {
-    return state
+    return transition(state)
   }
 
   switch (action) {
     case 'left':
-      return tryActive(state, (piece) => ({ ...piece, x: piece.x - 1 }))
+      return transition(
+        tryActive(state, (piece) => ({ ...piece, x: piece.x - 1 })),
+      )
     case 'right':
-      return tryActive(state, (piece) => ({ ...piece, x: piece.x + 1 }))
+      return transition(
+        tryActive(state, (piece) => ({ ...piece, x: piece.x + 1 })),
+      )
     case 'rotate':
-      return tryActive(state, (piece) => ({
-        ...piece,
-        rotation: (piece.rotation + 1) % 4,
-      }))
+      return transition(
+        tryActive(state, (piece) => ({
+          ...piece,
+          rotation: (piece.rotation + 1) % 4,
+        })),
+      )
     case 'soft-drop':
       return softDrop(state)
     case 'hard-drop':

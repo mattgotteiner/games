@@ -103,7 +103,11 @@ export function App({
                     Shape a clear path through a bright stack of falling blocks.
                   </p>
                 </div>
-                <button type="button" onClick={() => navigate('block-drop')}>
+                <button
+                  class="button-primary play-button"
+                  type="button"
+                  onClick={() => navigate('block-drop')}
+                >
                   Play Block Drop
                 </button>
               </li>

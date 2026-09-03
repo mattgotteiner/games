@@ -1,7 +1,11 @@
 import { fireEvent } from '@testing-library/preact'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { BlockDropController } from './controller'
 import {
+  BlockDropController,
+  type BlockDropControllerOptions,
+} from './controller'
+import {
+  BOARD_WIDTH,
   applyAction,
   createEmptyBoard,
   createGame,
@@ -32,9 +36,22 @@ function gameOverState(): BlockDropState {
   }
 }
 
+function lineClearState(): BlockDropState {
+  const board = createEmptyBoard().map((row) => [...row])
+  for (let x = 0; x < BOARD_WIDTH; x += 1) {
+    if (x !== 4 && x !== 5) board[19][x] = 'J'
+  }
+  return {
+    ...createGame(41),
+    board,
+    active: { type: 'O', rotation: 0, x: 3, y: 18 },
+  }
+}
+
 describe('BlockDropController', () => {
   let canvas: HTMLCanvasElement
   let container: HTMLDivElement
+  let context: CanvasRenderingContext2D
   let resizeCallback: ResizeObserverCallback
   let disconnect: ReturnType<typeof vi.fn>
   let cancelFrame: ReturnType<typeof vi.fn<(handle: number) => void>>
@@ -45,7 +62,8 @@ describe('BlockDropController', () => {
     canvas = document.createElement('canvas')
     container = document.createElement('div')
     container.append(canvas)
-    vi.spyOn(canvas, 'getContext').mockReturnValue(canvasContext())
+    context = canvasContext()
+    vi.spyOn(canvas, 'getContext').mockReturnValue(context)
     vi.spyOn(container, 'getBoundingClientRect').mockReturnValue({
       width: 180,
       height: 360,
@@ -62,7 +80,10 @@ describe('BlockDropController', () => {
     pixelRatio = 2
   })
 
-  function createController(initialState = createGame(41)) {
+  function createController(
+    initialState = createGame(41),
+    options: Partial<BlockDropControllerOptions> = {},
+  ) {
     const onStateChange = vi.fn()
     const controller = new BlockDropController(
       canvas,
@@ -71,6 +92,7 @@ describe('BlockDropController', () => {
       {
         initialState,
         devicePixelRatio: () => pixelRatio,
+        reducedMotion: () => false,
         requestFrame: vi.fn((callback: FrameRequestCallback) => {
           frameCallback = callback
           return 17
@@ -84,6 +106,7 @@ describe('BlockDropController', () => {
             disconnect,
           } as unknown as ResizeObserver
         },
+        ...options,
       },
     )
     return { controller, onStateChange }
@@ -190,6 +213,7 @@ describe('BlockDropController', () => {
     expect(controller.getState().board.flat().every((cell) => cell === null)).toBe(true)
     expect(onStateChange).toHaveBeenLastCalledWith(
       expect.objectContaining({ status: 'playing' }),
+      { clearing: false },
     )
     controller.destroy()
   })
@@ -213,5 +237,95 @@ describe('BlockDropController', () => {
     fireEvent(window, new Event('resize'))
     expect(controller.getState()).toBe(before)
     expect(canvas.width).toBe(width)
+  })
+
+  it('animates the exact completed rows before presenting the collapsed board', () => {
+    const { controller, onStateChange } = createController(lineClearState())
+
+    controller.dispatch('hard-drop')
+
+    expect(canvas.dataset.clearingRows).toBe('19')
+    expect(onStateChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({ score: 100 }),
+      { clearing: true },
+    )
+    expect(vi.mocked(context.fillRect)).toHaveBeenCalledWith(0, 342, 180, 18)
+
+    frameCallback(1_000)
+    frameCallback(1_090)
+    expect(canvas.dataset.clearingRows).toBe('19')
+    frameCallback(1_180)
+
+    expect(canvas.dataset.clearingRows).toBeUndefined()
+    expect(onStateChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({ score: 100 }),
+      { clearing: false },
+    )
+    controller.destroy()
+  })
+
+  it('gates gameplay during a clear and resumes with fresh gravity timing', () => {
+    const { controller } = createController(lineClearState())
+    controller.dispatch('hard-drop')
+    const cleared = controller.getState()
+
+    for (const action of [
+      'left',
+      'right',
+      'rotate',
+      'soft-drop',
+      'hard-drop',
+      'pause',
+    ] as const) {
+      controller.dispatch(action)
+      expect(controller.getState()).toBe(cleared)
+    }
+
+    frameCallback(0)
+    frameCallback(180)
+    frameCallback(879)
+    expect(controller.getState().active).toEqual(cleared.active)
+    frameCallback(880)
+    expect(controller.getState().active?.y).toBe((cleared.active?.y ?? 0) + 1)
+    controller.destroy()
+  })
+
+  it('lets restart cancel active clear feedback immediately', () => {
+    const initial = lineClearState()
+    const { controller, onStateChange } = createController(initial)
+    controller.dispatch('hard-drop')
+
+    controller.dispatch('restart')
+
+    expect(controller.getState()).toEqual(createGame(initial.initialSeed))
+    expect(canvas.dataset.clearingRows).toBeUndefined()
+    expect(onStateChange).toHaveBeenLastCalledWith(controller.getState(), {
+      clearing: false,
+    })
+    controller.destroy()
+  })
+
+  it('skips animated feedback when reduced motion is preferred', () => {
+    const { controller, onStateChange } = createController(lineClearState(), {
+      reducedMotion: () => true,
+    })
+
+    controller.dispatch('hard-drop')
+
+    expect(controller.getState().score).toBe(100)
+    expect(canvas.dataset.clearingRows).toBeUndefined()
+    expect(onStateChange).toHaveBeenLastCalledWith(controller.getState(), {
+      clearing: false,
+    })
+    controller.destroy()
+  })
+
+  it('cleans up active clear feedback during teardown', () => {
+    const { controller } = createController(lineClearState())
+    controller.dispatch('hard-drop')
+
+    controller.destroy()
+
+    expect(canvas.dataset.clearingRows).toBeUndefined()
   })
 })

@@ -9,6 +9,7 @@ import {
   BlockDrop,
   type BlockDropControllerFactory,
 } from './games/block-drop/BlockDrop'
+import type { BlockDropStateListener } from './games/block-drop/controller'
 import { applyAction, createGame } from './games/block-drop/rules'
 
 function updateController(
@@ -160,6 +161,8 @@ describe('App', () => {
 
     render(<BlockDrop onReturn={vi.fn()} controllerFactory={factory} />)
     expect(screen.getByText('Game over')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Move left' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Hard drop' })).toBeDisabled()
     fireEvent.click(screen.getByRole('button', { name: 'Restart game' }))
     expect(dispatch).toHaveBeenCalledWith('restart')
   })
@@ -215,17 +218,20 @@ describe('App', () => {
     }
 
     render(<BlockDrop onReturn={vi.fn()} controllerFactory={factory} />)
-    expect(screen.getByText('Score: 7')).toBeInTheDocument()
+    expect(screen.getByLabelText('Score: 7')).toBeInTheDocument()
+    expect(
+      screen.getByRole('complementary', { name: 'Game information' }),
+    ).toBeInTheDocument()
 
     act(() =>
       publish?.({ ...playing, active: null, status: 'game-over', score: 42 }),
     )
     expect(screen.getByText('Game over')).toBeInTheDocument()
-    expect(screen.getByText('Score: 42')).toBeInTheDocument()
+    expect(screen.getByLabelText('Score: 42')).toBeInTheDocument()
 
     act(() => publish?.(createGame(5)))
     expect(screen.getByText('Playing')).toBeInTheDocument()
-    expect(screen.getByText('Score: 0')).toBeInTheDocument()
+    expect(screen.getByLabelText('Score: 0')).toBeInTheDocument()
   })
 
   it('renders an accessible four-by-four preview and updates it after a lock', () => {
@@ -251,7 +257,7 @@ describe('App', () => {
       screen.getByRole('region', {
         name: `Next piece: ${initial.next} tetromino`,
       }),
-    ).toHaveTextContent(`Next: ${initial.next}`)
+    ).toHaveTextContent(`${initial.next} tetromino`)
     expect(container.querySelectorAll('.next-piece-cell')).toHaveLength(16)
     expect(
       container.querySelectorAll('.next-piece-cell.is-filled'),
@@ -264,9 +270,40 @@ describe('App', () => {
       screen.getByRole('region', {
         name: `Next piece: ${locked.next} tetromino`,
       }),
-    ).toHaveTextContent(`Next: ${locked.next}`)
+    ).toHaveTextContent(`${locked.next} tetromino`)
     expect(
       container.querySelectorAll('.next-piece-cell.is-filled'),
     ).toHaveLength(4)
+  })
+
+  it('announces clear feedback and disables gameplay until it finishes', () => {
+    let publish: BlockDropStateListener | undefined
+    const initial = createGame(5)
+    const factory: BlockDropControllerFactory = (
+      _canvas,
+      _container,
+      onStateChange,
+    ) => {
+      publish = onStateChange
+      return {
+        dispatch: vi.fn(),
+        destroy: vi.fn(),
+        getState: () => initial,
+      }
+    }
+
+    render(<BlockDrop onReturn={vi.fn()} controllerFactory={factory} />)
+    act(() => publish?.({ ...initial, score: 100 }, { clearing: true }))
+
+    expect(screen.getByText('Clearing lines')).toBeInTheDocument()
+    expect(screen.getByLabelText('Score: 100')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Move left' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Hard drop' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Pause game' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Restart game' })).toBeEnabled()
+
+    act(() => publish?.({ ...initial, score: 100 }, { clearing: false }))
+    expect(screen.getByText('Playing')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Move left' })).toBeEnabled()
   })
 })

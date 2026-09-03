@@ -1,18 +1,20 @@
 import {
   BOARD_HEIGHT,
   BOARD_WIDTH,
-  applyAction,
+  applyActionWithEvents,
   createGame,
   getPieceCells,
-  stepGravity,
+  stepGravityWithEvents,
   type BlockDropState,
   type GameAction,
+  type LineClearEvent,
   type Tetromino,
 } from './rules'
 import { TETROMINO_COLORS } from './piece-metadata'
 
 const GRAVITY_MS = 700
 const MAX_FRAME_MS = GRAVITY_MS * 2
+const LINE_CLEAR_MS = 180
 
 export const KEY_ACTIONS: Readonly<Record<string, GameAction>> = {
   ArrowLeft: 'left',
@@ -35,6 +37,22 @@ export interface BlockDropControllerOptions {
     callback: ResizeObserverCallback,
   ) => ResizeObserver
   readonly devicePixelRatio?: () => number
+  readonly reducedMotion?: () => boolean
+}
+
+export interface BlockDropPresentationState {
+  readonly clearing: boolean
+}
+
+export type BlockDropStateListener = (
+  state: BlockDropState,
+  presentation?: BlockDropPresentationState,
+) => void
+
+interface LineClearEffect {
+  readonly event: LineClearEvent
+  startedAt: number | null
+  progress: number
 }
 
 export class BlockDropController {
@@ -44,16 +62,18 @@ export class BlockDropController {
   private elapsed = 0
   private destroyed = false
   private pixelRatio = 1
+  private lineClearEffect: LineClearEffect | null = null
   private readonly context: CanvasRenderingContext2D
   private readonly requestFrame: typeof requestAnimationFrame
   private readonly cancelFrame: typeof cancelAnimationFrame
   private readonly observer: ResizeObserver
   private readonly devicePixelRatio: () => number
+  private readonly reducedMotion: () => boolean
 
   constructor(
     private readonly canvas: HTMLCanvasElement,
     private readonly container: HTMLElement,
-    private readonly onStateChange: (state: BlockDropState) => void,
+    private readonly onStateChange: BlockDropStateListener,
     options: BlockDropControllerOptions = {},
   ) {
     const context = canvas.getContext('2d')
@@ -70,6 +90,9 @@ export class BlockDropController {
       options.cancelFrame ?? window.cancelAnimationFrame.bind(window)
     this.devicePixelRatio =
       options.devicePixelRatio ?? (() => window.devicePixelRatio || 1)
+    this.reducedMotion =
+      options.reducedMotion ??
+      (() => window.matchMedia('(prefers-reduced-motion: reduce)').matches)
     const createObserver =
       options.createResizeObserver ??
       ((callback: ResizeObserverCallback) => new ResizeObserver(callback))
@@ -88,10 +111,19 @@ export class BlockDropController {
 
   dispatch(action: GameAction): void {
     if (this.destroyed) return
-    this.state = applyAction(this.state, action)
-    if (action === 'restart' || action === 'pause') {
+    if (this.lineClearEffect !== null && action !== 'restart') return
+
+    const result = applyActionWithEvents(this.state, action)
+    this.state = result.state
+    if (action === 'restart') {
+      this.cancelLineClear()
+    }
+    if (action === 'restart' || action === 'pause' || result.lineClear) {
       this.elapsed = 0
       this.previousTime = null
+    }
+    if (result.lineClear && !this.reducedMotion()) {
+      this.startLineClear(result.lineClear)
     }
     this.publish()
   }
@@ -106,6 +138,7 @@ export class BlockDropController {
     window.removeEventListener('keydown', this.handleKeyDown)
     window.removeEventListener('resize', this.handleResize)
     this.observer.disconnect()
+    this.cancelLineClear()
   }
 
   private readonly handleKeyDown = (event: KeyboardEvent): void => {
@@ -134,15 +167,25 @@ export class BlockDropController {
     if (Math.max(1, this.devicePixelRatio()) !== this.pixelRatio) {
       this.resize()
     }
-    if (this.previousTime !== null && this.state.status === 'playing') {
+    if (this.lineClearEffect !== null) {
+      this.advanceLineClear(time)
+    } else if (this.previousTime !== null && this.state.status === 'playing') {
       this.elapsed += Math.min(Math.max(time - this.previousTime, 0), MAX_FRAME_MS)
       let changed = false
       let steps = 0
       while (this.elapsed >= GRAVITY_MS && steps < 2) {
-        this.state = stepGravity(this.state)
+        const result = stepGravityWithEvents(this.state)
+        this.state = result.state
         this.elapsed -= GRAVITY_MS
         changed = true
         steps += 1
+        if (result.lineClear) {
+          this.elapsed = 0
+          if (!this.reducedMotion()) {
+            this.startLineClear(result.lineClear)
+          }
+          break
+        }
       }
       if (changed) this.publish()
     }
@@ -178,7 +221,9 @@ export class BlockDropController {
       this.canvas.height / this.pixelRatio,
       this.pixelRatio,
     )
-    this.onStateChange(this.state)
+    this.onStateChange(this.state, {
+      clearing: this.lineClearEffect !== null,
+    })
   }
 
   private draw(width: number, height: number, ratio: number): void {
@@ -194,13 +239,14 @@ export class BlockDropController {
     context.fillStyle = '#07111f'
     context.fillRect(offsetX, offsetY, boardWidth, boardHeight)
 
+    const board = this.lineClearEffect?.event.board ?? this.state.board
     for (let y = 0; y < BOARD_HEIGHT; y += 1) {
       for (let x = 0; x < BOARD_WIDTH; x += 1) {
-        const locked = this.state.board[y][x]
+        const locked = board[y][x]
         if (locked !== null) this.drawCell(x, y, locked, cell, offsetX, offsetY)
       }
     }
-    if (this.state.active !== null) {
+    if (this.lineClearEffect === null && this.state.active !== null) {
       for (const { x, y } of getPieceCells(this.state.active)) {
         this.drawCell(x, y, this.state.active.type, cell, offsetX, offsetY)
       }
@@ -218,6 +264,14 @@ export class BlockDropController {
       context.lineTo(offsetX + boardWidth, offsetY + y * cell)
     }
     context.stroke()
+
+    if (this.lineClearEffect !== null) {
+      const intensity = 0.3 + Math.sin(this.lineClearEffect.progress * Math.PI) * 0.7
+      context.fillStyle = `rgb(248 250 252 / ${intensity})`
+      for (const row of this.lineClearEffect.event.rows) {
+        context.fillRect(offsetX, offsetY + row * cell, boardWidth, cell)
+      }
+    }
 
     if (this.state.status === 'game-over') {
       context.fillStyle = 'rgb(7 17 31 / 76%)'
@@ -246,5 +300,38 @@ export class BlockDropController {
       size - inset * 2,
       size - inset * 2,
     )
+  }
+
+  private startLineClear(event: LineClearEvent): void {
+    this.lineClearEffect = {
+      event,
+      startedAt: null,
+      progress: 0,
+    }
+    this.canvas.dataset.clearingRows = event.rows.join(',')
+  }
+
+  private advanceLineClear(time: number): void {
+    const effect = this.lineClearEffect
+    if (effect === null) return
+    effect.startedAt ??= time
+    effect.progress = Math.min(1, (time - effect.startedAt) / LINE_CLEAR_MS)
+    if (effect.progress >= 1) {
+      this.cancelLineClear()
+      this.elapsed = 0
+      this.previousTime = time
+      this.publish()
+      return
+    }
+    this.draw(
+      this.canvas.width / this.pixelRatio,
+      this.canvas.height / this.pixelRatio,
+      this.pixelRatio,
+    )
+  }
+
+  private cancelLineClear(): void {
+    this.lineClearEffect = null
+    delete this.canvas.dataset.clearingRows
   }
 }

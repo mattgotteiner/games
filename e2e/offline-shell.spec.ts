@@ -80,10 +80,10 @@ test('launches Block Drop from the repository-scoped app offline', async ({
 
   const canvas = page.getByRole('img', { name: 'Block Drop board' })
   const moveLeft = page.getByRole('button', { name: 'Move left' })
-  const score = page.getByText(/^Score:/)
+  const score = page.locator('.game-score')
   const preview = page.getByRole('region', { name: /Next piece:/ })
   await expect(moveLeft).toBeEnabled()
-  await expect(score).toHaveText('Score: 0')
+  await expect(score).toHaveAttribute('aria-label', 'Score: 0')
   await expect(preview).toBeVisible()
   await expect(preview.locator('.next-piece-cell.is-filled')).toHaveCount(4)
   const initialPreview = await preview.getAttribute('aria-label')
@@ -99,9 +99,9 @@ test('launches Block Drop from the repository-scoped app offline', async ({
     .not.toBe(before)
 
   await page.getByRole('button', { name: 'Soft drop' }).click()
-  await expect(score).toHaveText('Score: 1')
+  await expect(score).toHaveAttribute('aria-label', 'Score: 1')
   await page.getByRole('button', { name: 'Hard drop' }).click()
-  await expect(score).not.toHaveText('Score: 1')
+  await expect(score).not.toHaveAttribute('aria-label', 'Score: 1')
   await expect(preview).not.toHaveAttribute('aria-label', initialPreview!)
 
   await page.getByRole('button', { name: 'Pause game' }).click()
