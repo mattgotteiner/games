@@ -5,6 +5,7 @@ import {
   type BlockDropStateListener,
 } from './controller'
 import {
+  BLOCK_DROP_SCORING,
   getInitialPieceCells,
   type GameAction,
   type GameStatus,
@@ -94,6 +95,42 @@ function NextPiece({ type }: { readonly type: Tetromino }) {
         </span>
       </div>
       <p class="next-piece-name">{type} tetromino</p>
+    </section>
+  )
+}
+
+function ScoringGuide() {
+  return (
+    <section class="scoring-guide" aria-labelledby="scoring-guide-heading">
+      <p class="hud-label" id="scoring-guide-heading">
+        Scoring
+      </p>
+      <dl class="scoring-rules">
+        <div class="scoring-rule">
+          <dt>Soft drop</dt>
+          <dd>+{BLOCK_DROP_SCORING.softDropPerRow} / row</dd>
+        </div>
+        <div class="scoring-rule">
+          <dt>Hard drop</dt>
+          <dd>+{BLOCK_DROP_SCORING.hardDropPerRow} / row</dd>
+        </div>
+        <div class="scoring-rule">
+          <dt>Gravity</dt>
+          <dd>+{BLOCK_DROP_SCORING.gravityPerRow}</dd>
+        </div>
+        <div class="scoring-rule scoring-rule-lines">
+          <dt>Lines cleared</dt>
+          <dd>
+            {Object.entries(BLOCK_DROP_SCORING.lineClears).map(
+              ([count, points]) => (
+              <span key={count}>
+                {count}: +{points}
+              </span>
+              ),
+            )}
+          </dd>
+        </div>
+      </dl>
     </section>
   )
 }
@@ -189,6 +226,7 @@ export function BlockDrop({
               <span class="status-dot" aria-hidden="true" />
               {statusText}
             </p>
+            <ScoringGuide />
           </aside>
         </div>
 

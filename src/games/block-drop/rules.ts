@@ -228,12 +228,17 @@ export function createGame(seed: number): BlockDropState {
   })
 }
 
-const LINE_CLEAR_SCORES: Readonly<Record<number, number>> = {
-  1: 100,
-  2: 300,
-  3: 500,
-  4: 800,
-}
+export const BLOCK_DROP_SCORING = Object.freeze({
+  gravityPerRow: 0,
+  softDropPerRow: 1,
+  hardDropPerRow: 2,
+  lineClears: Object.freeze<Record<number, number>>({
+    1: 100,
+    2: 300,
+    3: 500,
+    4: 800,
+  }),
+})
 
 function clearFullRows(board: Board): {
   readonly board: Board
@@ -273,7 +278,8 @@ function lockActive(state: BlockDropState): BlockDropTransition {
     board: cleared.board,
     active: null,
     score:
-      state.score + (LINE_CLEAR_SCORES[cleared.completedRows.length] ?? 0),
+      state.score +
+      (BLOCK_DROP_SCORING.lineClears[cleared.completedRows.length] ?? 0),
   })
 
   return cleared.completedRows.length === 0
@@ -322,7 +328,11 @@ function hardDrop(state: BlockDropState): BlockDropTransition {
   while (true) {
     const moved = tryActive(dropped, (piece) => ({ ...piece, y: piece.y + 1 }))
     if (moved === dropped) {
-      return lockActive({ ...dropped, score: dropped.score + distance * 2 })
+      return lockActive({
+        ...dropped,
+        score:
+          dropped.score + distance * BLOCK_DROP_SCORING.hardDropPerRow,
+      })
     }
     dropped = moved
     distance += 1
@@ -333,7 +343,10 @@ function softDrop(state: BlockDropState): BlockDropTransition {
   const moved = tryActive(state, (piece) => ({ ...piece, y: piece.y + 1 }))
   return moved === state
     ? lockActive(state)
-    : transition({ ...moved, score: state.score + 1 })
+    : transition({
+        ...moved,
+        score: state.score + BLOCK_DROP_SCORING.softDropPerRow,
+      })
 }
 
 export function restart(state: BlockDropState): BlockDropState {

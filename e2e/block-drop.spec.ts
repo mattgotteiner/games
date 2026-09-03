@@ -85,6 +85,7 @@ async function expectGameFitsViewport(page: import('@playwright/test').Page) {
     page.getByLabel(/^Score:/),
     page.getByText(/^(Playing|Paused|Clearing lines|Game over)$/),
     page.getByRole('region', { name: /Next piece:/ }),
+    page.getByRole('region', { name: 'Scoring' }),
     page.locator('.game-controls'),
   ]
 
@@ -108,6 +109,26 @@ async function expectGameFitsViewport(page: import('@playwright/test').Page) {
       () => document.documentElement.scrollHeight <= window.innerHeight,
     ),
   ).toBe(true)
+}
+
+async function expectScoringGuideVisible(page: import('@playwright/test').Page) {
+  const guide = page.getByRole('region', { name: 'Scoring' })
+  await expect(guide).toBeVisible()
+  for (const text of [
+    'Soft drop',
+    '+1 / row',
+    'Hard drop',
+    '+2 / row',
+    'Gravity',
+    '+0',
+    'Lines cleared',
+    '1: +100',
+    '2: +300',
+    '3: +500',
+    '4: +800',
+  ]) {
+    await expect(guide.getByText(text, { exact: true })).toBeVisible()
+  }
 }
 
 async function expectPreviewCentered(page: import('@playwright/test').Page) {
@@ -189,6 +210,7 @@ test('plays Block Drop with touch and keyboard across phone orientations', async
   )
   await expectPreviewCentered(page)
   await expectMovementOrder(page)
+  await expectScoringGuideVisible(page)
   const initialPreview = await preview.getAttribute('aria-label')
   const initialPreviewGrid = await preview.locator('.next-piece-grid').innerHTML()
 
@@ -263,6 +285,7 @@ test('plays Block Drop with touch and keyboard across phone orientations', async
   await expectGameFitsViewport(page)
   await expectPreviewCentered(page)
   await expectMovementOrder(page, true)
+  await expectScoringGuideVisible(page)
   const landscapeBoard = await canvas.boundingBox()
   const landscapeHud = await page.locator('.game-hud').boundingBox()
   expect(landscapeHud!.x).toBeGreaterThanOrEqual(
@@ -276,6 +299,7 @@ test('plays Block Drop with touch and keyboard across phone orientations', async
   await expectGameFitsViewport(page)
   await expectPreviewCentered(page)
   await expectMovementOrder(page, true)
+  await expectScoringGuideVisible(page)
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= window.innerWidth,
@@ -310,6 +334,7 @@ test('presents a prominent right-side HUD and polished button states', async ({
   const hudBox = await hud.boundingBox()
   expect(hudBox!.x).toBeGreaterThanOrEqual(canvasBox!.x + canvasBox!.width)
   expect((await preview.boundingBox())!.width).toBeGreaterThanOrEqual(96)
+  await expectScoringGuideVisible(page)
   expect(
     Number.parseFloat(
       await page

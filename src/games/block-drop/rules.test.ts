@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  BLOCK_DROP_SCORING,
   BOARD_HEIGHT,
   BOARD_WIDTH,
   TETROMINOES,
@@ -207,6 +208,17 @@ describe('descent and locking', () => {
 })
 
 describe('scoring', () => {
+  it('exposes the immutable scoring definition used by the game', () => {
+    expect(BLOCK_DROP_SCORING).toEqual({
+      gravityPerRow: 0,
+      softDropPerRow: 1,
+      hardDropPerRow: 2,
+      lineClears: { 1: 100, 2: 300, 3: 500, 4: 800 },
+    })
+    expect(Object.isFrozen(BLOCK_DROP_SCORING)).toBe(true)
+    expect(Object.isFrozen(BLOCK_DROP_SCORING.lineClears)).toBe(true)
+  })
+
   it('starts at zero and awards only successful manual drop rows', () => {
     const initial = createGame(8)
     const gravity = stepGravity(initial)

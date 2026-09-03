@@ -419,6 +419,49 @@ button:disabled {
   font-weight: 800;
 }
 
+.scoring-guide {
+  min-width: 0;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgb(125 211 252 / 20%);
+}
+
+.scoring-rules {
+  display: grid;
+  gap: 0.28rem;
+  margin: 0;
+  color: #cbd5e1;
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.scoring-rule {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.5rem;
+}
+
+.scoring-rule dt {
+  min-width: 0;
+}
+
+.scoring-rule dd {
+  margin: 0;
+  color: #f8fafc;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.scoring-rule-lines {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.18rem;
+}
+
+.scoring-rule-lines dd {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.18rem 0.45rem;
+}
+
 .status-dot {
   width: 0.6rem;
   height: 0.6rem;
@@ -550,6 +593,11 @@ button:disabled {
     align-self: start;
   }
 
+  .scoring-guide {
+    grid-column: 1 / -1;
+    grid-row: 3;
+  }
+
   .game-controls {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -637,6 +685,7 @@ button:disabled {
 
   .game-hud {
     display: flex;
+    gap: 0.35rem;
     padding: 0.55rem;
   }
 
@@ -651,6 +700,33 @@ button:disabled {
   .next-piece-name {
     display: block;
     font-size: 0.65rem;
+  }
+
+  .scoring-guide {
+    width: 100%;
+    padding-top: 0.35rem;
+  }
+
+  .scoring-guide .hud-label {
+    margin-bottom: 0.15rem;
+    font-size: 0.55rem;
+  }
+
+  .scoring-rules {
+    gap: 0.1rem;
+    font-size: 0.56rem;
+  }
+
+  .scoring-rule {
+    gap: 0.25rem;
+  }
+
+  .scoring-rule-lines {
+    gap: 0.08rem;
+  }
+
+  .scoring-rule-lines dd {
+    gap: 0.05rem 0.2rem;
   }
 
   .game-controls {

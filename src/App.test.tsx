@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from '@testing-library/preact'
+import { act, fireEvent, render, screen, within } from '@testing-library/preact'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { App } from './App'
 import type {
@@ -234,6 +234,17 @@ describe('App', () => {
     expect(
       screen.getByRole('complementary', { name: 'Game information' }),
     ).toBeInTheDocument()
+    const scoring = screen.getByRole('region', { name: 'Scoring' })
+    expect(within(scoring).getByText('Soft drop')).toBeInTheDocument()
+    expect(within(scoring).getByText('+1 / row')).toBeInTheDocument()
+    expect(within(scoring).getByText('Hard drop')).toBeInTheDocument()
+    expect(within(scoring).getByText('+2 / row')).toBeInTheDocument()
+    expect(within(scoring).getByText('Gravity')).toBeInTheDocument()
+    expect(within(scoring).getByText('+0')).toBeInTheDocument()
+    expect(within(scoring).getByText('Lines cleared')).toBeInTheDocument()
+    for (const value of ['1: +100', '2: +300', '3: +500', '4: +800']) {
+      expect(within(scoring).getByText(value)).toBeInTheDocument()
+    }
 
     act(() =>
       publish?.({ ...playing, active: null, status: 'game-over', score: 42 }),
