@@ -370,16 +370,30 @@ button:disabled {
 }
 
 .next-piece-grid {
+  position: relative;
   display: grid;
   width: clamp(6rem, 10vw, 8rem);
   aspect-ratio: 1;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 0.18rem;
+  grid-template-columns: repeat(6, 1fr);
+  grid-template-rows: repeat(6, 1fr);
 }
 
+.next-piece-grid-cell,
 .next-piece-cell {
+  margin: 0.08rem;
   border-radius: 0.22rem;
+}
+
+.next-piece-grid-cell {
   background: rgb(148 163 184 / 10%);
+}
+
+.next-piece-shape {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  transform: translate(-50%, -50%);
 }
 
 .next-piece-cell.is-filled {
@@ -610,7 +624,7 @@ button:disabled {
   }
 
   .game-layout {
-    grid-template-columns: minmax(0, 1fr) clamp(8.5rem, 24vw, 11rem);
+    grid-template-columns: minmax(0, 1fr) clamp(9.25rem, 26vw, 11rem);
     grid-template-rows: minmax(0, 1fr);
   }
 
@@ -645,7 +659,7 @@ button:disabled {
   }
 
   .movement-controls {
-    grid-template-columns: repeat(2, minmax(3rem, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .action-controls {

@@ -121,7 +121,10 @@ drop points.
 ### Requirement: Next-piece preview
 Block Drop SHALL identify and visualize the exact tetromino that will become
 active after the current piece locks. The preview SHALL use the piece's initial
-orientation and SHALL remain consistent with seeded piece generation.
+orientation, SHALL remain consistent with seeded piece generation, and SHALL
+center the occupied-cell bounds of every supported tetromino horizontally and
+vertically within a preview frame large enough to show the four-cell I piece
+without clipping or changing cell scale.
 
 #### Scenario: Game starts
 - **WHEN** a new game creates its first active piece
@@ -130,6 +133,10 @@ orientation and SHALL remain consistent with seeded piece generation.
 #### Scenario: Active piece locks
 - **WHEN** the active piece locks and the previewed piece enters play
 - **THEN** the preview updates to the subsequent generated piece
+
+#### Scenario: Any supported piece is previewed
+- **WHEN** the next piece is any of the seven supported tetrominoes
+- **THEN** its occupied-cell bounds are centered on the same horizontal and vertical midpoint without clipping
 
 #### Scenario: Preview is inspected semantically
 - **WHEN** a user or assistive technology inspects the next-piece preview
@@ -191,11 +198,15 @@ and the pause control SHALL become a resume control while paused.
 - **THEN** its movement, drop, pause/resume, or restart action is unambiguous without requiring interpretation of an icon alone
 
 ### Requirement: Clear control hierarchy and feedback
-Block Drop SHALL present catalog, navigation, movement, drop, pause, and restart controls with consistent touch-friendly sizing and a visual hierarchy that distinguishes primary gameplay actions from secondary session actions. Every control SHALL expose visible keyboard focus and appropriate hover, pressed, and disabled feedback without relying on color alone.
+Block Drop SHALL present catalog, navigation, movement, drop, pause, and restart controls with consistent touch-friendly sizing and a visual hierarchy that distinguishes primary gameplay actions from secondary session actions. The movement group SHALL present left, right, rotate, and soft drop in that visual and reading order, with left and right adjacent and rotate immediately to the right of right. Every control SHALL expose visible keyboard focus and appropriate hover, pressed, and disabled feedback without relying on color alone.
 
 #### Scenario: User scans the gameplay controls
 - **WHEN** the Block Drop play screen is presented
 - **THEN** related movement and drop controls are visually grouped and pause, restart, and catalog actions are distinguishable from moment-to-moment gameplay actions
+
+#### Scenario: User scans movement controls
+- **WHEN** the movement control group is presented at any supported viewport
+- **THEN** left and right are adjacent, rotate immediately follows right, and soft drop follows rotate in visual and reading order
 
 #### Scenario: User operates a pointer control
 - **WHEN** a pointer hovers over or presses an enabled button

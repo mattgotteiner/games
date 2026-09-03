@@ -31,34 +31,67 @@ const movementControls: ReadonlyArray<
   readonly [GameAction, string, string, string]
 > = [
   ['left', 'Move left', '←', 'Left'],
-  ['rotate', 'Rotate clockwise', '↻', 'Rotate'],
   ['right', 'Move right', '→', 'Right'],
+  ['rotate', 'Rotate clockwise', '↻', 'Rotate'],
   ['soft-drop', 'Soft drop', '↓', 'Down'],
 ]
 
+const PREVIEW_FRAME_SIZE = 6
+
+function getPreviewShape(type: Tetromino) {
+  const cells = getInitialPieceCells(type)
+  const minX = Math.min(...cells.map(({ x }) => x))
+  const maxX = Math.max(...cells.map(({ x }) => x))
+  const minY = Math.min(...cells.map(({ y }) => y))
+  const maxY = Math.max(...cells.map(({ y }) => y))
+
+  return {
+    cells: cells.map(({ x, y }) => ({ x: x - minX, y: y - minY })),
+    width: maxX - minX + 1,
+    height: maxY - minY + 1,
+  }
+}
+
 function NextPiece({ type }: { readonly type: Tetromino }) {
-  const occupied = new Set(
-    getInitialPieceCells(type).map(({ x, y }) => `${x},${y}`),
-  )
+  const shape = getPreviewShape(type)
 
   return (
     <section class="next-piece" aria-label={`Next piece: ${type} tetromino`}>
       <p class="hud-label">Next</p>
-      <div class="next-piece-grid" aria-hidden="true">
-        {Array.from({ length: 16 }, (_, index) => {
-          const filled = occupied.has(`${index % 4},${Math.floor(index / 4)}`)
-          return (
+      <div
+        class="next-piece-grid"
+        data-frame-size={PREVIEW_FRAME_SIZE}
+        aria-hidden="true"
+      >
+        {Array.from(
+          { length: PREVIEW_FRAME_SIZE * PREVIEW_FRAME_SIZE },
+          (_, index) => (
+            <span class="next-piece-grid-cell" key={index} />
+          ),
+        )}
+        <span
+          class="next-piece-shape"
+          data-height={shape.height}
+          data-width={shape.width}
+          style={{
+            gridTemplateColumns: `repeat(${shape.width}, 1fr)`,
+            gridTemplateRows: `repeat(${shape.height}, 1fr)`,
+            height: `${(shape.height / PREVIEW_FRAME_SIZE) * 100}%`,
+            width: `${(shape.width / PREVIEW_FRAME_SIZE) * 100}%`,
+          }}
+        >
+          {shape.cells.map(({ x, y }) => (
             <span
-              class={`next-piece-cell${filled ? ' is-filled' : ''}`}
-              style={
-                filled
-                  ? { backgroundColor: TETROMINO_COLORS[type] }
-                  : undefined
-              }
-              key={index}
+              class="next-piece-cell is-filled"
+              key={`${x}-${y}`}
+              style={{
+                backgroundColor: TETROMINO_COLORS[type],
+                gridColumn: x + 1,
+                gridRow: y + 1,
+              }}
             />
-          )
-        })}
+          ))}
+        </span>
       </div>
       <p class="next-piece-name">{type} tetromino</p>
     </section>

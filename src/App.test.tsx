@@ -10,7 +10,11 @@ import {
   type BlockDropControllerFactory,
 } from './games/block-drop/BlockDrop'
 import type { BlockDropStateListener } from './games/block-drop/controller'
-import { applyAction, createGame } from './games/block-drop/rules'
+import {
+  createGame,
+  TETROMINOES,
+  type Tetromino,
+} from './games/block-drop/rules'
 
 function updateController(
   status: ApplicationUpdateStatus,
@@ -38,7 +42,7 @@ describe('App', () => {
       destroy,
       getState: () => createGame(5),
     }))
-    render(<App blockDropControllerFactory={factory} />)
+    const { container } = render(<App blockDropControllerFactory={factory} />)
 
     expect(
       screen.getByRole('heading', { level: 1, name: 'Games' }),
@@ -52,10 +56,18 @@ describe('App', () => {
     expect(window.location.search).toBe('?game=block-drop')
     expect(screen.getByRole('heading', { name: 'Block Drop' })).toBeInTheDocument()
     expect(screen.getByText('Playing')).toBeInTheDocument()
+    expect(
+      Array.from(
+        container.querySelectorAll<HTMLButtonElement>('.movement-controls button'),
+        (button) => button.getAttribute('aria-label'),
+      ),
+    ).toEqual(['Move left', 'Move right', 'Rotate clockwise', 'Soft drop'])
     fireEvent.click(screen.getByRole('button', { name: 'Move left' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Move right' }))
     fireEvent.click(screen.getByRole('button', { name: 'Rotate clockwise' }))
     expect(dispatch).toHaveBeenNthCalledWith(1, 'left')
-    expect(dispatch).toHaveBeenNthCalledWith(2, 'rotate')
+    expect(dispatch).toHaveBeenNthCalledWith(2, 'right')
+    expect(dispatch).toHaveBeenNthCalledWith(3, 'rotate')
 
     fireEvent.click(screen.getByRole('button', { name: /catalog/i }))
     expect(destroy).toHaveBeenCalledOnce()
@@ -234,9 +246,18 @@ describe('App', () => {
     expect(screen.getByLabelText('Score: 0')).toBeInTheDocument()
   })
 
-  it('renders an accessible four-by-four preview and updates it after a lock', () => {
+  it('centers every tetromino in a normalized six-cell preview frame', () => {
     let publish: ((state: ReturnType<typeof createGame>) => void) | undefined
     const initial = createGame(42)
+    const expectedDimensions: Record<Tetromino, readonly [number, number]> = {
+      I: [4, 1],
+      J: [3, 2],
+      L: [3, 2],
+      O: [2, 2],
+      S: [3, 2],
+      T: [3, 2],
+      Z: [3, 2],
+    }
     const factory: BlockDropControllerFactory = (
       _canvas,
       _container,
@@ -250,30 +271,35 @@ describe('App', () => {
       }
     }
 
-    const { container } = render(
-      <BlockDrop onReturn={vi.fn()} controllerFactory={factory} />,
-    )
-    expect(
-      screen.getByRole('region', {
-        name: `Next piece: ${initial.next} tetromino`,
-      }),
-    ).toHaveTextContent(`${initial.next} tetromino`)
-    expect(container.querySelectorAll('.next-piece-cell')).toHaveLength(16)
-    expect(
-      container.querySelectorAll('.next-piece-cell.is-filled'),
-    ).toHaveLength(4)
+    render(<BlockDrop onReturn={vi.fn()} controllerFactory={factory} />)
 
-    const locked = applyAction(initial, 'hard-drop')
-    act(() => publish?.(locked))
+    for (const type of TETROMINOES) {
+      act(() => publish?.({ ...initial, next: type }))
+      const region = screen.getByRole('region', {
+        name: `Next piece: ${type} tetromino`,
+      })
+      const frame = region.querySelector<HTMLElement>('.next-piece-grid')
+      const shape = region.querySelector<HTMLElement>('.next-piece-shape')
+      const cells = Array.from(
+        region.querySelectorAll<HTMLElement>('.next-piece-cell.is-filled'),
+      )
+      const columns = cells.map((cell) => Number(cell.style.gridColumn))
+      const rows = cells.map((cell) => Number(cell.style.gridRow))
+      const [width, height] = expectedDimensions[type]
 
-    expect(
-      screen.getByRole('region', {
-        name: `Next piece: ${locked.next} tetromino`,
-      }),
-    ).toHaveTextContent(`${locked.next} tetromino`)
-    expect(
-      container.querySelectorAll('.next-piece-cell.is-filled'),
-    ).toHaveLength(4)
+      expect(region).toHaveTextContent(`${type} tetromino`)
+      expect(frame).toHaveAttribute('data-frame-size', '6')
+      expect(
+        region.querySelectorAll('.next-piece-grid-cell'),
+      ).toHaveLength(36)
+      expect(shape).toHaveAttribute('data-width', String(width))
+      expect(shape).toHaveAttribute('data-height', String(height))
+      expect(cells).toHaveLength(4)
+      expect(Math.min(...columns)).toBe(1)
+      expect(Math.max(...columns)).toBe(width)
+      expect(Math.min(...rows)).toBe(1)
+      expect(Math.max(...rows)).toBe(height)
+    }
   })
 
   it('announces clear feedback and disables gameplay until it finishes', () => {

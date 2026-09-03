@@ -110,10 +110,65 @@ async function expectGameFitsViewport(page: import('@playwright/test').Page) {
   ).toBe(true)
 }
 
+async function expectPreviewCentered(page: import('@playwright/test').Page) {
+  const frame = await page.locator('.next-piece-grid').boundingBox()
+  const shape = await page.locator('.next-piece-shape').boundingBox()
+
+  expect(frame).not.toBeNull()
+  expect(shape).not.toBeNull()
+  expect(shape!.x).toBeGreaterThanOrEqual(frame!.x)
+  expect(shape!.y).toBeGreaterThanOrEqual(frame!.y)
+  expect(shape!.x + shape!.width).toBeLessThanOrEqual(frame!.x + frame!.width)
+  expect(shape!.y + shape!.height).toBeLessThanOrEqual(frame!.y + frame!.height)
+  expect(shape!.x + shape!.width / 2).toBeCloseTo(
+    frame!.x + frame!.width / 2,
+    0,
+  )
+  expect(shape!.y + shape!.height / 2).toBeCloseTo(
+    frame!.y + frame!.height / 2,
+    0,
+  )
+}
+
+async function expectMovementOrder(
+  page: import('@playwright/test').Page,
+  shortLandscape = false,
+) {
+  const left = await page.getByRole('button', { name: 'Move left' }).boundingBox()
+  const right = await page
+    .getByRole('button', { name: 'Move right' })
+    .boundingBox()
+  const rotate = await page
+    .getByRole('button', { name: 'Rotate clockwise' })
+    .boundingBox()
+  const softDrop = await page
+    .getByRole('button', { name: 'Soft drop' })
+    .boundingBox()
+
+  for (const box of [left, right, rotate, softDrop]) {
+    expect(box).not.toBeNull()
+    expect(box!.width).toBeGreaterThanOrEqual(44)
+    expect(box!.height).toBeGreaterThanOrEqual(44)
+  }
+  expect(left!.y).toBeCloseTo(right!.y, 0)
+  expect(right!.y).toBeCloseTo(rotate!.y, 0)
+  expect(left!.x + left!.width).toBeLessThanOrEqual(right!.x)
+  expect(right!.x + right!.width).toBeLessThanOrEqual(rotate!.x)
+
+  if (shortLandscape) {
+    expect(softDrop!.y).toBeGreaterThanOrEqual(left!.y + left!.height)
+  } else {
+    expect(rotate!.x + rotate!.width).toBeLessThanOrEqual(softDrop!.x)
+  }
+}
+
 test('plays Block Drop with touch and keyboard across phone orientations', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 })
+  await page.addInitScript(() => {
+    Date.now = () => 42
+  })
   await page.goto('./')
   await page.getByRole('button', { name: 'Play Block Drop' }).click()
 
@@ -125,8 +180,15 @@ test('plays Block Drop with touch and keyboard across phone orientations', async
     name: /Next piece: [IJLOSTZ] tetromino/,
   })
   await expect(preview).toBeVisible()
-  await expect(preview.locator('.next-piece-cell')).toHaveCount(16)
+  await expect(preview.locator('.next-piece-grid-cell')).toHaveCount(36)
+  await expect(preview.locator('.next-piece-cell')).toHaveCount(4)
   await expect(preview.locator('.next-piece-cell.is-filled')).toHaveCount(4)
+  await expect(preview.locator('.next-piece-shape')).toHaveAttribute(
+    'data-width',
+    '2',
+  )
+  await expectPreviewCentered(page)
+  await expectMovementOrder(page)
   const initialPreview = await preview.getAttribute('aria-label')
   const initialPreviewGrid = await preview.locator('.next-piece-grid').innerHTML()
 
@@ -159,6 +221,10 @@ test('plays Block Drop with touch and keyboard across phone orientations', async
   await page.keyboard.press('Space')
   await expect(preview).not.toHaveAttribute('aria-label', initialPreview!)
   await expect(preview.locator('.next-piece-cell.is-filled')).toHaveCount(4)
+  await expect(preview.locator('.next-piece-shape')).toHaveAttribute(
+    'data-width',
+    '3',
+  )
   expect(await preview.locator('.next-piece-grid').innerHTML()).not.toBe(
     initialPreviewGrid,
   )
@@ -195,6 +261,8 @@ test('plays Block Drop with touch and keyboard across phone orientations', async
     390,
   )
   await expectGameFitsViewport(page)
+  await expectPreviewCentered(page)
+  await expectMovementOrder(page, true)
   const landscapeBoard = await canvas.boundingBox()
   const landscapeHud = await page.locator('.game-hud').boundingBox()
   expect(landscapeHud!.x).toBeGreaterThanOrEqual(
@@ -206,6 +274,8 @@ test('plays Block Drop with touch and keyboard across phone orientations', async
     320,
   )
   await expectGameFitsViewport(page)
+  await expectPreviewCentered(page)
+  await expectMovementOrder(page, true)
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= window.innerWidth,
