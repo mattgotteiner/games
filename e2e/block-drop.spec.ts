@@ -208,8 +208,12 @@ async function expectScoringGuideVisible(page: import('@playwright/test').Page) 
     const content = dialog.locator('.help-dialog-content')
     const scrollMetrics = await content.evaluate((element) => ({
       clientHeight: element.clientHeight,
+      paddingInlineEnd: Number.parseFloat(
+        getComputedStyle(element).paddingInlineEnd,
+      ),
       scrollHeight: element.scrollHeight,
     }))
+    expect(scrollMetrics.paddingInlineEnd).toBeGreaterThanOrEqual(12)
     expect(scrollMetrics.scrollHeight).toBeGreaterThan(
       scrollMetrics.clientHeight,
     )
