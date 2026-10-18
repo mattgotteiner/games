@@ -3,6 +3,7 @@ import {
   BOARD_WIDTH,
   applyActionWithEvents,
   createGame,
+  getLandingPiece,
   getPieceCells,
   stepGravityWithEvents,
   type BlockDropState,
@@ -260,19 +261,6 @@ export class BlockDropController {
     context.fillStyle = '#07111f'
     context.fillRect(offsetX, offsetY, boardWidth, boardHeight)
 
-    const board = this.lineClearEffect?.event.board ?? this.state.board
-    for (let y = 0; y < BOARD_HEIGHT; y += 1) {
-      for (let x = 0; x < BOARD_WIDTH; x += 1) {
-        const locked = board[y][x]
-        if (locked !== null) this.drawCell(x, y, locked, cell, offsetX, offsetY)
-      }
-    }
-    if (this.lineClearEffect === null && this.state.active !== null) {
-      for (const { x, y } of getPieceCells(this.state.active)) {
-        this.drawCell(x, y, this.state.active.type, cell, offsetX, offsetY)
-      }
-    }
-
     context.strokeStyle = 'rgb(148 163 184 / 18%)'
     context.lineWidth = 1
     context.beginPath()
@@ -285,6 +273,48 @@ export class BlockDropController {
       context.lineTo(offsetX + boardWidth, offsetY + y * cell)
     }
     context.stroke()
+
+    const board = this.lineClearEffect?.event.board ?? this.state.board
+    for (let y = 0; y < BOARD_HEIGHT; y += 1) {
+      for (let x = 0; x < BOARD_WIDTH; x += 1) {
+        const locked = board[y][x]
+        if (locked !== null) {
+          this.drawCell(x, y, locked, cell, offsetX, offsetY, ratio)
+        }
+      }
+    }
+
+    if (
+      this.lineClearEffect === null &&
+      this.state.status !== 'game-over' &&
+      this.state.active !== null
+    ) {
+      const landing = getLandingPiece(this.state)
+      if (landing !== null && landing.y !== this.state.active.y) {
+        for (const { x, y } of getPieceCells(landing)) {
+          this.drawGhostCell(
+            x,
+            y,
+            landing.type,
+            cell,
+            offsetX,
+            offsetY,
+            ratio,
+          )
+        }
+      }
+      for (const { x, y } of getPieceCells(this.state.active)) {
+        this.drawCell(
+          x,
+          y,
+          this.state.active.type,
+          cell,
+          offsetX,
+          offsetY,
+          ratio,
+        )
+      }
+    }
 
     if (this.lineClearEffect !== null) {
       const intensity = 0.3 + Math.sin(this.lineClearEffect.progress * Math.PI) * 0.7
@@ -312,14 +342,89 @@ export class BlockDropController {
     size: number,
     offsetX: number,
     offsetY: number,
+    ratio: number,
   ): void {
-    const inset = Math.max(1, size * 0.08)
+    const align = (value: number) => Math.round(value * ratio) / ratio
+    const left = align(offsetX + x * size)
+    const top = align(offsetY + y * size)
+    const right = align(offsetX + (x + 1) * size)
+    const bottom = align(offsetY + (y + 1) * size)
+    const edge = Math.max(1 / ratio, Math.round(size * 0.08 * ratio) / ratio)
+    const innerLeft = align(left + edge)
+    const innerTop = align(top + edge)
+    const innerRight = align(right - edge)
+    const innerBottom = align(bottom - edge)
+
     this.context.fillStyle = TETROMINO_COLORS[type]
     this.context.fillRect(
-      offsetX + x * size + inset,
-      offsetY + y * size + inset,
-      size - inset * 2,
-      size - inset * 2,
+      innerLeft,
+      innerTop,
+      innerRight - innerLeft,
+      innerBottom - innerTop,
+    )
+    this.context.fillStyle = 'rgb(255 255 255 / 28%)'
+    this.context.fillRect(
+      innerLeft,
+      innerTop,
+      innerRight - innerLeft,
+      edge,
+    )
+    this.context.fillRect(
+      innerLeft,
+      innerTop,
+      edge,
+      innerBottom - innerTop,
+    )
+    this.context.fillStyle = 'rgb(0 0 0 / 22%)'
+    this.context.fillRect(
+      innerLeft,
+      innerBottom - edge,
+      innerRight - innerLeft,
+      edge,
+    )
+    this.context.fillRect(
+      innerRight - edge,
+      innerTop,
+      edge,
+      innerBottom - innerTop,
+    )
+  }
+
+  private drawGhostCell(
+    x: number,
+    y: number,
+    type: Tetromino,
+    size: number,
+    offsetX: number,
+    offsetY: number,
+    ratio: number,
+  ): void {
+    const align = (value: number) => Math.round(value * ratio) / ratio
+    const left = align(offsetX + x * size)
+    const top = align(offsetY + y * size)
+    const right = align(offsetX + (x + 1) * size)
+    const bottom = align(offsetY + (y + 1) * size)
+    const inset = Math.max(2 / ratio, Math.round(size * 0.12 * ratio) / ratio)
+    const innerLeft = align(left + inset)
+    const innerTop = align(top + inset)
+    const innerRight = align(right - inset)
+    const innerBottom = align(bottom - inset)
+    const color = TETROMINO_COLORS[type]
+
+    this.context.fillStyle = `${color}14`
+    this.context.fillRect(
+      innerLeft,
+      innerTop,
+      innerRight - innerLeft,
+      innerBottom - innerTop,
+    )
+    this.context.strokeStyle = `${color}73`
+    this.context.lineWidth = 2
+    this.context.strokeRect(
+      innerLeft + 1 / ratio,
+      innerTop + 1 / ratio,
+      innerRight - innerLeft - 2 / ratio,
+      innerBottom - innerTop - 2 / ratio,
     )
   }
 

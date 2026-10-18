@@ -65,8 +65,9 @@ completed change retained for history.
 
 Six proposed Block Drop changes, applied in this order, one PR each. Later
 changes modify requirements introduced by earlier ones, so archive each
-before applying the next. `compact-block-drop-mobile-layout` has been
-implemented, reviewed E2E, and archived. `add-block-drop-ghost-piece` is next.
+before applying the next. `compact-block-drop-mobile-layout` and
+`add-block-drop-ghost-piece` have been implemented, reviewed E2E, and archived.
+`add-block-drop-touch-repeat` is the next change to implement.
 
 1. `compact-block-drop-mobile-layout`: compact header, scoring guide moved
    into a help dialog, playfield-first layout (at least 540 px tall at 390 by

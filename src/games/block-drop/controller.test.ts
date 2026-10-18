@@ -22,6 +22,7 @@ function canvasContext(): CanvasRenderingContext2D {
     moveTo: vi.fn(),
     setTransform: vi.fn(),
     stroke: vi.fn(),
+    strokeRect: vi.fn(),
   } as unknown as CanvasRenderingContext2D
 }
 
@@ -44,6 +45,13 @@ function lineClearState(): BlockDropState {
   return {
     ...createGame(41),
     board,
+    active: { type: 'O', rotation: 0, x: 3, y: 18 },
+  }
+}
+
+function restingPieceState(): BlockDropState {
+  return {
+    ...createGame(41),
     active: { type: 'O', rotation: 0, x: 3, y: 18 },
   }
 }
@@ -200,6 +208,75 @@ describe('BlockDropController', () => {
     frameCallback(0)
     expect(canvas.width).toBe(300)
     expect(canvas.height).toBe(600)
+    controller.destroy()
+  })
+
+  it('draws the grid before locked and active cells', () => {
+    const board = createEmptyBoard().map((row) => [...row])
+    board[10][0] = 'J'
+    const initialState = {
+      ...createGame(41),
+      board,
+      active: { type: 'O', rotation: 0, x: 3, y: 0 },
+    }
+    const { controller } = createController(initialState)
+    const cellFillOrder = vi.mocked(context.fillRect).mock.invocationCallOrder[1]
+    const gridStrokeOrder = vi.mocked(context.stroke).mock.invocationCallOrder[0]
+
+    expect(gridStrokeOrder).toBeLessThan(cellFillOrder)
+    controller.destroy()
+  })
+
+  it('draws a ghost for a floating piece and skips it at rest or game over', () => {
+    const floating = createController()
+    expect(context.strokeRect).toHaveBeenCalledTimes(4)
+    floating.controller.destroy()
+
+    vi.mocked(context.strokeRect).mockClear()
+    const resting = createController(restingPieceState())
+    expect(context.strokeRect).not.toHaveBeenCalled()
+    resting.controller.destroy()
+
+    vi.mocked(context.strokeRect).mockClear()
+    const over = createController(gameOverState())
+    expect(context.strokeRect).not.toHaveBeenCalled()
+    over.controller.destroy()
+  })
+
+  it('skips the ghost during line-clear feedback', () => {
+    const { controller } = createController(lineClearState())
+    vi.mocked(context.strokeRect).mockClear()
+
+    controller.dispatch('hard-drop')
+
+    expect(canvas.dataset.clearingRows).toBe('19')
+    expect(context.strokeRect).not.toHaveBeenCalled()
+    controller.destroy()
+  })
+
+  it.each([1, 3])('scales cell edge rectangles at DPR %i', (ratio) => {
+    pixelRatio = ratio
+    const { controller } = createController(restingPieceState())
+    const align = (value: number) => Math.round(value * ratio) / ratio
+    const edge = Math.max(1 / ratio, Math.round(18 * 0.08 * ratio) / ratio)
+    const left = align(4 * 18)
+    const top = align(18 * 18)
+    const right = align(5 * 18)
+    const bottom = align(19 * 18)
+    const innerLeft = align(left + edge)
+    const innerTop = align(top + edge)
+    const innerRight = align(right - edge)
+    const innerBottom = align(bottom - edge)
+    const width = innerRight - innerLeft
+    const height = innerBottom - innerTop
+
+    expect(vi.mocked(context.fillRect).mock.calls.slice(1, 6)).toEqual([
+      [innerLeft, innerTop, width, height],
+      [innerLeft, innerTop, width, edge],
+      [innerLeft, innerTop, edge, height],
+      [innerLeft, innerBottom - edge, width, edge],
+      [innerRight - edge, innerTop, edge, height],
+    ])
     controller.destroy()
   })
 

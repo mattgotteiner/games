@@ -393,6 +393,52 @@ test('presents a prominent right-side HUD and polished button states', async ({
   await page.mouse.up()
 })
 
+test('shows the seeded landing ghost in the cells hard drop will occupy', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.addInitScript(() => {
+    Date.now = () => 42
+  })
+  await page.goto('./')
+  await page.getByRole('button', { name: 'Play Block Drop' }).click()
+  await page.getByRole('button', { name: 'Pause game' }).click()
+
+  const canvas = page.getByRole('img', { name: 'Block Drop board' })
+  const samples = await canvas.evaluate((element: HTMLCanvasElement) => {
+    const context = element.getContext('2d')!
+    const cells = [
+      [4, 18],
+      [5, 18],
+      [3, 19],
+      [4, 19],
+    ]
+    const pixel = (x: number, y: number) =>
+      Array.from(
+        context.getImageData(
+          Math.floor((x + 0.5) * (element.width / 10)),
+          Math.floor((y + 0.5) * (element.height / 20)),
+          1,
+          1,
+        ).data,
+      )
+
+    return {
+      ghost: cells.map(([x, y]) => pixel(x, y)),
+      empty: pixel(6, 19),
+    }
+  })
+
+  expect(samples.ghost).toHaveLength(4)
+  for (const [red, green, blue] of samples.ghost) {
+    expect(green).toBeGreaterThan(25)
+    expect(green).toBeLessThan(60)
+    expect(red).toBeGreaterThan(5)
+    expect(blue).toBeGreaterThan(30)
+  }
+  expect(samples.empty[1]).toBe(17)
+})
+
 test('animates an exact deterministic line clear and gates gameplay', async ({
   page,
 }) => {

@@ -169,6 +169,19 @@ export function isValidPiece(board: Board, piece: ActivePiece): boolean {
   )
 }
 
+export function getLandingPiece(
+  state: Pick<BlockDropState, 'board' | 'active'>,
+): ActivePiece | null {
+  if (state.active === null) return null
+
+  let landing = state.active
+  while (true) {
+    const next = { ...landing, y: landing.y + 1 }
+    if (!isValidPiece(state.board, next)) return landing
+    landing = next
+  }
+}
+
 function spawnPiece(type: Tetromino): ActivePiece {
   return {
     type,
@@ -319,24 +332,16 @@ export function stepGravity(state: BlockDropState): BlockDropState {
 }
 
 function hardDrop(state: BlockDropState): BlockDropTransition {
-  if (state.active === null) {
-    return transition(state)
-  }
+  const landing = getLandingPiece(state)
+  if (landing === null || state.active === null) return transition(state)
 
-  let dropped = state
-  let distance = 0
-  while (true) {
-    const moved = tryActive(dropped, (piece) => ({ ...piece, y: piece.y + 1 }))
-    if (moved === dropped) {
-      return lockActive({
-        ...dropped,
-        score:
-          dropped.score + distance * BLOCK_DROP_SCORING.hardDropPerRow,
-      })
-    }
-    dropped = moved
-    distance += 1
-  }
+  return lockActive({
+    ...state,
+    active: landing,
+    score:
+      state.score +
+      (landing.y - state.active.y) * BLOCK_DROP_SCORING.hardDropPerRow,
+  })
 }
 
 function softDrop(state: BlockDropState): BlockDropTransition {

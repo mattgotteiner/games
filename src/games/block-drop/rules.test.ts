@@ -8,8 +8,10 @@ import {
   applyActionWithEvents,
   createEmptyBoard,
   createGame,
+  getLandingPiece,
   getInitialPieceCells,
   getPieceCells,
+  isValidPiece,
   restart,
   shuffleBag,
   stepGravity,
@@ -127,6 +129,71 @@ describe('movement and rotation', () => {
     const verticalAtWall = stateWith({ type: 'I', rotation: 1, x: -2, y: 2 })
 
     expect(applyAction(verticalAtWall, 'rotate')).toBe(verticalAtWall)
+  })
+})
+
+describe('landing position', () => {
+  it.each(TETROMINOES)('finds the lowest %s on an empty board', (type) => {
+    const active = { type, rotation: 0, x: 3, y: 0 } satisfies ActivePiece
+
+    expect(getLandingPiece({ board: createEmptyBoard(), active })).toEqual({
+      ...active,
+      y: 18,
+    })
+  })
+
+  it.each(TETROMINOES)('finds the %s landing point over uneven cells', (type) => {
+    const board = boardWith([
+      [4, 16, 'J'],
+      [6, 18, 'L'],
+    ])
+    const active = { type, rotation: 0, x: 3, y: 0 } satisfies ActivePiece
+    const landing = getLandingPiece({ board, active })
+
+    expect(landing).toEqual({ ...active, y: 14 })
+    expect(isValidPiece(board, landing!)).toBe(true)
+    expect(isValidPiece(board, { ...landing!, y: landing!.y + 1 })).toBe(false)
+  })
+
+  it.each(TETROMINOES)('keeps a resting %s piece at its current position', (type) => {
+    const active = { type, rotation: 0, x: 3, y: 18 } satisfies ActivePiece
+
+    expect(getLandingPiece({ board: createEmptyBoard(), active })).toEqual(active)
+  })
+
+  it('returns null when no active piece is present', () => {
+    expect(
+      getLandingPiece({ ...createGame(41), active: null }),
+    ).toBeNull()
+  })
+
+  it('locks the exact landing cells after seeded random movement sequences', () => {
+    for (let seed = 0; seed < 64; seed += 1) {
+      let state = createGame(seed)
+      let random = seed + 1
+      for (let index = 0; index < 24; index += 1) {
+        random = (Math.imul(random, 1664525) + 1013904223) >>> 0
+        const action = (['left', 'right', 'rotate'] as const)[random % 3]
+        state = applyAction(state, action)
+      }
+
+      const active = state.active
+      const landing = getLandingPiece(state)
+      expect(active).not.toBeNull()
+      expect(landing).not.toBeNull()
+
+      const expectedBoard = state.board.map((row) => [...row])
+      for (const { x, y } of getPieceCells(landing!)) {
+        expectedBoard[y][x] = landing!.type
+      }
+      const dropped = applyAction(state, 'hard-drop')
+
+      expect(dropped.board).toEqual(expectedBoard)
+      expect(dropped.score).toBe(
+        state.score +
+          (landing!.y - active!.y) * BLOCK_DROP_SCORING.hardDropPerRow,
+      )
+    }
   })
 })
 
