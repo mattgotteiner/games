@@ -245,6 +245,67 @@ describe('seeded pieces', () => {
 })
 
 describe('movement and rotation', () => {
+  const JLSTZ_KICKS = [
+    [
+      [0, 0],
+      [-1, 0],
+      [-1, -1],
+      [0, 2],
+      [-1, 2],
+    ],
+    [
+      [0, 0],
+      [1, 0],
+      [1, 1],
+      [0, -2],
+      [1, -2],
+    ],
+    [
+      [0, 0],
+      [1, 0],
+      [1, -1],
+      [0, 2],
+      [1, 2],
+    ],
+    [
+      [0, 0],
+      [-1, 0],
+      [-1, 1],
+      [0, -2],
+      [-1, -2],
+    ],
+  ] as const
+  const I_KICKS = [
+    [
+      [0, 0],
+      [-2, 0],
+      [1, 0],
+      [-2, 1],
+      [1, -2],
+    ],
+    [
+      [0, 0],
+      [-1, 0],
+      [2, 0],
+      [-1, -2],
+      [2, 1],
+    ],
+    [
+      [0, 0],
+      [2, 0],
+      [-1, 0],
+      [2, -1],
+      [-1, 2],
+    ],
+    [
+      [0, 0],
+      [1, 0],
+      [-2, 0],
+      [1, -2],
+      [-2, 1],
+    ],
+  ] as const
+
   it('accepts valid horizontal movement and clockwise rotation', () => {
     const initial = stateWith({ type: 'T', rotation: 0, x: 3, y: 2 })
     const movedLeft = applyAction(initial, 'left')
@@ -301,45 +362,70 @@ describe('movement and rotation', () => {
     expect(isValidPiece(rotated.board, rotated.active!)).toBe(true)
   })
 
-  it.each([
-    {
-      edge: 'left wall',
-      active: { type: 'T', rotation: 0, x: 0, y: 4 } as const,
-      blocker: [1, 6, 'Z'] as const,
-      expectedX: 1,
-    },
-    {
-      edge: 'right wall',
-      active: { type: 'T', rotation: 0, x: 7, y: 4 } as const,
-      blocker: [8, 6, 'Z'] as const,
-      expectedX: 6,
-    },
-  ])('kicks a T piece away from the $edge', ({ active, blocker, expectedX }) => {
-    const initial = stateWith(active, boardWith([blocker]))
-    const rotated = applyAction(initial, 'rotate')
+  for (const family of [
+    { name: 'JLSTZ', type: 'J' as const, kicks: JLSTZ_KICKS },
+    { name: 'I', type: 'I' as const, kicks: I_KICKS },
+  ]) {
+    for (let fromRotation = 0; fromRotation < 4; fromRotation += 1) {
+      const kickTests = family.kicks[fromRotation]
+      for (let expectedIndex = 0; expectedIndex < kickTests.length; expectedIndex += 1) {
+        it(`${family.name} ${fromRotation}→${(fromRotation + 1) % 4} uses SRS test ${expectedIndex + 1}`, () => {
+          const active = {
+            type: family.type,
+            rotation: fromRotation,
+            x: 3,
+            y: 6,
+          } as const
+          const targetOffset = kickTests[expectedIndex]
+          const currentCells = new Set(
+            getPieceCells(active).map(({ x, y }) => `${x},${y}`),
+          )
+          const targetCells = new Set(
+            getPieceCells({
+              ...active,
+              rotation: (fromRotation + 1) % 4,
+              x: active.x + targetOffset[0],
+              y: active.y + targetOffset[1],
+            }).map(({ x, y }) => `${x},${y}`),
+          )
+          const board = createEmptyBoard().map((row) => [...row])
 
-    expect(rotated.active).toEqual({
-      ...active,
-      rotation: 1,
-      x: expectedX,
-    })
-    expect(isValidPiece(rotated.board, rotated.active!)).toBe(true)
-  })
+          for (const [dx, dy] of kickTests.slice(0, expectedIndex)) {
+            const blocked = getPieceCells({
+              ...active,
+              rotation: (fromRotation + 1) % 4,
+              x: active.x + dx,
+              y: active.y + dy,
+            }).find(
+              ({ x, y }) =>
+                x >= 0 &&
+                x < BOARD_WIDTH &&
+                y >= 0 &&
+                y < BOARD_HEIGHT &&
+                !currentCells.has(`${x},${y}`) &&
+                !targetCells.has(`${x},${y}`),
+            )
 
-  it('kicks a J piece away from a nearby stack', () => {
-    const active = { type: 'J', rotation: 0, x: 4, y: 4 } as const
-    const initial = stateWith(
-      active,
-      boardWith([
-        [5, 3, 'Z'],
-        [5, 4, 'Z'],
-      ]),
-    )
-    const rotated = applyAction(initial, 'rotate')
+            if (blocked === undefined) {
+              throw new Error(`Could not block prior ${family.name} SRS test`)
+            }
+            board[blocked.y][blocked.x] = 'Z'
+          }
 
-    expect(rotated.active).toEqual({ ...active, rotation: 1, x: 5 })
-    expect(isValidPiece(rotated.board, rotated.active!)).toBe(true)
-  })
+          const initial = stateWith(active, board)
+          const rotated = applyAction(initial, 'rotate')
+
+          expect(rotated.active).toEqual({
+            ...active,
+            rotation: (fromRotation + 1) % 4,
+            x: active.x + targetOffset[0],
+            y: active.y + targetOffset[1],
+          })
+          expect(isValidPiece(rotated.board, rotated.active!)).toBe(true)
+        })
+      }
+    }
+  }
 
   it('keeps a rotation in place when every kick offset collides', () => {
     const active = { type: 'T', rotation: 0, x: 3, y: 5 } as const
@@ -360,6 +446,76 @@ describe('movement and rotation', () => {
 
     expect(applyAction(initial, 'rotate')).toBe(initial)
   })
+
+  it('allows a standard upward I kick above the visible ceiling', () => {
+    const active = { type: 'I', rotation: 0, x: 3, y: 0 } as const
+    const kickTests = I_KICKS[0]
+    const targetOffset = kickTests[4]
+    const currentCells = new Set(
+      getPieceCells(active).map(({ x, y }) => `${x},${y}`),
+    )
+    const targetCells = new Set(
+      getPieceCells({
+        ...active,
+        rotation: 1,
+        x: active.x + targetOffset[0],
+        y: active.y + targetOffset[1],
+      }).map(({ x, y }) => `${x},${y}`),
+    )
+    const board = createEmptyBoard().map((row) => [...row])
+
+    for (const [dx, dy] of kickTests.slice(0, 4)) {
+      const blocked = getPieceCells({
+        ...active,
+        rotation: 1,
+        x: active.x + dx,
+        y: active.y + dy,
+      }).find(
+        ({ x, y }) =>
+          x >= 0 &&
+          x < BOARD_WIDTH &&
+          y >= 0 &&
+          y < BOARD_HEIGHT &&
+          !currentCells.has(`${x},${y}`) &&
+          !targetCells.has(`${x},${y}`),
+      )
+
+      expect(blocked).toBeDefined()
+      board[blocked!.y][blocked!.x] = 'Z'
+    }
+
+    const initial = stateWith(active, board)
+    const rotated = applyAction(initial, 'rotate')
+
+    expect(rotated.active).toEqual({
+      ...active,
+      rotation: 1,
+      x: active.x + targetOffset[0],
+      y: active.y + targetOffset[1],
+    })
+    expect(rotated.active!.y).toBe(-2)
+    expect(isValidPiece(rotated.board, rotated.active!)).toBe(true)
+  })
+
+  it.each(['gravity', 'soft-drop', 'hard-drop'] as const)(
+    'tops out when %s locks a piece above the visible ceiling',
+    (lockAction) => {
+      const board = boardWith([[5, 3, 'Z']])
+      const initial = stateWith(
+        { type: 'I', rotation: 1, x: 3, y: -1 },
+        board,
+      )
+
+      expect(isValidPiece(board, initial.active!)).toBe(true)
+      const locked =
+        lockAction === 'gravity'
+          ? stepGravity(initial)
+          : applyAction(initial, lockAction)
+
+      expect(locked).toMatchObject({ active: null, status: 'game-over' })
+      expect(locked.board).toBe(board)
+    },
+  )
 })
 
 describe('hold piece', () => {

@@ -552,6 +552,46 @@ test('plays Block Drop with touch and keyboard across phone orientations', async
   ).toBeVisible()
 })
 
+test('keeps SRS rotations playable at the side walls and near the floor', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.addInitScript(() => {
+    Date.now = () => 42
+  })
+  await page.goto('./')
+  await page.getByRole('button', { name: 'Play Block Drop' }).click()
+
+  for (let step = 0; step < 8; step += 1) {
+    await page.keyboard.press('ArrowLeft')
+  }
+  for (let turn = 0; turn < 4; turn += 1) {
+    await page.keyboard.press('ArrowUp')
+  }
+  await page.keyboard.press('Space')
+
+  await expect(page.locator('.game-status')).toHaveText('Playing')
+  for (let step = 0; step < 8; step += 1) {
+    await page.keyboard.press('ArrowRight')
+  }
+  for (let turn = 0; turn < 4; turn += 1) {
+    await page.keyboard.press('ArrowUp')
+  }
+  await page.keyboard.press('Space')
+
+  await expect(page.locator('.game-status')).toHaveText('Playing')
+  for (let step = 0; step < 12; step += 1) {
+    await page.keyboard.press('ArrowDown')
+  }
+  for (let turn = 0; turn < 4; turn += 1) {
+    await page.keyboard.press('ArrowUp')
+  }
+  await page.keyboard.press('Space')
+
+  await expect(page.locator('.game-status')).toHaveText('Playing')
+  await expect(page.getByLabel(/^Score:/)).not.toHaveText('Score: 0')
+})
+
 test('holds and swaps pieces with the C key and phone control', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.addInitScript(() => {

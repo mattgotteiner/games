@@ -28,11 +28,13 @@ and service-worker-controlled offline deep links are covered.
 Difficulty persistence was reviewed on a phone, archived, and pushed in
 `e3434bd`; the user confirmed the saved choice survives reload. Wall kicks
 were reviewed on a phone and pushed to `main`. Hold was reviewed in the
-portrait phone layout and the user approved the behavior and spacing. Its
-implementation passes `npm run check`: typechecking, 174 unit/component tests,
-the production build, and all 12 Chromium flows. Hold is centered between
-movement and action controls with at least 16 px of clearance on each side;
-Rotate and Hard drop are restored to their original stack.
+portrait phone layout; the user approved the behavior and spacing. The Hold
+feature is archived and pushed. SRS rotation was reviewed on a phone and the
+user found no issues. It passes `npm run check`: typechecking, 215
+unit/component tests, the production build, and all 13 Chromium flows. Hold
+remains centered between movement and action controls with at least 16 px of
+clearance on each side; Rotate and Hard drop are restored to their original
+stack.
 
 ## Completed OpenSpec Changes
 
@@ -60,6 +62,8 @@ Rotate and Hard drop are restored to their original stack.
   - `openspec/changes/archive/2026-10-18-persist-block-drop-difficulty`
 - `add-block-drop-wall-kicks`
   - `openspec/changes/archive/2026-10-18-add-block-drop-wall-kicks`
+- `add-block-drop-srs-rotation-kicks`
+  - `openspec/changes/archive/2026-10-18-add-block-drop-srs-rotation-kicks`
 
 Synchronized capability specs:
 
@@ -82,7 +86,7 @@ completed change retained for history.
 
 Ten incremental Block Drop changes, applied one at a time. Later changes
 modify requirements introduced by earlier ones, so archive each before applying
-the next. Changes 1–7 are implemented, reviewed E2E, and archived. During
+the next. All ten changes are implemented, reviewed E2E, and archived. During
 implementation of `add-block-drop-touch-repeat`, mobile E2E
 uncovered page panning when dragging from game elements; the fix is recorded in
 that archived change and the canonical Block Drop spec. During E2E review of
@@ -104,8 +108,8 @@ half speed, Medium is the default pace, and Hard is 1.5× faster. The user
 reviewed the slider E2E and confirmed the feature works. Scoring is also scaled
 by difficulty, and the selected difficulty and multiplier appear in the HUD
 and persist on the same device. The user confirmed persistence after reload.
-The current full automated check passes 157 unit/component tests, a production
-build, and all 11 Chromium flows.
+The current full automated check passes 215 unit/component tests, a production
+build, and all 13 Chromium flows.
 
 1. `compact-block-drop-mobile-layout`: compact header, scoring guide moved
    into a help dialog, playfield-first layout (at least 540 px tall at 390 by
@@ -129,9 +133,11 @@ build, and all 11 Chromium flows.
    SRS); implemented, reviewed on a phone, and archived.
 9. `add-block-drop-hold-piece`: one hold slot, once per piece, with a phone
    control, C-key shortcut, and compact hold/next previews; implemented,
-   reviewed, and ready to archive.
+   reviewed, archived, and pushed to `main`.
 10. `add-block-drop-srs-rotation-kicks`: use standard SRS kick tables for
-    clockwise rotations, including upward kicks for supported transitions.
+    clockwise rotations, including upward kicks for supported transitions;
+    implemented, automated E2E passing, reviewed on a phone, archived, and
+    pushed to `main`.
 
 Changes 2 and 6 are independent and can ship at any point. The design
 rationale and before screenshots are in `plans/block-drop/PLAN.md` in
@@ -139,7 +145,8 @@ rationale and before screenshots are in `plans/block-drop/PLAN.md` in
 
 ## Deferred Work
 
-Full SRS rotation kicks and upward kicks are the next planned change.
 A generalized game registry/runtime remains deferred.
 Introduce shared platform abstractions only after another game exposes
 concrete duplication.
+
+There are no remaining planned changes in the current Block Drop sequence.

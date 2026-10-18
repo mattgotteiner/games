@@ -133,16 +133,67 @@ const SHAPE_SIZE: Readonly<Record<Tetromino, number>> = {
   Z: 3,
 }
 
-const ROTATION_KICK_OFFSETS: Readonly<Record<Tetromino, ReadonlyArray<number>>> =
-  Object.freeze({
-    I: Object.freeze([0, 1, -1, 2, -2]),
-    J: Object.freeze([0, 1, -1]),
-    L: Object.freeze([0, 1, -1]),
-    O: Object.freeze([0]),
-    S: Object.freeze([0, 1, -1]),
-    T: Object.freeze([0, 1, -1]),
-    Z: Object.freeze([0, 1, -1]),
-  })
+const JLSTZ_CLOCKWISE_KICKS = [
+  [
+    { x: 0, y: 0 },
+    { x: -1, y: 0 },
+    { x: -1, y: -1 },
+    { x: 0, y: 2 },
+    { x: -1, y: 2 },
+  ],
+  [
+    { x: 0, y: 0 },
+    { x: 1, y: 0 },
+    { x: 1, y: 1 },
+    { x: 0, y: -2 },
+    { x: 1, y: -2 },
+  ],
+  [
+    { x: 0, y: 0 },
+    { x: 1, y: 0 },
+    { x: 1, y: -1 },
+    { x: 0, y: 2 },
+    { x: 1, y: 2 },
+  ],
+  [
+    { x: 0, y: 0 },
+    { x: -1, y: 0 },
+    { x: -1, y: 1 },
+    { x: 0, y: -2 },
+    { x: -1, y: -2 },
+  ],
+] as const satisfies ReadonlyArray<ReadonlyArray<Point>>
+
+const I_CLOCKWISE_KICKS = [
+  [
+    { x: 0, y: 0 },
+    { x: -2, y: 0 },
+    { x: 1, y: 0 },
+    { x: -2, y: 1 },
+    { x: 1, y: -2 },
+  ],
+  [
+    { x: 0, y: 0 },
+    { x: -1, y: 0 },
+    { x: 2, y: 0 },
+    { x: -1, y: -2 },
+    { x: 2, y: 1 },
+  ],
+  [
+    { x: 0, y: 0 },
+    { x: 2, y: 0 },
+    { x: -1, y: 0 },
+    { x: 2, y: -1 },
+    { x: -1, y: 2 },
+  ],
+  [
+    { x: 0, y: 0 },
+    { x: 1, y: 0 },
+    { x: -2, y: 0 },
+    { x: 1, y: -2 },
+    { x: -2, y: 1 },
+  ],
+] as const satisfies ReadonlyArray<ReadonlyArray<Point>>
 
 export function createEmptyBoard(): Board {
   return Array.from({ length: BOARD_HEIGHT }, () =>
@@ -199,9 +250,8 @@ export function isValidPiece(board: Board, piece: ActivePiece): boolean {
     ({ x, y }) =>
       x >= 0 &&
       x < BOARD_WIDTH &&
-      y >= 0 &&
       y < BOARD_HEIGHT &&
-      board[y]?.[x] === null,
+      (y < 0 || board[y]?.[x] === null),
   )
 }
 
@@ -337,8 +387,13 @@ function lockActive(state: BlockDropState): BlockDropTransition {
     return transition(state)
   }
 
+  const activeCells = getPieceCells(state.active)
+  if (activeCells.some(({ y }) => y < 0)) {
+    return transition({ ...state, active: null, status: 'game-over' })
+  }
+
   const board = state.board.map((row) => [...row])
-  for (const { x, y } of getPieceCells(state.active)) {
+  for (const { x, y } of activeCells) {
     board[y][x] = state.active.type
   }
   const cleared = clearFullRows(board)
@@ -404,11 +459,18 @@ function rotateActive(state: BlockDropState): BlockDropState {
   if (piece === null || piece.type === 'O') return state
 
   const rotation = (piece.rotation + 1) % 4
-  for (const offset of ROTATION_KICK_OFFSETS[piece.type]) {
+  const kickTests =
+    piece.type === 'I'
+      ? I_CLOCKWISE_KICKS[piece.rotation]
+      : JLSTZ_CLOCKWISE_KICKS[piece.rotation]
+  if (kickTests === undefined) return state
+
+  for (const { x, y } of kickTests) {
     const candidate = {
       ...piece,
       rotation,
-      x: piece.x + offset,
+      x: piece.x + x,
+      y: piece.y + y,
     }
     if (isValidPiece(state.board, candidate)) {
       return { ...state, active: candidate }
