@@ -169,8 +169,8 @@ The only active change is `remove-block-drop-catalog-buttons`, described below.
 `remove-block-drop-catalog-buttons` removes both the game-over `Back to
 catalog` action and the header `Catalog` button. Browser Back remains the way
 to return to the catalog after launch, and the spec plus implementation are
-in the working tree. Existing navigation coverage was updated; integrated
-checks and phone review are still pending.
+committed and pushed in `a0358f0`. CI and the GitHub Pages deployment passed,
+and the public app returned HTTP 200. A phone review is still pending.
 
 ## Most Recent OpenSpec Change
 
