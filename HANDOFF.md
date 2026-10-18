@@ -150,3 +150,9 @@ Introduce shared platform abstractions only after another game exposes
 concrete duplication.
 
 There are no remaining planned changes in the current Block Drop sequence.
+
+## Next OpenSpec Change
+
+`add-block-drop-rules-dialog` has a written spec for a beginner-friendly Rules
+dialog in the pause menu. The spec is committed separately before
+implementation; the UI and tests have not been started.
