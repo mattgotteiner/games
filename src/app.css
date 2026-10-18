@@ -602,6 +602,20 @@ button:disabled {
   line-height: 1;
 }
 
+.game-progress-item .difficulty-value {
+  display: inline-grid;
+  flex: none;
+  grid-template-columns: 4.2em 3.1em;
+  gap: 0.2em;
+  color: #a5f3fc;
+  white-space: nowrap;
+}
+
+.difficulty-multiplier {
+  text-align: left;
+  font-variant-numeric: tabular-nums;
+}
+
 .level-value-highlight {
   animation: level-up-highlight 380ms ease-out both;
 }
@@ -976,7 +990,7 @@ button:disabled {
       "board";
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto minmax(0, 1fr);
-    gap: 0.45rem;
+    gap: 0.3rem;
   }
 
   .game-hud {
@@ -995,9 +1009,10 @@ button:disabled {
   }
 
   .game-progress {
-    grid-column: 1;
+    grid-column: 1 / -1;
     grid-row: 2;
     display: flex;
+    justify-content: space-between;
     gap: 0.65rem;
   }
 
@@ -1025,7 +1040,7 @@ button:disabled {
   .next-piece {
     display: flex;
     grid-column: 3;
-    grid-row: 1 / 3;
+    grid-row: 1;
     align-self: center;
     align-items: center;
     gap: 0.35rem;
@@ -1045,7 +1060,7 @@ button:disabled {
 
   .game-status {
     grid-column: 2;
-    grid-row: 1 / 3;
+    grid-row: 1;
     align-self: center;
     font-size: 0.78rem;
   }
@@ -1178,20 +1193,24 @@ button:disabled {
 
   .game-hud {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     gap: 0.45rem;
     padding: 0.45rem;
   }
 
   .game-progress {
     display: flex;
+    min-width: 0;
+    flex-wrap: wrap;
     gap: 0.3rem;
   }
 
   .game-progress-item {
     display: flex;
+    min-width: 0;
     align-items: baseline;
     gap: 0.2rem;
+    flex-wrap: wrap;
   }
 
   .game-progress-item .hud-label {

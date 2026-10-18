@@ -32,6 +32,7 @@ export const KEY_ACTIONS: Readonly<Record<string, GameAction>> = {
 
 export interface BlockDropControllerOptions {
   readonly seed?: number
+  readonly difficulty?: BlockDropDifficulty
   readonly initialState?: BlockDropState
   readonly requestFrame?: typeof requestAnimationFrame
   readonly cancelFrame?: typeof cancelAnimationFrame
@@ -89,7 +90,8 @@ export class BlockDropController {
 
     this.context = context
     this.state =
-      options.initialState ?? createGame(options.seed ?? (Date.now() >>> 0))
+      options.initialState ??
+      createGame(options.seed ?? (Date.now() >>> 0), options.difficulty)
     this.requestFrame =
       options.requestFrame ?? window.requestAnimationFrame.bind(window)
     this.cancelFrame =

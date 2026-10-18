@@ -249,7 +249,10 @@ function spawnNext(state: BlockDropState): BlockDropState {
     : { ...next, active: null, status: 'game-over' }
 }
 
-export function createGame(seed: number): BlockDropState {
+export function createGame(
+  seed: number,
+  difficulty: BlockDropDifficulty = 'medium',
+): BlockDropState {
   const first = drawPiece({ bag: [], randomState: seed >>> 0 })
   return spawnNext({
     board: createEmptyBoard(),
@@ -259,7 +262,7 @@ export function createGame(seed: number): BlockDropState {
     randomState: first.randomState,
     initialSeed: seed >>> 0,
     status: 'playing',
-    difficulty: 'medium',
+    difficulty,
     score: 0,
     lines: 0,
     level: 1,

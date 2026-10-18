@@ -627,9 +627,66 @@ describe('App', () => {
     fireEvent.input(slider, { target: { value: '0' } })
     expect(setDifficulty).toHaveBeenCalledWith('easy')
     expect(slider).toHaveAttribute('aria-valuetext', 'Easy, half speed')
+    expect(screen.getByText('Easy · 0.5×')).toBeInTheDocument()
+    expect(window.localStorage.getItem('games.block-drop.difficulty')).toBe(
+      'easy',
+    )
 
     act(() => publish?.({ ...state, score: 0.5 }))
     expect(screen.getByLabelText('Score: 0.5')).toBeInTheDocument()
+  })
+
+  it('restores a saved difficulty in the initial game and HUD', () => {
+    window.localStorage.setItem('games.block-drop.difficulty', 'hard')
+    let initialDifficulty: BlockDropDifficulty | undefined
+    const factory: BlockDropControllerFactory = (
+      _canvas,
+      _container,
+      _onStateChange,
+      options,
+    ) => {
+      initialDifficulty = options?.difficulty
+      const initial = createGame(5, options?.difficulty)
+      return {
+        dispatch: vi.fn(),
+        destroy: vi.fn(),
+        getState: () => initial,
+      }
+    }
+
+    render(<BlockDrop onReturn={vi.fn()} controllerFactory={factory} />)
+
+    expect(initialDifficulty).toBe('hard')
+    expect(screen.getByText('Hard · 1.5×')).toBeInTheDocument()
+    expect(
+      screen.getByRole('group', {
+        name: 'Level 1, 0 lines cleared, Hard difficulty',
+      }),
+    ).toBeInTheDocument()
+  })
+
+  it.each(['expert', '1.5'])('defaults to Medium for invalid preference %s', (value) => {
+    window.localStorage.setItem('games.block-drop.difficulty', value)
+    let initialDifficulty: BlockDropDifficulty | undefined
+    const factory: BlockDropControllerFactory = (
+      _canvas,
+      _container,
+      _onStateChange,
+      options,
+    ) => {
+      initialDifficulty = options?.difficulty
+      const initial = createGame(5, options?.difficulty)
+      return {
+        dispatch: vi.fn(),
+        destroy: vi.fn(),
+        getState: () => initial,
+      }
+    }
+
+    render(<BlockDrop onReturn={vi.fn()} controllerFactory={factory} />)
+
+    expect(initialDifficulty).toBe('medium')
+    expect(screen.getByText('Medium · 1×')).toBeInTheDocument()
   })
 
   it('keeps an existing best score when a later run scores less', () => {
@@ -769,6 +826,7 @@ describe('App', () => {
 
     render(<BlockDrop onReturn={vi.fn()} controllerFactory={factory} />)
     expect(screen.getByText('Playing')).toBeInTheDocument()
+    expect(screen.getByText('Medium · 1×')).toBeInTheDocument()
     act(() =>
       publish?.({ ...playing, active: null, status: 'game-over', score: 14 }),
     )

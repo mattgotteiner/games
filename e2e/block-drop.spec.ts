@@ -91,12 +91,18 @@ async function expectGameFitsViewport(page: import('@playwright/test').Page) {
 
   for (const element of elements) {
     const box = await element.boundingBox()
+    const description = await element.evaluate((node) =>
+      node.getAttribute('aria-label') ||
+      node.className ||
+      node.tagName.toLowerCase(),
+    )
     expect(box).not.toBeNull()
     expect(box!.x).toBeGreaterThanOrEqual(0)
     expect(box!.y).toBeGreaterThanOrEqual(0)
-    expect(box!.x + box!.width).toBeLessThanOrEqual(
-      await page.evaluate(() => window.innerWidth),
-    )
+    expect(
+      box!.x + box!.width,
+      `${description} extends beyond the viewport width`,
+    ).toBeLessThanOrEqual(await page.evaluate(() => window.innerWidth))
     expect(box!.y + box!.height).toBeLessThanOrEqual(
       await page.evaluate(() => window.innerHeight),
     )
@@ -740,6 +746,42 @@ test('scales drop points by pause difficulty and preserves fractional scores', a
     .click()
   await page.keyboard.press('ArrowDown')
   await expect(page.getByLabel('Score: 1.5')).toBeVisible()
+})
+
+test('shows the selected difficulty and restores it after reload', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('./?game=block-drop')
+  await expect(page.getByText('Medium · 1×')).toBeVisible()
+
+  await page.getByRole('button', { name: 'Pause game' }).click()
+  const pause = page.getByRole('group', { name: 'Paused' })
+  const slider = pause.getByRole('slider', { name: 'Difficulty' })
+  await slider.press('End')
+  await expect(page.getByText('Hard · 1.5×', { exact: true })).toBeVisible()
+  await pause.getByRole('button', { name: 'Resume game' }).click()
+  await expectGameFitsViewport(page)
+
+  await page.reload()
+  await expect(page.getByText('Hard · 1.5×', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Pause game' }).click()
+  await expect(
+    page.getByRole('group', { name: 'Paused' }).getByRole('slider', {
+      name: 'Difficulty',
+    }),
+  ).toHaveAttribute('aria-valuetext', 'Hard, 1.5× speed')
+  await page.getByRole('group', { name: 'Paused' })
+    .getByRole('button', { name: 'Resume game' })
+    .click()
+
+  await page.setViewportSize({ width: 320, height: 568 })
+  await expect(page.getByText('Hard · 1.5×', { exact: true })).toBeVisible()
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true)
 })
 
 test('keeps the best score through reload and offline relaunch', async ({

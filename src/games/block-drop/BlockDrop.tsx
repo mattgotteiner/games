@@ -256,6 +256,7 @@ function vibrateForGameEvent(
 }
 
 const BEST_SCORE_STORAGE_KEY = 'games.block-drop.best-score'
+const DIFFICULTY_STORAGE_KEY = 'games.block-drop.difficulty'
 
 function readBestScore(): number {
   try {
@@ -275,6 +276,26 @@ function writeBestScore(score: number): void {
     window.localStorage.setItem(BEST_SCORE_STORAGE_KEY, String(score))
   } catch {
     // Best-score persistence is optional; the current game stays playable.
+  }
+}
+
+function readDifficulty(): BlockDropDifficulty {
+  try {
+    const value = window.localStorage.getItem(DIFFICULTY_STORAGE_KEY)
+    return (
+      BLOCK_DROP_DIFFICULTY_ORDER.find((difficulty) => difficulty === value) ??
+      'medium'
+    )
+  } catch {
+    return 'medium'
+  }
+}
+
+function writeDifficulty(difficulty: BlockDropDifficulty): void {
+  try {
+    window.localStorage.setItem(DIFFICULTY_STORAGE_KEY, difficulty)
+  } catch {
+    // Difficulty persistence is optional; the current game stays playable.
   }
 }
 
@@ -409,7 +430,7 @@ export function BlockDrop({
   const [controller, setController] =
     useState<BlockDropControllerInstance | null>(null)
   const [status, setStatus] = useState<GameStatus>('playing')
-  const [difficulty, setDifficulty] = useState<BlockDropDifficulty>('medium')
+  const [difficulty, setDifficulty] = useState<BlockDropDifficulty>(readDifficulty)
   const [postOverlayGestureLock, setPostOverlayGestureLock] = useState(false)
   const [score, setScore] = useState(0)
   const [lines, setLines] = useState(0)
@@ -561,6 +582,7 @@ export function BlockDrop({
         if (message) setAnnouncement(message)
         lastAnnouncedStatus.current = state.status
       },
+      { difficulty },
     )
     controllerRef.current = controller
     setController(controller)
@@ -775,6 +797,7 @@ export function BlockDrop({
                         ]
                         if (selected !== undefined) {
                           setDifficulty(selected)
+                          writeDifficulty(selected)
                           controllerRef.current?.setDifficulty?.(selected)
                         }
                       }}
@@ -866,7 +889,7 @@ export function BlockDrop({
             <div
               class="game-progress"
               role="group"
-              aria-label={`Level ${level}, ${lines} lines cleared`}
+              aria-label={`Level ${level}, ${lines} lines cleared, ${BLOCK_DROP_DIFFICULTIES[difficulty].label} difficulty`}
             >
               <p class="game-progress-item">
                 <span class="hud-label">Level</span>
@@ -880,6 +903,15 @@ export function BlockDrop({
               <p class="game-progress-item">
                 <span class="hud-label">Lines</span>
                 <strong>{lines}</strong>
+              </p>
+              <p class="game-progress-item">
+                <span class="hud-label">Difficulty</span>
+                <strong class="difficulty-value">
+                  <span>{BLOCK_DROP_DIFFICULTIES[difficulty].label}</span>
+                  <span class="difficulty-multiplier">
+                    {BLOCK_DROP_DIFFICULTIES[difficulty].speed}×
+                  </span>
+                </strong>
               </p>
             </div>
             <p

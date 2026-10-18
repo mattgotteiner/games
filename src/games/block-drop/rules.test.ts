@@ -101,6 +101,11 @@ describe('level progression', () => {
     expect(createGame(8)).toMatchObject({ level: 1, lines: 0 })
   })
 
+  it('defaults to Medium and accepts an initial difficulty preference', () => {
+    expect(createGame(8).difficulty).toBe('medium')
+    expect(createGame(8, 'hard').difficulty).toBe('hard')
+  })
+
   it.each([
     [1, 700],
     [2, 595],
