@@ -162,8 +162,9 @@ describe('App', () => {
     })
     expect(within(sessionActions).getByRole('button', { name: 'Pause game' }))
       .toBeInTheDocument()
-    expect(within(sessionActions).getByRole('button', { name: 'Help' }))
-      .toBeInTheDocument()
+    expect(
+      within(sessionActions).queryByRole('button', { name: 'Help' }),
+    ).not.toBeInTheDocument()
     expect(
       within(sessionActions).queryByRole('button', { name: 'Restart game' }),
     ).not.toBeInTheDocument()
@@ -590,9 +591,18 @@ describe('App', () => {
       within(pausePanel).getByRole('button', { name: 'Restart game' }),
     ).toBeEnabled()
     expect(
+      within(pausePanel).getByRole('button', { name: 'Help' }),
+    ).toBeEnabled()
+    expect(
       within(screen.getByRole('group', { name: 'Session actions' })).queryByRole(
         'button',
         { name: 'Restart game' },
+      ),
+    ).not.toBeInTheDocument()
+    expect(
+      within(screen.getByRole('group', { name: 'Session actions' })).queryByRole(
+        'button',
+        { name: 'Help' },
       ),
     ).not.toBeInTheDocument()
 
@@ -955,10 +965,36 @@ describe('App', () => {
     expect(screen.getByText('Lines')).toBeInTheDocument()
     expect(screen.getByText('1')).toBeInTheDocument()
     expect(screen.getByText('0')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Help' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Pause game' }))
     expect(dispatch).toHaveBeenCalledOnce()
     expect(dispatch).toHaveBeenCalledWith('pause')
-    const dialog = screen.getByRole('dialog', { name: 'Scoring and controls' })
+    act(() => publish?.({ ...playing, status: 'paused' }))
+    const pausePanel = screen.getByRole('group', { name: 'Paused' })
+    expect(
+      within(pausePanel).getByRole('button', { name: 'Help' }),
+    ).toBeInTheDocument()
+    expect(
+      within(screen.getByRole('group', { name: 'Session actions' })).queryByRole(
+        'button',
+        { name: 'Help' },
+      ),
+    ).not.toBeInTheDocument()
+    fireEvent.click(within(pausePanel).getByRole('button', { name: 'Help' }))
+    const dialog = screen.getByRole('dialog', { name: 'Help' })
+    const dialogHeadings = within(dialog).getAllByRole('heading')
+    expect(dialogHeadings.map((heading) => heading.textContent)).toEqual([
+      'Help',
+      'How to play',
+      'Scoring and controls',
+      'Scoring',
+      'Keyboard controls',
+    ])
+    expect(
+      within(dialog).getByText(/Each piece has four squares and falls from the top/),
+    ).toBeInTheDocument()
+    expect(
+      within(dialog).getByText(/any part of a piece is still above the board when it lands/),
+    ).toBeInTheDocument()
     const scoring = within(dialog).getByRole('region', { name: 'Scoring' })
     expect(within(scoring).getByText('Soft drop')).toBeInTheDocument()
     expect(
@@ -987,13 +1023,16 @@ describe('App', () => {
     expect(within(dialog).getByText('Keyboard controls')).toBeInTheDocument()
     fireEvent.click(within(dialog).getByRole('button', { name: 'Close help' }))
     expect(screen.getByRole('button', { name: 'Help' })).toHaveFocus()
+    expect(document.querySelector('.game-status')).toHaveTextContent('Paused')
     const announcements = screen.getByRole('status', {
       name: 'Game announcements',
     })
+    act(() => publish?.(playing))
+    const announcementBeforeSoftDrop = announcements.textContent
     act(() =>
       publish?.({ ...playing, score: 8 }, { clearing: false, action: 'soft-drop' }),
     )
-    expect(announcements.textContent).toBe('')
+    expect(announcements.textContent).toBe(announcementBeforeSoftDrop)
     vi.useFakeTimers()
     act(() =>
       publish?.(

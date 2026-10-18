@@ -84,9 +84,10 @@ completed change retained for history.
 
 ## Planned OpenSpec Changes
 
-Ten incremental Block Drop changes, applied one at a time. Later changes
+Eleven incremental Block Drop changes, applied one at a time. Later changes
 modify requirements introduced by earlier ones, so archive each before applying
-the next. All ten changes are implemented, reviewed E2E, and archived. During
+the next. The original ten changes are implemented, reviewed E2E, and archived;
+the active Help consolidation is described below. During
 implementation of `add-block-drop-touch-repeat`, mobile E2E
 uncovered page panning when dragging from game elements; the fix is recorded in
 that archived change and the canonical Block Drop spec. During E2E review of
@@ -110,6 +111,12 @@ by difficulty, and the selected difficulty and multiplier appear in the HUD
 and persist on the same device. The user confirmed persistence after reload.
 The current full automated check passes 215 unit/component tests, a production
 build, and all 13 Chromium flows.
+
+The active `consolidate-block-drop-help` change is implemented in the working
+tree and passes `npm run check`. Browser coverage verifies the pause-only Help
+entry, beginner/reference order, Escape dismissal, focus return, and internal
+scrolling with a reachable close control at 320 px viewport height. It is ready
+for manual phone review before commit and push.
 
 1. `compact-block-drop-mobile-layout`: compact header, scoring guide moved
    into a help dialog, playfield-first layout (at least 540 px tall at 390 by
@@ -149,11 +156,11 @@ A generalized game registry/runtime remains deferred.
 Introduce shared platform abstractions only after another game exposes
 concrete duplication.
 
-There are no remaining planned changes in the current Block Drop sequence.
+There are no additional planned changes beyond the active Help consolidation.
 
-## Next OpenSpec Change
+## Active OpenSpec Change
 
 `consolidate-block-drop-help` has a written spec for one Help entry in the
 pause menu. Its dialog begins with beginner-friendly `How to play` guidance,
-then preserves the existing scoring and controls reference. The UI and tests
-have not been started.
+then preserves the existing scoring and controls reference. Implementation
+and automated checks are complete; manual phone review remains.

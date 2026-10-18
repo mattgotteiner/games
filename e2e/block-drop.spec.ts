@@ -152,10 +152,37 @@ async function expectScoringGuideVisible(page: import('@playwright/test').Page) 
     .locator('.game-status')
     .getByText('Playing', { exact: true })
     .isVisible()
-  await page.getByRole('button', { name: 'Help' }).click()
-  const dialog = page.getByRole('dialog', { name: 'Scoring and controls' })
+  if (wasPlaying) {
+    await page.getByRole('button', { name: 'Pause game' }).click()
+  }
+  const pausePanel = page.getByRole('group', { name: 'Paused' })
+  await expect(pausePanel.getByRole('button', { name: 'Help' })).toBeVisible()
+  await expect(
+    page.getByRole('group', { name: 'Session actions' }).getByRole('button', {
+      name: 'Help',
+    }),
+  ).toHaveCount(0)
+  await expect(
+    page.getByRole('button', { name: 'Help', exact: true }),
+  ).toHaveCount(1)
+  await pausePanel.getByRole('button', { name: 'Help' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Help' })
   await expect(dialog).toBeVisible()
-  const guide = dialog.getByRole('region', { name: 'Scoring' })
+  const headings = await dialog.getByRole('heading').allTextContents()
+  expect(headings.slice(0, 3)).toEqual([
+    'Help',
+    'How to play',
+    'Scoring and controls',
+  ])
+  await expect(
+    dialog.getByText(/Each piece has four squares and falls from the top/),
+  ).toBeVisible()
+  await expect(
+    dialog.getByText(/any part of a piece is still above the board when it lands/),
+  ).toBeVisible()
+  const closeButton = dialog.getByRole('button', { name: 'Close help' })
+  await expect(closeButton).toBeVisible()
+  const guide = dialog.getByRole('region', { name: 'Scoring', exact: true })
   await expect(guide).toBeVisible()
   for (const text of [
     'Soft drop',
@@ -176,14 +203,32 @@ async function expectScoringGuideVisible(page: import('@playwright/test').Page) 
   await expect(dialog.getByText('Keyboard controls')).toBeVisible()
   await expect(dialog.getByText('Hold or swap the active piece')).toBeVisible()
   await expect(dialog.locator('dt').getByText('C', { exact: true })).toBeVisible()
+  const viewportHeight = await page.evaluate(() => window.innerHeight)
+  if (viewportHeight <= 320) {
+    const content = dialog.locator('.help-dialog-content')
+    const scrollMetrics = await content.evaluate((element) => ({
+      clientHeight: element.clientHeight,
+      scrollHeight: element.scrollHeight,
+    }))
+    expect(scrollMetrics.scrollHeight).toBeGreaterThan(
+      scrollMetrics.clientHeight,
+    )
+    await content.evaluate((element) => {
+      element.scrollTop = element.scrollHeight
+    })
+    await expect(closeButton).toBeVisible()
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollHeight <= window.innerHeight,
+      ),
+    ).toBe(true)
+  }
   await page.keyboard.press('Escape')
   await expect(dialog).not.toBeVisible()
-  await expect(page.getByRole('button', { name: 'Help' })).toBeFocused()
+  await expect(pausePanel.getByRole('button', { name: 'Help' })).toBeFocused()
+  await expect(page.locator('.game-status')).toHaveText('Paused')
   if (wasPlaying) {
-    await page
-      .getByRole('group', { name: 'Paused' })
-      .getByRole('button', { name: 'Resume game' })
-      .click()
+    await pausePanel.getByRole('button', { name: 'Resume game' }).click()
   }
 }
 
@@ -352,7 +397,7 @@ test('prevents page panning from touch drags anywhere in Block Drop', async ({
       page.locator('.game-status'),
       page.getByRole('region', { name: /Next piece:/ }),
       page.getByRole('button', { name: 'Move left' }),
-      page.getByRole('button', { name: 'Help' }),
+      page.getByRole('button', { name: 'Pause game' }),
     ]
 
     for (const target of targets) {

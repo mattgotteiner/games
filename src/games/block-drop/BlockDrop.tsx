@@ -386,9 +386,9 @@ function PiecePreview({
 function ScoringGuide() {
   return (
     <section class="scoring-guide" aria-labelledby="scoring-guide-heading">
-      <h2 class="hud-label" id="scoring-guide-heading">
+      <h4 class="hud-label" id="scoring-guide-heading">
         Scoring
-      </h2>
+      </h4>
       <dl class="scoring-rules">
         <div class="scoring-rule">
           <dt>Soft drop</dt>
@@ -754,16 +754,6 @@ export function BlockDrop({
             </span>
             <span class="button-caption">{paused ? 'Resume' : 'Pause'}</span>
           </button>
-          <button
-            class="button-quiet session-action"
-            type="button"
-            aria-label="Help"
-            ref={helpButtonRef}
-            onClick={openHelp}
-          >
-            <span class="control-symbol" aria-hidden="true">?</span>
-            <span class="button-caption">Help</span>
-          </button>
         </div>
       </header>
 
@@ -856,6 +846,15 @@ export function BlockDrop({
                       onClick={() => act('restart')}
                     >
                       Restart
+                    </button>
+                    <button
+                      class="button-secondary pause-help-action"
+                      type="button"
+                      aria-label="Help"
+                      ref={helpButtonRef}
+                      onClick={openHelp}
+                    >
+                      Help
                     </button>
                   </div>
                 </div>
@@ -1036,7 +1035,7 @@ export function BlockDrop({
       </div>
 
       <dialog
-        class="scoring-dialog"
+        class="help-dialog"
         ref={helpDialogRef}
         aria-labelledby="help-dialog-heading"
         onClose={returnFocusToHelp}
@@ -1046,7 +1045,7 @@ export function BlockDrop({
         }}
       >
         <div class="dialog-heading-row">
-          <h2 id="help-dialog-heading">Scoring and controls</h2>
+          <h2 id="help-dialog-heading">Help</h2>
           <button
             class="button-quiet dialog-close"
             type="button"
@@ -1056,43 +1055,69 @@ export function BlockDrop({
             ×
           </button>
         </div>
-        <ScoringGuide />
-        <section
-          class="keyboard-guide"
-          aria-labelledby="keyboard-guide-heading"
-        >
-          <h3 id="keyboard-guide-heading">Keyboard controls</h3>
-          <dl>
-            <div>
-              <dt>← / →</dt>
-              <dd>Move left or right</dd>
-            </div>
-            <div>
-              <dt>↑</dt>
-              <dd>Rotate clockwise</dd>
-            </div>
-            <div>
-              <dt>↓</dt>
-              <dd>Soft drop</dd>
-            </div>
-            <div>
-              <dt>Space</dt>
-              <dd>Hard drop</dd>
-            </div>
-            <div>
-              <dt>C</dt>
-              <dd>Hold or swap the active piece</dd>
-            </div>
-            <div>
-              <dt>P</dt>
-              <dd>Pause or resume (when help is closed)</dd>
-            </div>
-            <div>
-              <dt>R</dt>
-              <dd>Restart the game (when help is closed)</dd>
-            </div>
-          </dl>
-        </section>
+        <div class="help-dialog-content">
+          <section
+            class="beginner-guide"
+            aria-labelledby="how-to-play-heading"
+          >
+            <h3 id="how-to-play-heading">How to play</h3>
+            <p>
+              Each piece has four squares and falls from the top. Move and turn
+              it to fit with the pieces already on the board. Fill a whole row
+              from edge to edge and it clears, bringing the pieces above it
+              down.
+            </p>
+            <p>
+              Drop places a piece instantly. Hold saves your piece for later,
+              once before the next piece locks. Clear lines and keep playing.
+              The game ends if there is no room for the next piece, or any part
+              of a piece is still above the board when it lands.
+            </p>
+          </section>
+          <section
+            class="scoring-reference"
+            aria-labelledby="scoring-controls-heading"
+          >
+            <h3 id="scoring-controls-heading">Scoring and controls</h3>
+            <ScoringGuide />
+            <section
+              class="keyboard-guide"
+              aria-labelledby="keyboard-guide-heading"
+            >
+              <h4 id="keyboard-guide-heading">Keyboard controls</h4>
+              <dl>
+                <div>
+                  <dt>← / →</dt>
+                  <dd>Move left or right</dd>
+                </div>
+                <div>
+                  <dt>↑</dt>
+                  <dd>Rotate clockwise</dd>
+                </div>
+                <div>
+                  <dt>↓</dt>
+                  <dd>Soft drop</dd>
+                </div>
+                <div>
+                  <dt>Space</dt>
+                  <dd>Hard drop</dd>
+                </div>
+                <div>
+                  <dt>C</dt>
+                  <dd>Hold or swap the active piece</dd>
+                </div>
+                <div>
+                  <dt>P</dt>
+                  <dd>Pause or resume (when help is closed)</dd>
+                </div>
+                <div>
+                  <dt>R</dt>
+                  <dd>Restart the game (when help is closed)</dd>
+                </div>
+              </dl>
+            </section>
+          </section>
+        </div>
       </dialog>
       <div
         class="visually-hidden"

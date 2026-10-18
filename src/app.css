@@ -437,6 +437,10 @@ button:disabled {
   padding: 0.55rem 0.65rem;
 }
 
+.pause-help-action {
+  grid-column: 1 / -1;
+}
+
 .pause-difficulty {
   display: grid;
   gap: 0.12rem;
@@ -882,11 +886,12 @@ button:disabled {
   text-align: center;
 }
 
-.scoring-dialog {
+.help-dialog {
+  box-sizing: border-box;
   width: min(32rem, calc(100vw - 2rem));
   max-width: none;
   max-height: calc(100dvh - 2rem);
-  overflow: auto;
+  overflow: hidden;
   border: 1px solid #3e5c82;
   border-radius: 1rem;
   padding: clamp(1rem, 4vw, 1.5rem);
@@ -896,7 +901,12 @@ button:disabled {
   overscroll-behavior: contain;
 }
 
-.scoring-dialog::backdrop {
+.help-dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+.help-dialog::backdrop {
   background: rgb(3 9 18 / 76%);
   backdrop-filter: blur(3px);
 }
@@ -906,6 +916,7 @@ button:disabled {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
+  flex: 0 0 auto;
   margin-bottom: 1rem;
 }
 
@@ -920,17 +931,50 @@ button:disabled {
   font-size: 1.25rem;
 }
 
-.scoring-dialog .scoring-guide {
+.help-dialog-content {
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.beginner-guide {
+  margin-bottom: 1.25rem;
+}
+
+.beginner-guide h3,
+.scoring-reference > h3 {
+  margin: 0 0 0.65rem;
+  color: #7dd3fc;
+  font-size: 0.9rem;
+}
+
+.beginner-guide p {
+  margin: 0 0 0.65rem;
+  color: #cbd5e1;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.beginner-guide p:last-child {
+  margin-bottom: 0;
+}
+
+.help-dialog .scoring-guide {
   padding-top: 0;
   border-top: 0;
 }
 
-.scoring-dialog .scoring-rules {
+.help-dialog .scoring-guide .hud-label {
+  margin-bottom: 0.25rem;
+}
+
+.help-dialog .scoring-rules {
   gap: 0.55rem;
   font-size: 0.9rem;
 }
 
-.scoring-dialog .scoring-rule-lines dd {
+.help-dialog .scoring-rule-lines dd {
   display: flex;
   flex-wrap: wrap;
   gap: 0.35rem 1rem;
@@ -942,7 +986,7 @@ button:disabled {
   padding-top: 1rem;
 }
 
-.keyboard-guide h3 {
+.keyboard-guide h4 {
   margin: 0 0 0.65rem;
   color: #7dd3fc;
   font-size: 0.8rem;
