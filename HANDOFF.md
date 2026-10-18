@@ -70,9 +70,9 @@ completed change retained for history.
 
 ## Planned OpenSpec Changes
 
-Six proposed Block Drop changes, applied in this order, one PR each. Later
+Seven proposed Block Drop changes, applied in this order, one PR each. Later
 changes modify requirements introduced by earlier ones, so archive each
-before applying the next. Changes 1–4 are implemented, reviewed E2E, and
+before applying the next. Changes 1–5 are implemented, reviewed E2E, and
 archived. During implementation of `add-block-drop-touch-repeat`, mobile E2E
 uncovered page panning when dragging from game elements; the fix is recorded in
 that archived change and the canonical Block Drop spec. During E2E review of
@@ -109,7 +109,8 @@ check last ran before the slider addition.
    slider. Implemented, user-reviewed, and archived.
 6. `scale-block-drop-score-by-difficulty`: apply the selected 0.5×, 1×, or
    1.5× difficulty speed multiplier to awarded points while retaining the
-   level multiplier on line clears.
+   level multiplier on line clears. A proposal and spec delta are drafted in
+   `openspec/changes/scale-block-drop-score-by-difficulty/`.
 7. `add-block-drop-wall-kicks`: basic horizontal rotation kicks (not full
    SRS).
 
