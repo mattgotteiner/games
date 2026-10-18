@@ -162,7 +162,8 @@ A generalized game registry/runtime remains deferred.
 Introduce shared platform abstractions only after another game exposes
 concrete duplication.
 
-The only active change is `remove-block-drop-catalog-buttons`, described below.
+The active changes are `remove-block-drop-catalog-buttons` and
+`add-block-drop-themes`, described below.
 
 ## Active OpenSpec Change
 
@@ -171,6 +172,13 @@ catalog` action and the header `Catalog` button. Browser Back remains the way
 to return to the catalog after launch, and the spec plus implementation are
 committed and pushed in `a0358f0`. CI and the GitHub Pages deployment passed,
 and the public app returned HTTP 200. A phone review is still pending.
+
+`add-block-drop-themes` adds six cosmetic themes: Classic (default), Tron,
+Chocolate, Nature, Sketchbook, and Stained Glass. Each theme has its own
+line-clear animation. A Theme picker in the pause menu saves the choice under
+`games.block-drop.theme`. Only the spec and art direction are written so far.
+Start with `design.md`, `art-direction.md`, and the runnable reference
+`art-direction/preview.html`, then follow `tasks.md` in order.
 
 ## Most Recent OpenSpec Change
 

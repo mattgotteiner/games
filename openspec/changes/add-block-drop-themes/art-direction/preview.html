@@ -1,0 +1,367 @@
+<!doctype html>
+<!--
+  Block Drop theme art-direction reference.
+  Open directly in a browser (no build step). Each column renders a sample
+  board with the recipes from ../art-direction.md: a resting board, then the
+  theme's line-clear effect at two moments. The card below each board shows the
+  theme's UI tokens. This file is a reference sketch, not production code.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Block Drop themes - art direction</title>
+<style>
+  body { margin: 0; padding: 24px; background: #888; font-family: system-ui, sans-serif; }
+  h1 { margin: 0 0 16px; font-size: 20px; color: #111; }
+  .themes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+  .theme { padding: 14px; border-radius: 14px; background: var(--page); color: var(--text); font-family: var(--font-ui); }
+  .theme h2 { margin: 0 0 4px; font-family: var(--font-display); font-size: 22px; }
+  .theme p.tagline { margin: 0 0 10px; color: var(--muted); font-size: 13px; }
+  .boards { display: flex; gap: 8px; }
+  .boards figure { margin: 0; flex: 1; }
+  .boards figcaption { font-size: 11px; color: var(--muted); text-align: center; margin-top: 4px; }
+  canvas { display: block; width: 100%; aspect-ratio: 1 / 2; border-radius: 6px; box-shadow: 0 0 0 2px var(--frame); }
+  .card { margin-top: 12px; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--panel); }
+  .label { color: var(--label); font-size: 11px; font-weight: 900; letter-spacing: .14em; text-transform: uppercase; }
+  .score { font-size: 28px; font-weight: 900; font-variant-numeric: tabular-nums; }
+  .buttons { display: flex; gap: 6px; margin-top: 8px; }
+  .buttons span { flex: 1; text-align: center; padding: 8px 4px; border-radius: var(--radius-control); font-size: 13px; font-weight: 800; border: 1px solid var(--s-border); background: var(--s-bg); color: var(--s-text); }
+  .buttons span.primary { background: var(--p-bg); color: var(--p-text); border-color: var(--p-bg); }
+  .buttons span.focus { outline: 3px solid var(--focus); outline-offset: 2px; }
+  [data-theme="tron"] .card, [data-theme="tron"] canvas { box-shadow: 0 0 0 1px var(--frame), 0 0 14px rgb(0 229 255 / 35%); }
+  [data-theme="tron"] .label, [data-theme="tron"] h2 { text-shadow: 0 0 8px rgb(0 229 255 / 60%); }
+  [data-theme="sketchbook"] .card, [data-theme="sketchbook"] .buttons span { border-width: 2px; border-radius: 255px 12px 225px 12px / 12px 225px 12px 255px; }
+  [data-theme="stained-glass"] .card { border-radius: 48% 48% 10px 10px / 34px 34px 10px 10px; padding-top: 22px; text-align: center; }
+</style>
+</head>
+<body>
+<h1>Block Drop themes - art direction reference</h1>
+<div class="themes" id="themes"></div>
+<script>
+const W = 10, H = 20
+const TYPES = ['I', 'J', 'L', 'O', 'S', 'T', 'Z']
+
+const THEMES = {
+  classic: {
+    label: 'Classic', tagline: 'The original midnight board.',
+    pieces: { I: '#38bdf8', J: '#818cf8', L: '#fb923c', O: '#facc15', S: '#4ade80', T: '#c084fc', Z: '#fb7185' },
+    board: '#07111f', grid: 'rgb(148 163 184 / 18%)',
+    ui: { page: '#07111f', text: '#f8fafc', muted: '#94a3b8', label: '#7dd3fc', panel: '#132641', border: '#2d4768', frame: '#3a5b83', 'p-bg': '#67e8f9', 'p-text': '#07111f', 's-bg': '#1e3049', 's-border': '#3e5c82', 's-text': '#eff6ff', focus: '#fbbf24', radius: '16px', 'radius-control': '12px', 'font-ui': 'Inter, system-ui, sans-serif', 'font-display': 'Inter, system-ui, sans-serif' },
+  },
+  tron: {
+    label: 'Tron', tagline: 'Light lines on an endless grid.',
+    pieces: { I: '#00e5ff', J: '#2f6bff', L: '#ff8a00', O: '#ffe600', S: '#39ff14', T: '#ff2bd6', Z: '#ff1f4b' },
+    board: '#03060c', grid: 'rgb(0 229 255 / 11%)',
+    ui: { page: '#020409', text: '#e6fbff', muted: '#7fa9b8', label: '#00e5ff', panel: '#050b14', border: 'rgb(0 229 255 / 45%)', frame: '#00e5ff', 'p-bg': '#00e5ff', 'p-text': '#001018', 's-bg': '#07131f', 's-border': '#1a6c80', 's-text': '#c8f6ff', focus: '#ff2bd6', radius: '4px', 'radius-control': '2px', 'font-ui': 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace', 'font-display': 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace' },
+  },
+  chocolate: {
+    label: 'Chocolate', tagline: 'A box of little bars.',
+    pieces: { I: '#5a301c', J: '#9bb35a', L: '#d9963f', O: '#a8714a', S: '#9fd8bf', T: '#f1e4cc', Z: '#c75b7a' },
+    board: '#2e0f14', grid: 'rgb(201 162 74 / 16%)',
+    ui: { page: '#1b0f0a', text: '#fbf1e3', muted: '#cdb59b', label: '#e3b866', panel: '#2b1911', border: '#6b4429', frame: '#b8913f', 'p-bg': '#e3b866', 'p-text': '#2b1408', 's-bg': '#3a2216', 's-border': '#7a5032', 's-text': '#fbf1e3', focus: '#ffd98a', radius: '14px', 'radius-control': '999px', 'font-ui': 'Inter, system-ui, sans-serif', 'font-display': '"Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif' },
+  },
+  nature: {
+    label: 'Nature', tagline: 'River stones and falling leaves.',
+    pieces: { I: '#6fb3c8', J: '#8090b8', L: '#dcc79a', O: '#e6b843', S: '#86a95c', T: '#b08fcf', Z: '#c9654b' },
+    board: '#1e2419', grid: 'rgb(232 220 192 / 7%)',
+    ui: { page: '#1a1f17', text: '#f1eadb', muted: '#b9b29f', label: '#a8c686', panel: '#232b20', border: '#4a5a40', frame: '#6b7d5a', 'p-bg': '#a8c686', 'p-text': '#1a2414', 's-bg': '#2c3628', 's-border': '#55684a', 's-text': '#f1eadb', focus: '#f2c14e', radius: '22px', 'radius-control': '18px', 'font-ui': 'ui-rounded, "SF Pro Rounded", system-ui, sans-serif', 'font-display': 'ui-rounded, "SF Pro Rounded", system-ui, sans-serif' },
+  },
+  sketchbook: {
+    label: 'Sketchbook', tagline: 'Colored pencil on graph paper.',
+    pieces: { I: '#3d8fd1', J: '#2c4f9e', L: '#e07b28', O: '#e8c22c', S: '#4b9e3f', T: '#8d4fb3', Z: '#d1433a' },
+    board: '#fbf8f0', grid: 'rgb(127 166 207 / 32%)',
+    ui: { page: '#efe9dc', text: '#2b2a28', muted: '#5f5a52', label: '#b8322a', panel: '#fbf8f0', border: '#8a8172', frame: '#8a8172', 'p-bg': '#2b2a28', 'p-text': '#fbf8f0', 's-bg': '#fffdf7', 's-border': '#7a7163', 's-text': '#2b2a28', focus: '#1f6fd1', radius: '6px', 'radius-control': '6px', 'font-ui': 'Inter, system-ui, sans-serif', 'font-display': '"Segoe Print", "Bradley Hand", "Chalkboard SE", "Comic Sans MS", cursive' },
+  },
+  'stained-glass': {
+    label: 'Stained Glass', tagline: 'Jewel light through leaded panes.',
+    pieces: { I: '#2bb3b1', J: '#1f4fb5', L: '#e39b17', O: '#f2cf4a', S: '#138a52', T: '#7b3fa6', Z: '#b3122e' },
+    board: '#121212', grid: '#262626',
+    ui: { page: '#0d0f1c', text: '#f4ecd8', muted: '#b7ad96', label: '#d4af37', panel: '#171a2e', border: '#3b3f63', frame: '#d4af37', 'p-bg': '#d4af37', 'p-text': '#1a1405', 's-bg': '#20243d', 's-border': '#4a4f7a', 's-text': '#f4ecd8', focus: '#7fd8ff', radius: '10px', 'radius-control': '8px', 'font-ui': 'Inter, system-ui, sans-serif', 'font-display': '"Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif' },
+  },
+}
+
+// Deterministic per-cell noise in [0, 1). Never use Math.random in renderers.
+function hash(x, y, salt = 0) {
+  let h = (x * 374761393 + y * 668265263 + salt * 2147483647) | 0
+  h = Math.imul(h ^ (h >>> 13), 1274126177)
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296
+}
+function mix(hex, target, amount) {
+  const a = parseInt(hex.slice(1), 16), b = parseInt(target.slice(1), 16)
+  const c = [16, 8, 0].map((s) => Math.round(((a >> s) & 255) * (1 - amount) + ((b >> s) & 255) * amount))
+  return `rgb(${c.join(' ')})`
+}
+function alpha(hex, a) {
+  const n = parseInt(hex.slice(1), 16)
+  return `rgb(${(n >> 16) & 255} ${(n >> 8) & 255} ${n & 255} / ${a})`
+}
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath(); ctx.roundRect(x, y, w, h, Math.min(r, w / 2, h / 2))
+}
+const ease = (t) => 1 - Math.pow(1 - t, 3)
+const clamp01 = (t) => Math.max(0, Math.min(1, t))
+
+// ---- Cell renderers: (ctx, x, y, size, color, theme, cellX, cellY) --------
+const CELL = {
+  classic(ctx, x, y, s, c) {
+    const e = Math.max(1, s * 0.08)
+    ctx.fillStyle = c; ctx.fillRect(x + e, y + e, s - 2 * e, s - 2 * e)
+    ctx.fillStyle = 'rgb(255 255 255 / 28%)'
+    ctx.fillRect(x + e, y + e, s - 2 * e, e); ctx.fillRect(x + e, y + e, e, s - 2 * e)
+    ctx.fillStyle = 'rgb(0 0 0 / 22%)'
+    ctx.fillRect(x + e, y + s - 2 * e, s - 2 * e, e); ctx.fillRect(x + s - 2 * e, y + e, e, s - 2 * e)
+  },
+  tron(ctx, x, y, s, c) {
+    const i = s * 0.12
+    ctx.fillStyle = alpha(c, 0.16); ctx.fillRect(x + i, y + i, s - 2 * i, s - 2 * i)
+    ctx.strokeStyle = alpha(c, 0.28); ctx.lineWidth = s * 0.2
+    ctx.strokeRect(x + i, y + i, s - 2 * i, s - 2 * i)
+    ctx.strokeStyle = c; ctx.lineWidth = Math.max(1.5, s * 0.07)
+    ctx.strokeRect(x + i, y + i, s - 2 * i, s - 2 * i)
+    ctx.strokeStyle = 'rgb(255 255 255 / 55%)'; ctx.lineWidth = 1
+    ctx.strokeRect(x + s * 0.34, y + s * 0.34, s * 0.32, s * 0.32)
+  },
+  chocolate(ctx, x, y, s, c, t, cx, cy, soften = 0) {
+    const i = s * 0.05
+    roundRect(ctx, x + i, y + i, s - 2 * i, s - 2 * i, s * (0.14 + soften * 0.3))
+    ctx.fillStyle = c; ctx.fill()
+    const emboss = 1 - soften
+    if (emboss > 0) {
+      const p = s * 0.24, w = Math.max(1, s * 0.07)
+      ctx.lineWidth = w
+      ctx.strokeStyle = `rgb(255 240 220 / ${0.26 * emboss})`
+      ctx.beginPath(); ctx.moveTo(x + p, y + s - p); ctx.lineTo(x + p, y + p); ctx.lineTo(x + s - p, y + p); ctx.stroke()
+      ctx.strokeStyle = `rgb(0 0 0 / ${0.32 * emboss})`
+      ctx.beginPath(); ctx.moveTo(x + s - p, y + p); ctx.lineTo(x + s - p, y + s - p); ctx.lineTo(x + p, y + s - p); ctx.stroke()
+    }
+    ctx.fillStyle = `rgb(255 255 255 / ${0.1 + soften * 0.18})`
+    roundRect(ctx, x + s * 0.14, y + s * 0.1, s * 0.34, s * 0.08, s * 0.04); ctx.fill()
+  },
+  nature(ctx, x, y, s, c, t, cx, cy) {
+    const i = s * 0.06
+    const g = ctx.createRadialGradient(x + s * 0.35, y + s * 0.3, s * 0.05, x + s / 2, y + s / 2, s * 0.65)
+    g.addColorStop(0, mix(c, '#ffffff', 0.28)); g.addColorStop(0.55, c); g.addColorStop(1, mix(c, '#000000', 0.2))
+    roundRect(ctx, x + i, y + i, s - 2 * i, s - 2 * i, s * 0.38); ctx.fillStyle = g; ctx.fill()
+    ctx.fillStyle = 'rgb(0 0 0 / 14%)'
+    for (let k = 0; k < 2; k++) {
+      ctx.beginPath()
+      ctx.arc(x + s * (0.3 + hash(cx, cy, k) * 0.4), y + s * (0.4 + hash(cx, cy, k + 5) * 0.35), s * 0.035, 0, Math.PI * 2)
+      ctx.fill()
+    }
+  },
+  sketchbook(ctx, x, y, s, c, t, cx, cy, fade = 1) {
+    const i = s * 0.08
+    ctx.save(); ctx.beginPath(); ctx.rect(x + i, y + i, s - 2 * i, s - 2 * i); ctx.clip()
+    ctx.strokeStyle = alpha(c, 0.85 * fade); ctx.lineWidth = Math.max(1, s * 0.07); ctx.lineCap = 'round'
+    const gap = s * 0.16, tilt = (hash(cx, cy, 1) - 0.5) * s * 0.25
+    for (let d = -s; d < s * 1.2; d += gap) {
+      ctx.beginPath(); ctx.moveTo(x + d, y + s); ctx.lineTo(x + d + s + tilt, y); ctx.stroke()
+    }
+    ctx.restore()
+    if (fade < 1) return
+    ctx.strokeStyle = '#3a3a3a'; ctx.lineWidth = Math.max(1, s * 0.05)
+    const j = (k) => (hash(cx, cy, k) - 0.5) * s * 0.08
+    const pts = [[x + i + j(2), y + i + j(3)], [x + s - i + j(4), y + i + j(5)], [x + s - i + j(6), y + s - i + j(7)], [x + i + j(8), y + s - i + j(9)]]
+    ctx.beginPath()
+    for (let k = 0; k < 4; k++) {
+      const [ax, ay] = pts[k], [bx, by] = pts[(k + 1) % 4]
+      ctx.moveTo(ax - (bx - ax) * 0.06, ay - (by - ay) * 0.06); ctx.lineTo(bx + (bx - ax) * 0.06, by + (by - ay) * 0.06)
+    }
+    ctx.stroke()
+  },
+  'stained-glass'(ctx, x, y, s, c, t, cx, cy, glow = 0) {
+    const g = ctx.createLinearGradient(x, y, x + s, y + s)
+    g.addColorStop(0, mix(c, '#ffffff', 0.32 + glow * 0.4)); g.addColorStop(0.5, glow ? mix(c, '#ffffff', glow * 0.3) : c); g.addColorStop(1, mix(c, '#000000', 0.28))
+    ctx.fillStyle = g; ctx.fillRect(x, y, s, s)
+    ctx.strokeStyle = 'rgb(255 255 255 / 9%)'; ctx.lineWidth = Math.max(1, s * 0.05)
+    ctx.beginPath(); ctx.moveTo(x + s * 0.15, y + s * (0.55 + hash(cx, cy) * 0.3))
+    ctx.quadraticCurveTo(x + s * 0.5, y + s * (0.2 + hash(cx, cy, 2) * 0.3), x + s * 0.85, y + s * (0.45 + hash(cx, cy, 3) * 0.3)); ctx.stroke()
+    ctx.fillStyle = 'rgb(255 255 255 / 35%)'
+    ctx.beginPath(); ctx.moveTo(x + s * 0.18, y + s * 0.18); ctx.lineTo(x + s * 0.42, y + s * 0.18); ctx.lineTo(x + s * 0.18, y + s * 0.38); ctx.fill()
+    ctx.strokeStyle = '#161616'; ctx.lineWidth = s * 0.13; ctx.strokeRect(x, y, s, s)
+    ctx.strokeStyle = 'rgb(255 255 255 / 12%)'; ctx.lineWidth = 1; ctx.strokeRect(x + s * 0.07, y + s * 0.07, s * 0.86, s * 0.86)
+  },
+}
+
+const GHOST = {
+  classic(ctx, x, y, s, c) { const i = s * 0.12; ctx.fillStyle = c + '14'; ctx.fillRect(x + i, y + i, s - 2 * i, s - 2 * i); ctx.strokeStyle = c + '73'; ctx.lineWidth = 2; ctx.strokeRect(x + i + 1, y + i + 1, s - 2 * i - 2, s - 2 * i - 2) },
+  tron(ctx, x, y, s, c) { const i = s * 0.14; ctx.setLineDash([s * 0.2, s * 0.12]); ctx.strokeStyle = alpha(c, 0.55); ctx.lineWidth = 1.5; ctx.strokeRect(x + i, y + i, s - 2 * i, s - 2 * i); ctx.setLineDash([]) },
+  chocolate(ctx, x, y, s) { const i = s * 0.1; ctx.setLineDash([1.5, s * 0.12]); ctx.lineCap = 'round'; ctx.strokeStyle = 'rgb(227 184 102 / 60%)'; ctx.lineWidth = 2; roundRect(ctx, x + i, y + i, s - 2 * i, s - 2 * i, s * 0.18); ctx.stroke(); ctx.setLineDash([]) },
+  nature(ctx, x, y, s, c) { const i = s * 0.12; ctx.setLineDash([s * 0.14, s * 0.1]); ctx.strokeStyle = alpha(c, 0.5); ctx.lineWidth = 1.5; roundRect(ctx, x + i, y + i, s - 2 * i, s - 2 * i, s * 0.36); ctx.stroke(); ctx.setLineDash([]) },
+  sketchbook(ctx, x, y, s) { const i = s * 0.12; ctx.setLineDash([s * 0.12, s * 0.08]); ctx.strokeStyle = 'rgb(58 58 58 / 45%)'; ctx.lineWidth = 1.2; ctx.strokeRect(x + i, y + i, s - 2 * i, s - 2 * i); ctx.setLineDash([]) },
+  'stained-glass'(ctx, x, y, s, c) { ctx.fillStyle = alpha(c, 0.12); ctx.fillRect(x, y, s, s); ctx.strokeStyle = '#5a5a5a'; ctx.lineWidth = s * 0.08; ctx.strokeRect(x + s * 0.04, y + s * 0.04, s * 0.92, s * 0.92) },
+}
+
+// ---- Line-clear renderers: draw cleared rows at progress p in [0, 1] -------
+const CLEAR = {
+  classic(ctx, rows, board, p, s, t) {
+    for (const r of rows) for (let x = 0; x < W; x++) CELL.classic(ctx, x * s, r * s, s, t.pieces[board[r][x]])
+    ctx.fillStyle = `rgb(248 250 252 / ${0.3 + Math.sin(p * Math.PI) * 0.7})`
+    for (const r of rows) ctx.fillRect(0, r * s, W * s, s)
+  },
+  tron(ctx, rows, board, p, s, t) {
+    const a = clamp01(p / 0.4), q = clamp01((p - 0.4) / 0.6), beam = a * W * s
+    for (const r of rows) {
+      for (let x = 0; x < W; x++) {
+        const c = t.pieces[board[r][x]], cx = x * s, cy = r * s
+        if (q === 0 && cx + s > beam) { CELL.tron(ctx, cx, cy, s, c); continue }
+        for (let k = 0; k < 4; k++) {
+          const dx = (hash(x, r, k) - 0.5) * s * 2.2 * ease(q)
+          ctx.fillStyle = `rgb(230 251 255 / ${(1 - q) * (0.55 + 0.45 * hash(x, r, k + 9))})`
+          ctx.fillRect(cx + s * 0.12 + dx, cy + s * (0.14 + k * 0.19), s * 0.76, s * 0.11)
+        }
+      }
+      if (q === 0) {
+        const g = ctx.createLinearGradient(beam - s * 3, 0, beam, 0)
+        g.addColorStop(0, 'rgb(0 229 255 / 0)'); g.addColorStop(1, 'rgb(0 229 255 / 45%)')
+        ctx.fillStyle = g; ctx.fillRect(Math.max(0, beam - s * 3), r * s, Math.min(beam, s * 3), s)
+        ctx.fillStyle = '#ffffff'; ctx.fillRect(beam - 1.5, r * s - s * 0.15, 3, s * 1.3)
+      }
+    }
+  },
+  chocolate(ctx, rows, board, p, s, t) {
+    const soften = clamp01(p / 0.35), m = ease(clamp01((p - 0.25) / 0.75)), fade = 1 - clamp01((p - 0.7) / 0.3)
+    ctx.save(); ctx.globalAlpha = fade
+    for (const r of rows) {
+      if (m === 0) { for (let x = 0; x < W; x++) CELL.chocolate(ctx, x * s, r * s, s, t.pieces[board[r][x]], t, x, r, soften); continue }
+      const top = (x) => r * s + s * 0.08 + m * s * 0.5 + Math.sin(x / s * 1.7 + r) * s * 0.1 * m
+      for (let x = 0; x < W; x++) {
+        const c = t.pieces[board[r][x]], cx = x * s
+        ctx.fillStyle = c
+        ctx.beginPath(); ctx.moveTo(cx, r * s + s)
+        for (let k = 0; k <= 4; k++) ctx.lineTo(cx + (s * k) / 4, top(cx + (s * k) / 4))
+        ctx.lineTo(cx + s, r * s + s); ctx.closePath(); ctx.fill()
+        for (let k = 0; k < 2; k++) {
+          if (hash(x, r, k) < 0.35) continue
+          const dx = cx + s * (0.2 + hash(x, r, k + 3) * 0.6), len = s * (0.6 + hash(x, r, k + 6) * 1.4) * m, w = s * 0.22
+          ctx.fillRect(dx - w / 2, r * s + s - 1, w, len)
+          ctx.beginPath(); ctx.arc(dx, r * s + s + len, w * 0.7, 0, Math.PI * 2); ctx.fill()
+        }
+      }
+      ctx.strokeStyle = 'rgb(255 240 220 / 28%)'; ctx.lineWidth = Math.max(1, s * 0.06)
+      ctx.beginPath(); for (let px = 0; px <= W * s; px += s / 4) px === 0 ? ctx.moveTo(px, top(px) + s * 0.08) : ctx.lineTo(px, top(px) + s * 0.08); ctx.stroke()
+    }
+    ctx.restore()
+  },
+  nature(ctx, rows, board, p, s, t) {
+    const a = clamp01(p / 0.3), q = clamp01((p - 0.15) / 0.85)
+    for (const r of rows) {
+      ctx.fillStyle = `rgb(168 198 134 / ${0.22 * (1 - p)})`; ctx.fillRect(0, r * s, W * s, s)
+      for (let x = 0; x < W; x++) {
+        const c = t.pieces[board[r][x]]
+        if (a < 1) { ctx.globalAlpha = 1 - a; CELL.nature(ctx, x * s, r * s, s, c, t, x, r); ctx.globalAlpha = 1 }
+        const cx = x * s + s / 2 + Math.sin(q * Math.PI * 2 + hash(x, r) * 6) * s * 0.35 * q
+        const cy = r * s + s / 2 + s * 1.8 * Math.pow(q, 1.4)
+        ctx.save(); ctx.translate(cx, cy); ctx.rotate((hash(x, r, 2) - 0.5) * 0.6 + (hash(x, r, 3) - 0.5) * 2.4 * q)
+        ctx.globalAlpha = a * (1 - q * q); const L = s * (0.46 - 0.12 * q)
+        ctx.fillStyle = c; ctx.beginPath(); ctx.moveTo(-L, 0); ctx.quadraticCurveTo(0, -L * 0.75, L, 0); ctx.quadraticCurveTo(0, L * 0.75, -L, 0); ctx.fill()
+        ctx.strokeStyle = 'rgb(0 0 0 / 22%)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-L * 0.8, 0); ctx.lineTo(L * 0.9, 0); ctx.stroke()
+        ctx.restore()
+      }
+    }
+  },
+  sketchbook(ctx, rows, board, p, s, t) {
+    const ex = ease(clamp01(p / 0.8)) * (W + 1.2) * s - s * 0.6
+    rows.forEach((r, ri) => {
+      for (let x = 0; x < W; x++) {
+        const c = t.pieces[board[r][x]], erased = clamp01((ex - x * s) / (s * 1.5))
+        if (erased < 1) CELL.sketchbook(ctx, x * s, r * s, s, c, t, x, r, erased > 0 ? 1 - erased : 1)
+        if (erased > 0) {
+          ctx.fillStyle = `rgb(80 80 80 / ${0.12 * (1 - p)})`; ctx.fillRect(x * s, r * s + s * 0.3, s, s * 0.4)
+          for (let k = 0; k < 3; k++) {
+            const f = clamp01(erased * 1.4 - hash(x, r, k) * 0.4)
+            ctx.fillStyle = `rgb(150 110 115 / ${0.7 * (1 - f)})`
+            ctx.beginPath(); ctx.ellipse(x * s + s * hash(x, r, k + 2), r * s + s * 0.8 + f * s * 0.9, s * 0.06, s * 0.04, hash(x, r, k + 4) * 3, 0, Math.PI * 2); ctx.fill()
+          }
+        }
+      }
+      if (p < 0.85) {
+        ctx.save(); ctx.translate(ex, r * s + s / 2 + Math.sin(p * 46 + ri) * s * 0.08); ctx.rotate(-0.14)
+        ctx.fillStyle = '#f4a6b4'; roundRect(ctx, -s * 0.7, -s * 0.48, s * 1.0, s * 0.96, s * 0.12); ctx.fill()
+        ctx.fillStyle = '#3d6fb6'; ctx.fillRect(s * 0.3, -s * 0.48, s * 0.55, s * 0.96)
+        ctx.strokeStyle = '#3a3a3a'; ctx.lineWidth = 1.2; ctx.strokeRect(-s * 0.7, -s * 0.48, s * 1.55, s * 0.96)
+        ctx.restore()
+      }
+    })
+  },
+  'stained-glass'(ctx, rows, board, p, s, t) {
+    const a = clamp01(p / 0.3), q = clamp01((p - 0.3) / 0.7)
+    for (const r of rows) for (let x = 0; x < W; x++) {
+      const c = t.pieces[board[r][x]], X = x * s, Y = r * s
+      const ox = X + s * (0.35 + hash(x, r) * 0.3), oy = Y + s * (0.35 + hash(x, r, 1) * 0.3)
+      if (q === 0) {
+        CELL['stained-glass'](ctx, X, Y, s, c, t, x, r, a)
+        ctx.strokeStyle = `rgb(255 255 255 / ${0.85 * a})`; ctx.lineWidth = 1.2
+        ctx.beginPath(); for (const [cx, cy] of [[X, Y + s * hash(x, r, 4)], [X + s, Y + s * hash(x, r, 5)], [X + s * hash(x, r, 6), Y + s]]) { ctx.moveTo(ox, oy); ctx.lineTo(ox + (cx - ox) * a, oy + (cy - oy) * a) } ctx.stroke()
+        continue
+      }
+      const corners = [[X, Y], [X + s, Y], [X + s, Y + s], [X, Y + s]]
+      for (let k = 0; k < 4; k++) {
+        const [ax, ay] = corners[k], [bx, by] = corners[(k + 1) % 4]
+        const mx = (ox + ax + bx) / 3, my = (oy + ay + by) / 3
+        const vx = (mx - ox) * 2.4 + (hash(x, r, k + 7) - 0.5) * s * 1.2, vy = -s * 0.7 * hash(x, r, k + 11)
+        const dx = vx * q, dy = vy * q + 0.5 * s * 7 * q * q, rot = (hash(x, r, k + 13) - 0.5) * 4 * q
+        ctx.save(); ctx.globalAlpha = 1 - q; ctx.translate(mx + dx, my + dy); ctx.rotate(rot)
+        ctx.beginPath(); ctx.moveTo(ox - mx, oy - my); ctx.lineTo(ax - mx, ay - my); ctx.lineTo(bx - mx, by - my); ctx.closePath()
+        ctx.fillStyle = mix(c, '#ffffff', 0.2); ctx.fill(); ctx.strokeStyle = '#161616'; ctx.lineWidth = s * 0.07; ctx.stroke()
+        ctx.restore()
+      }
+    }
+  },
+}
+
+// Sample board: bottom-left stack with one completed row (row 17).
+function sampleBoard() {
+  const b = Array.from({ length: H }, () => Array(W).fill(null))
+  const rows = {
+    14: '.....T....', 15: 'SS..TTZ..J', 16: 'ISSOOZZLJJ', 17: 'IJJOOTLLLS', 18: 'IJTTTZZOOS', 19: 'IJLLSSZOO.',
+  }
+  for (const [y, line] of Object.entries(rows)) [...line].forEach((ch, x) => { if (ch !== '.') b[y][x] = ch })
+  return b
+}
+
+function drawBoard(canvas, id, progress) {
+  const t = THEMES[id], dpr = window.devicePixelRatio || 1
+  const cssW = canvas.clientWidth, s = cssW / W
+  canvas.width = Math.round(cssW * dpr); canvas.height = Math.round(cssW * 2 * dpr)
+  const ctx = canvas.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+  ctx.fillStyle = t.board; ctx.fillRect(0, 0, W * s, H * s)
+  if (id === 'tron') { const g = ctx.createLinearGradient(0, H * s * 0.6, 0, H * s); g.addColorStop(0, 'rgb(0 229 255 / 0)'); g.addColorStop(1, 'rgb(0 229 255 / 9%)'); ctx.fillStyle = g; ctx.fillRect(0, 0, W * s, H * s) }
+  if (id === 'nature') { const g = ctx.createLinearGradient(0, 0, 0, H * s); g.addColorStop(0, '#1b2117'); g.addColorStop(1, '#2a3122'); ctx.fillStyle = g; ctx.fillRect(0, 0, W * s, H * s) }
+  ctx.strokeStyle = t.grid; ctx.lineWidth = id === 'stained-glass' ? 2 : 1
+  ctx.beginPath()
+  for (let x = 0; x <= W; x++) { ctx.moveTo(x * s, 0); ctx.lineTo(x * s, H * s) }
+  for (let y = 0; y <= H; y++) { ctx.moveTo(0, y * s); ctx.lineTo(W * s, y * s) }
+  ctx.stroke()
+  if (id === 'sketchbook') { ctx.strokeStyle = 'rgb(127 166 207 / 50%)'; ctx.beginPath(); for (let x = 0; x <= W; x += 5) { ctx.moveTo(x * s, 0); ctx.lineTo(x * s, H * s) } for (let y = 0; y <= H; y += 5) { ctx.moveTo(0, y * s); ctx.lineTo(W * s, y * s) } ctx.stroke() }
+  const board = sampleBoard(), clearing = progress !== null ? [17] : []
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const v = board[y][x]
+    if (v && !clearing.includes(y)) CELL[id](ctx, x * s, y * s, s, t.pieces[v], t, x, y)
+  }
+  if (progress !== null) { CLEAR[id](ctx, clearing, board, progress, s, t); return }
+  const active = [[4, 3], [5, 3], [5, 4], [6, 4]], ghost = [[4, 12], [5, 12], [5, 13], [6, 13]]
+  for (const [x, y] of ghost) GHOST[id](ctx, x * s, y * s, s, t.pieces.Z)
+  for (const [x, y] of active) CELL[id](ctx, x * s, y * s, s, t.pieces.Z, t, x, y)
+}
+
+const root = document.getElementById('themes')
+for (const [id, t] of Object.entries(THEMES)) {
+  const el = document.createElement('section')
+  el.className = 'theme'; el.dataset.theme = id
+  for (const [k, v] of Object.entries(t.ui)) el.style.setProperty(`--${k}`, v)
+  el.innerHTML = `<h2>${t.label}</h2><p class="tagline">${t.tagline}</p>
+    <div class="boards">
+      <figure><canvas data-p=""></canvas><figcaption>Resting</figcaption></figure>
+      <figure><canvas data-p="0.3"></canvas><figcaption>Clear 30%</figcaption></figure>
+      <figure><canvas data-p="0.6"></canvas><figcaption>Clear 60%</figcaption></figure>
+    </div>
+    <div class="card"><div class="label">Score</div><div class="score">12,480</div>
+      <div class="buttons"><span class="primary">Resume</span><span class="focus">Restart</span><span>Help</span></div></div>`
+  root.append(el)
+  el.querySelectorAll('canvas').forEach((c) => drawBoard(c, id, c.dataset.p === '' ? null : Number(c.dataset.p)))
+}
+</script>
+</body>
+</html>
