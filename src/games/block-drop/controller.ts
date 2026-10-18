@@ -24,6 +24,8 @@ export const KEY_ACTIONS: Readonly<Record<string, GameAction>> = {
   ArrowUp: 'rotate',
   ArrowDown: 'soft-drop',
   ' ': 'hard-drop',
+  c: 'hold',
+  C: 'hold',
   p: 'pause',
   P: 'pause',
   r: 'restart',
@@ -172,6 +174,10 @@ export class BlockDropController {
     const action = KEY_ACTIONS[event.key]
     if (action === undefined) return
     const target = event.target
+    const holdControlShortcut =
+      action === 'hold' &&
+      target instanceof Element &&
+      target.closest('.control-hold') !== null
     if (
       target instanceof Element &&
       target.closest('dialog[open]') !== null
@@ -181,6 +187,7 @@ export class BlockDropController {
     if (
       action !== 'pause' &&
       action !== 'restart' &&
+      !holdControlShortcut &&
       target instanceof Element &&
       target.closest(
         'button, input, select, textarea, a[href], [contenteditable="true"]',

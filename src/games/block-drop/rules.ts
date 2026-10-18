@@ -13,6 +13,7 @@ export type GameAction =
   | 'rotate'
   | 'soft-drop'
   | 'hard-drop'
+  | 'hold'
   | 'pause'
   | 'restart'
 
@@ -27,6 +28,8 @@ export interface BlockDropState {
   readonly board: Board
   readonly active: ActivePiece | null
   readonly next: Tetromino
+  readonly heldPiece: Tetromino | null
+  readonly holdUsed: boolean
   readonly bag: ReadonlyArray<Tetromino>
   readonly randomState: number
   readonly initialSeed: number
@@ -244,13 +247,17 @@ function drawPiece(
   return { type: type as Tetromino, bag: remaining, randomState }
 }
 
-function spawnNext(state: BlockDropState): BlockDropState {
+function spawnNext(
+  state: BlockDropState,
+  holdUsed = false,
+): BlockDropState {
   const drawn = drawPiece(state)
   const active = spawnPiece(state.next)
   const next = {
     ...state,
     active,
     next: drawn.type,
+    holdUsed,
     bag: drawn.bag,
     randomState: drawn.randomState,
   }
@@ -269,6 +276,8 @@ export function createGame(
     board: createEmptyBoard(),
     active: null,
     next: first.type,
+    heldPiece: null,
+    holdUsed: false,
     bag: first.bag,
     randomState: first.randomState,
     initialSeed: seed >>> 0,
@@ -368,6 +377,26 @@ function tryActive(
   }
   const active = update(state.active)
   return isValidPiece(state.board, active) ? { ...state, active } : state
+}
+
+function holdActive(state: BlockDropState): BlockDropState {
+  const active = state.active
+  if (active === null || state.holdUsed) return state
+
+  if (state.heldPiece === null) {
+    return spawnNext({ ...state, active: null, heldPiece: active.type }, true)
+  }
+
+  const incoming = spawnPiece(state.heldPiece)
+  const swapped = {
+    ...state,
+    active: incoming,
+    heldPiece: active.type,
+    holdUsed: true,
+  }
+  return isValidPiece(swapped.board, incoming)
+    ? swapped
+    : { ...swapped, active: null, status: 'game-over' }
 }
 
 function rotateActive(state: BlockDropState): BlockDropState {
@@ -485,5 +514,7 @@ export function applyActionWithEvents(
       return softDrop(state)
     case 'hard-drop':
       return hardDrop(state)
+    case 'hold':
+      return transition(holdActive(state))
   }
 }

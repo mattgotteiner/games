@@ -96,6 +96,7 @@ async function expectGameFitsViewport(page: import('@playwright/test').Page) {
     page.getByLabel(/^Score:/),
     page.locator('.game-status'),
     page.locator('.game-progress'),
+    page.getByRole('region', { name: /Held piece:/ }),
     page.getByRole('region', { name: /Next piece:/ }),
     page.locator('.game-controls'),
   ]
@@ -126,6 +127,7 @@ async function expectGameFitsViewport(page: import('@playwright/test').Page) {
   expect(Math.abs(surfaceBox!.width - canvasBox!.width)).toBeLessThanOrEqual(4)
   expect(Math.abs(surfaceBox!.height - canvasBox!.height)).toBeLessThanOrEqual(4)
   expect(await page.locator('.action-controls button').count()).toBe(2)
+  expect(await page.locator('.hold-controls button').count()).toBe(1)
   for (const button of await page.getByRole('button').all()) {
     const box = await button.boundingBox()
     expect(box).not.toBeNull()
@@ -172,6 +174,8 @@ async function expectScoringGuideVisible(page: import('@playwright/test').Page) 
     await expect(guide.getByText(text, { exact: true })).toBeVisible()
   }
   await expect(dialog.getByText('Keyboard controls')).toBeVisible()
+  await expect(dialog.getByText('Hold or swap the active piece')).toBeVisible()
+  await expect(dialog.locator('dt').getByText('C', { exact: true })).toBeVisible()
   await page.keyboard.press('Escape')
   await expect(dialog).not.toBeVisible()
   await expect(page.getByRole('button', { name: 'Help' })).toBeFocused()
@@ -184,8 +188,9 @@ async function expectScoringGuideVisible(page: import('@playwright/test').Page) 
 }
 
 async function expectPreviewCentered(page: import('@playwright/test').Page) {
-  const frame = await page.locator('.next-piece-grid').boundingBox()
-  const shape = await page.locator('.next-piece-shape').boundingBox()
+  const preview = page.getByRole('region', { name: /Next piece:/ })
+  const frame = await preview.locator('.next-piece-grid').boundingBox()
+  const shape = await preview.locator('.next-piece-shape').boundingBox()
 
   expect(frame).not.toBeNull()
   expect(shape).not.toBeNull()
@@ -208,6 +213,7 @@ async function expectMovementOrder(page: import('@playwright/test').Page) {
     page.getByRole('button', { name: 'Move left' }),
     page.getByRole('button', { name: 'Move right' }),
     page.getByRole('button', { name: 'Soft drop' }),
+    page.getByRole('button', { name: 'Hold piece' }),
     page.getByRole('button', { name: 'Rotate clockwise' }),
     page.getByRole('button', { name: 'Hard drop' }),
   ]
@@ -219,6 +225,7 @@ async function expectMovementOrder(page: import('@playwright/test').Page) {
     'Move left',
     'Move right',
     'Soft drop',
+    'Hold piece',
     'Rotate clockwise',
     'Hard drop',
   ])
@@ -230,7 +237,7 @@ async function expectMovementOrder(page: import('@playwright/test').Page) {
     expect(box!.width).toBeGreaterThanOrEqual(44)
     expect(box!.height).toBeGreaterThanOrEqual(44)
   }
-  const [left, right, softDrop, rotate, hardDrop] = boxes
+  const [left, right, softDrop, hold, rotate, hardDrop] = boxes
   const { width, height } = await page.evaluate(() => ({
     width: window.innerWidth,
     height: window.innerHeight,
@@ -242,18 +249,35 @@ async function expectMovementOrder(page: import('@playwright/test').Page) {
       expect(box!.height).toBeGreaterThanOrEqual(56)
     }
     const leftCluster = await page.locator('.movement-controls').boundingBox()
+    const holdCluster = await page.locator('.hold-controls').boundingBox()
     const rightCluster = await page.locator('.action-controls').boundingBox()
     expect(leftCluster).not.toBeNull()
+    expect(holdCluster).not.toBeNull()
     expect(rightCluster).not.toBeNull()
     expect(left!.y).toBeCloseTo(right!.y, 0)
     expect(softDrop!.y).toBeGreaterThan(left!.y)
     expect(rotate!.y).toBeCloseTo(left!.y, 0)
     expect(hardDrop!.y).toBeGreaterThan(rotate!.y)
+    expect(hardDrop!.x).toBeCloseTo(rotate!.x, 0)
+    expect(
+      holdCluster!.x - (leftCluster!.x + leftCluster!.width),
+    ).toBeGreaterThanOrEqual(16)
+    expect(
+      rightCluster!.x - (holdCluster!.x + holdCluster!.width),
+    ).toBeGreaterThanOrEqual(16)
+    expect(
+      Math.abs(
+        hold!.y +
+          hold!.height / 2 -
+          (rotate!.y + hardDrop!.y + hardDrop!.height) / 2,
+      ),
+    ).toBeLessThan(2)
     expect(left!.x + left!.width).toBeLessThanOrEqual(right!.x)
     expect(
       softDrop!.x + softDrop!.width / 2,
     ).toBeCloseTo(leftCluster!.x + leftCluster!.width / 2, 0)
-    expect(leftCluster!.x + leftCluster!.width).toBeLessThan(rightCluster!.x)
+    expect(leftCluster!.x + leftCluster!.width).toBeLessThan(hold!.x)
+    expect(rotate!.x).toBeCloseTo(hardDrop!.x, 0)
   } else {
     for (const box of boxes) {
       expect(box!.y).toBeCloseTo(left!.y, 0)
@@ -261,6 +285,8 @@ async function expectMovementOrder(page: import('@playwright/test').Page) {
     expect(left!.x + left!.width).toBeLessThanOrEqual(right!.x)
     expect(right!.x + right!.width).toBeLessThanOrEqual(softDrop!.x)
     expect(softDrop!.x + softDrop!.width).toBeLessThanOrEqual(rotate!.x)
+    expect(softDrop!.x + softDrop!.width).toBeLessThanOrEqual(hold!.x)
+    expect(hold!.x + hold!.width).toBeLessThanOrEqual(rotate!.x)
     expect(rotate!.x + rotate!.width).toBeLessThanOrEqual(hardDrop!.x)
   }
 }
@@ -324,7 +350,7 @@ test('prevents page panning from touch drags anywhere in Block Drop', async ({
       page.locator('.board-surface'),
       page.locator('.game-score'),
       page.locator('.game-status'),
-      page.locator('.next-piece'),
+      page.getByRole('region', { name: /Next piece:/ }),
       page.getByRole('button', { name: 'Move left' }),
       page.getByRole('button', { name: 'Help' }),
     ]
@@ -526,6 +552,41 @@ test('plays Block Drop with touch and keyboard across phone orientations', async
   ).toBeVisible()
 })
 
+test('holds and swaps pieces with the C key and phone control', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.addInitScript(() => {
+    Date.now = () => 42
+  })
+  await page.goto('./')
+  await page.getByRole('button', { name: 'Play Block Drop' }).click()
+
+  const holdButton = page.getByRole('button', { name: 'Hold piece' })
+  const holdSlot = page.locator('.hold-piece')
+  const nextPreview = page.getByRole('region', { name: /Next piece:/ })
+  const initialNext = await nextPreview.getAttribute('aria-label')
+  await expect(holdSlot).toHaveAttribute('aria-label', 'Held piece: empty')
+  await expect(holdSlot.locator('.next-piece-shape')).toHaveCount(0)
+  await expect(holdButton).toHaveAttribute('aria-keyshortcuts', 'C')
+  await expectGameFitsViewport(page)
+
+  await page.keyboard.press('c')
+  await expect(holdSlot).toHaveAttribute(
+    'aria-label',
+    /Held piece: [IJLOSTZ] tetromino/,
+  )
+  await expect(holdButton).toBeDisabled()
+  await expect(nextPreview).not.toHaveAttribute('aria-label', initialNext!)
+
+  const savedPiece = await holdSlot.getAttribute('aria-label')
+  await page.keyboard.press('Space')
+  await expect(holdButton).toBeEnabled()
+  const beforeSwapNext = await nextPreview.getAttribute('aria-label')
+  await holdButton.click()
+  await expect(holdButton).toBeDisabled()
+  await expect(holdSlot).not.toHaveAttribute('aria-label', savedPiece!)
+  await expect(nextPreview).toHaveAttribute('aria-label', beforeSwapNext!)
+})
+
 test('presents a prominent right-side HUD and polished button states', async ({
   page,
 }) => {
@@ -543,7 +604,9 @@ test('presents a prominent right-side HUD and polished button states', async ({
 
   const canvas = page.getByRole('img', { name: 'Block Drop board' })
   const hud = page.getByRole('complementary', { name: 'Game information' })
-  const preview = page.locator('.next-piece-grid')
+  const preview = page
+    .getByRole('region', { name: /Next piece:/ })
+    .locator('.next-piece-grid')
   const canvasBox = await canvas.boundingBox()
   const hudBox = await hud.boundingBox()
   expect(hudBox!.x).toBeGreaterThanOrEqual(canvasBox!.x + canvasBox!.width)

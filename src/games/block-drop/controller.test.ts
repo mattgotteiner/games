@@ -127,6 +127,28 @@ describe('BlockDropController', () => {
     fireEvent.keyDown(window, { key: 'ArrowLeft' })
     expect(controller.getState().active?.x).toBe((startX ?? 0) - 1)
 
+    const heldType = controller.getState().active?.type
+    fireEvent.keyDown(window, { key: 'c' })
+    const held = controller.getState()
+    expect(held).toMatchObject({
+      heldPiece: heldType,
+      holdUsed: true,
+    })
+    fireEvent.keyDown(window, { key: 'C' })
+    expect(controller.getState()).toBe(held)
+
+    const holdControl = document.createElement('button')
+    holdControl.className = 'control-hold'
+    document.body.append(holdControl)
+    controller.dispatch('hard-drop')
+    const heldAfterLock = controller.getState().heldPiece
+    fireEvent.keyDown(holdControl, { key: 'c' })
+    expect(controller.getState()).toMatchObject({
+      active: { type: heldAfterLock },
+      holdUsed: true,
+    })
+    holdControl.remove()
+
     const startY = controller.getState().active?.y
     frameCallback(0)
     frameCallback(10_000)

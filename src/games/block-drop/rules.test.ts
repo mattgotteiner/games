@@ -45,6 +45,8 @@ function stateWith(
     board,
     active,
     next,
+    heldPiece: null,
+    holdUsed: false,
     bag,
     randomState: 123,
     initialSeed: 123,
@@ -360,6 +362,129 @@ describe('movement and rotation', () => {
   })
 })
 
+describe('hold piece', () => {
+  it.each(['easy', 'medium', 'hard'] as const)(
+    'allows hold at %s difficulty',
+    (difficulty) => {
+      const initial = createGame(812, difficulty)
+      const held = applyAction(initial, 'hold')
+
+      expect(held.heldPiece).toBe(initial.active?.type)
+      expect(held.holdUsed).toBe(true)
+      expect(held.difficulty).toBe(difficulty)
+    },
+  )
+
+  it('stores the active piece and promotes the queued piece when the slot is empty', () => {
+    const initial = stateWith(
+      { type: 'T', rotation: 2, x: 5, y: 7 },
+      createEmptyBoard(),
+      ['L', 'S'],
+      'J',
+    )
+    const held = applyAction(initial, 'hold')
+
+    expect(held).toMatchObject({
+      heldPiece: 'T',
+      holdUsed: true,
+      active: { type: 'J', rotation: 0, x: 3, y: 0 },
+      next: 'L',
+      bag: ['S'],
+      score: initial.score,
+      lines: initial.lines,
+      level: initial.level,
+      difficulty: initial.difficulty,
+    })
+    expect(held.board).toBe(initial.board)
+  })
+
+  it('swaps with the held piece without consuming the queue', () => {
+    const initial = {
+      ...stateWith(
+        { type: 'T', rotation: 3, x: 5, y: 7 },
+        createEmptyBoard(),
+        ['L', 'S'],
+        'J',
+      ),
+      heldPiece: 'O' as const,
+    }
+    const held = applyAction(initial, 'hold')
+
+    expect(held).toMatchObject({
+      heldPiece: 'T',
+      holdUsed: true,
+      active: { type: 'O', rotation: 0, x: 3, y: 0 },
+      next: 'J',
+      bag: ['L', 'S'],
+      randomState: initial.randomState,
+      score: initial.score,
+    })
+    expect(held.board).toBe(initial.board)
+  })
+
+  it('allows only one hold before the active piece locks', () => {
+    const initial = stateWith(
+      { type: 'T', rotation: 0, x: 3, y: 4 },
+      createEmptyBoard(),
+      ['L', 'S'],
+      'J',
+    )
+    const held = applyAction(initial, 'hold')
+
+    expect(applyAction(held, 'hold')).toBe(held)
+  })
+
+  it('resets hold availability when the next piece spawns', () => {
+    const initial = {
+      ...stateWith(
+        { type: 'O', rotation: 0, x: 3, y: 18 },
+        createEmptyBoard(),
+        ['L', 'S'],
+        'J',
+      ),
+      heldPiece: 'T' as const,
+      holdUsed: true,
+    }
+    const locked = stepGravity(initial)
+
+    expect(locked).toMatchObject({
+      active: { type: 'J', rotation: 0 },
+      heldPiece: 'T',
+      holdUsed: false,
+    })
+  })
+
+  it('ends the game when a held piece cannot spawn', () => {
+    const incoming: ActivePiece = { type: 'O', rotation: 0, x: 3, y: 0 }
+    const spawnCell = getPieceCells(incoming)[0]
+    const initial = {
+      ...stateWith(
+        { type: 'T', rotation: 0, x: 3, y: 10 },
+        boardWith([[spawnCell.x, spawnCell.y, 'Z']]),
+      ),
+      heldPiece: 'O' as const,
+    }
+
+    expect(applyAction(initial, 'hold')).toMatchObject({
+      active: null,
+      status: 'game-over',
+      heldPiece: 'T',
+      holdUsed: true,
+    })
+  })
+
+  it('replays hold actions deterministically', () => {
+    const replay = () => {
+      let state = createGame(821)
+      state = applyAction(state, 'hold')
+      state = applyAction(state, 'hard-drop')
+      return applyAction(state, 'hold')
+    }
+
+    expect(replay()).toEqual(replay())
+  })
+})
+
 describe('landing position', () => {
   it.each(TETROMINOES)('finds the lowest %s on an empty board', (type) => {
     const active = { type, rotation: 0, x: 3, y: 0 } satisfies ActivePiece
@@ -652,6 +777,7 @@ describe('game lifecycle', () => {
       'rotate',
       'soft-drop',
       'hard-drop',
+      'hold',
     ] as const) {
       expect(applyAction(paused, action)).toBe(paused)
     }
@@ -735,12 +861,13 @@ describe('game lifecycle', () => {
     expect(gameOver.active).toBeNull()
     expect(stepGravity(gameOver)).toBe(gameOver)
     expect(applyAction(gameOver, 'left')).toBe(gameOver)
+    expect(applyAction(gameOver, 'hold')).toBe(gameOver)
     expect(applyAction(gameOver, 'pause')).toBe(gameOver)
   })
 
   it('restarts with a fresh empty board and active piece', () => {
     const playing = createGame(77)
-    const dirty = applyAction(playing, 'hard-drop')
+    const dirty = applyAction(applyAction(playing, 'hold'), 'hard-drop')
     expect(dirty.score).toBeGreaterThan(0)
     const gameOver: BlockDropState = {
       ...dirty,

@@ -70,6 +70,7 @@ interface GameplayControlProps {
   readonly className: string
   readonly disabled: boolean
   readonly repeatable?: boolean
+  readonly keyShortcuts?: string
   readonly isGameActive: Readonly<{ current: boolean }>
   readonly onAction: (action: GameAction) => void
 }
@@ -82,6 +83,7 @@ function GameplayControl({
   className,
   disabled,
   repeatable = false,
+  keyShortcuts,
   isGameActive,
   onAction,
 }: GameplayControlProps) {
@@ -222,6 +224,7 @@ function GameplayControl({
       class={className}
       type="button"
       aria-label={label}
+      aria-keyshortcuts={keyShortcuts}
       disabled={disabled}
       onPointerDown={handlePointerDown}
       onPointerUp={handlePointerUp}
@@ -315,12 +318,27 @@ function getPreviewShape(type: Tetromino) {
   }
 }
 
-function NextPiece({ type }: { readonly type: Tetromino }) {
-  const shape = getPreviewShape(type)
+function PiecePreview({
+  label,
+  type,
+}: {
+  readonly label: 'Hold' | 'Next'
+  readonly type: Tetromino | null
+}) {
+  const shape = type === null ? null : getPreviewShape(type)
+  const accessibleLabel =
+    label === 'Hold'
+      ? type === null
+        ? 'Held piece: empty'
+        : `Held piece: ${type} tetromino`
+      : `Next piece: ${type} tetromino`
 
   return (
-    <section class="next-piece" aria-label={`Next piece: ${type} tetromino`}>
-      <p class="hud-label">Next</p>
+    <section
+      class={`next-piece${label === 'Hold' ? ' hold-piece' : ''}`}
+      aria-label={accessibleLabel}
+    >
+      <p class="hud-label">{label}</p>
       <div
         class="next-piece-grid"
         data-frame-size={PREVIEW_FRAME_SIZE}
@@ -332,31 +350,35 @@ function NextPiece({ type }: { readonly type: Tetromino }) {
             <span class="next-piece-grid-cell" key={index} />
           ),
         )}
-        <span
-          class="next-piece-shape"
-          data-height={shape.height}
-          data-width={shape.width}
-          style={{
-            gridTemplateColumns: `repeat(${shape.width}, 1fr)`,
-            gridTemplateRows: `repeat(${shape.height}, 1fr)`,
-            height: `${(shape.height / PREVIEW_FRAME_SIZE) * 100}%`,
-            width: `${(shape.width / PREVIEW_FRAME_SIZE) * 100}%`,
-          }}
-        >
-          {shape.cells.map(({ x, y }) => (
-            <span
-              class="next-piece-cell is-filled"
-              key={`${x}-${y}`}
-              style={{
-                backgroundColor: TETROMINO_COLORS[type],
-                gridColumn: x + 1,
-                gridRow: y + 1,
-              }}
-            />
-          ))}
-        </span>
+        {shape && type !== null && (
+          <span
+            class="next-piece-shape"
+            data-height={shape.height}
+            data-width={shape.width}
+            style={{
+              gridTemplateColumns: `repeat(${shape.width}, 1fr)`,
+              gridTemplateRows: `repeat(${shape.height}, 1fr)`,
+              height: `${(shape.height / PREVIEW_FRAME_SIZE) * 100}%`,
+              width: `${(shape.width / PREVIEW_FRAME_SIZE) * 100}%`,
+            }}
+          >
+            {shape.cells.map(({ x, y }) => (
+              <span
+                class="next-piece-cell is-filled"
+                key={`${x}-${y}`}
+                style={{
+                  backgroundColor: TETROMINO_COLORS[type],
+                  gridColumn: x + 1,
+                  gridRow: y + 1,
+                }}
+              />
+            ))}
+          </span>
+        )}
       </div>
-      <p class="next-piece-name">{type} tetromino</p>
+      <p class="next-piece-name">
+        {type === null ? 'Empty' : `${type} tetromino`}
+      </p>
     </section>
   )
 }
@@ -439,6 +461,8 @@ export function BlockDrop({
   const [lineClearCallout, setLineClearCallout] =
     useState<LineClearCallout | null>(null)
   const [next, setNext] = useState<Tetromino>('I')
+  const [heldPiece, setHeldPiece] = useState<Tetromino | null>(null)
+  const [holdUsed, setHoldUsed] = useState(false)
   const [clearing, setClearing] = useState(false)
   const [announcement, setAnnouncement] = useState('')
 
@@ -470,6 +494,8 @@ export function BlockDrop({
         setLines(state.lines)
         setLevel(state.level)
         setNext(state.next)
+        setHeldPiece(state.heldPiece)
+        setHoldUsed(state.holdUsed)
         setClearing(presentation?.clearing ?? false)
         vibrateForGameEvent(presentation)
 
@@ -920,7 +946,14 @@ export function BlockDrop({
               <span class="status-dot" aria-hidden="true" />
               {statusText}
             </p>
-            <NextPiece type={next} />
+            <div
+              class="piece-previews"
+              role="group"
+              aria-label="Piece previews"
+            >
+              <PiecePreview label="Hold" type={heldPiece} />
+              <PiecePreview label="Next" type={next} />
+            </div>
           </aside>
         </div>
 
@@ -953,6 +986,23 @@ export function BlockDrop({
             ))}
           </div>
           <div
+            class="control-group hold-controls"
+            role="group"
+            aria-label="Hold control"
+          >
+            <GameplayControl
+              className="button-control control-hold"
+              action="hold"
+              label="Hold piece"
+              symbol="⇄"
+              caption="Hold"
+              keyShortcuts="C"
+              disabled={gameplayDisabled || holdUsed}
+              isGameActive={isGameActive}
+              onAction={act}
+            />
+          </div>
+          <div
             class="control-group action-controls"
             role="group"
             aria-label="Rotation and drop controls"
@@ -979,7 +1029,8 @@ export function BlockDrop({
             />
           </div>
           <p class="key-help">
-            Keys: arrows move and rotate, Space drops, P pauses, R restarts.
+            Keys: arrows move and rotate, C holds, Space drops, P pauses, R
+            restarts.
           </p>
         </div>
       </div>
@@ -1027,6 +1078,10 @@ export function BlockDrop({
             <div>
               <dt>Space</dt>
               <dd>Hard drop</dd>
+            </div>
+            <div>
+              <dt>C</dt>
+              <dd>Hold or swap the active piece</dd>
             </div>
             <div>
               <dt>P</dt>
