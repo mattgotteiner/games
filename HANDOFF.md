@@ -153,6 +153,7 @@ There are no remaining planned changes in the current Block Drop sequence.
 
 ## Next OpenSpec Change
 
-`add-block-drop-rules-dialog` has a written spec for a beginner-friendly Rules
-dialog in the pause menu. The spec is committed separately before
-implementation; the UI and tests have not been started.
+`consolidate-block-drop-help` has a written spec for one Help entry in the
+pause menu. Its dialog begins with beginner-friendly `How to play` guidance,
+then preserves the existing scoring and controls reference. The UI and tests
+have not been started.
