@@ -25,10 +25,11 @@ and service-worker-controlled offline deep links are covered.
 
 ## Validation
 
-The last full `npm run check` passed on the levels-only implementation:
-typechecking, 137 unit/component tests, the production build, and all 9
-Chromium flows. The user then reviewed the pause-menu difficulty slider E2E
-and confirmed it works; the automated check was not rerun after that addition.
+The latest `npm run check` passes after aligning test selectors with the
+rendered HUD: typechecking, 157 unit/component tests, the production build, and
+all 11 Chromium flows. The user has reviewed difficulty persistence on a phone
+and confirmed the saved choice survives reload. The next planned change is
+`add-block-drop-wall-kicks`.
 
 ## Completed OpenSpec Changes
 
@@ -50,6 +51,10 @@ and confirmed it works; the automated check was not rerun after that addition.
   - `openspec/changes/archive/2026-10-17-add-block-drop-pause-and-game-over-overlays`
 - `add-block-drop-levels`
   - `openspec/changes/archive/2026-10-17-add-block-drop-levels`
+- `scale-block-drop-score-by-difficulty`
+  - `openspec/changes/archive/2026-10-17-scale-block-drop-score-by-difficulty`
+- `persist-block-drop-difficulty`
+  - `openspec/changes/archive/2026-10-18-persist-block-drop-difficulty`
 
 Synchronized capability specs:
 
@@ -70,10 +75,10 @@ completed change retained for history.
 
 ## Planned OpenSpec Changes
 
-Seven proposed Block Drop changes, applied in this order, one PR each. Later
-changes modify requirements introduced by earlier ones, so archive each
-before applying the next. Changes 1–5 are implemented, reviewed E2E, and
-archived. During implementation of `add-block-drop-touch-repeat`, mobile E2E
+Eight incremental Block Drop changes, applied one at a time. Later changes
+modify requirements introduced by earlier ones, so archive each before applying
+the next. Changes 1–7 are implemented, reviewed E2E, and archived. During
+implementation of `add-block-drop-touch-repeat`, mobile E2E
 uncovered page panning when dragging from game elements; the fix is recorded in
 that archived change and the canonical Block Drop spec. During E2E review of
 `add-block-drop-pause-and-game-over-overlays`, the user reported page zoom after
@@ -89,11 +94,13 @@ after resume; user E2E review confirmed the reported zoom stopped. Pinch zoom
 is blocked over paused/game-over controls and during the brief post-resume
 gesture guard, while remaining available elsewhere. `add-block-drop-levels`
 adds line and level tracking, level-scaled line-clear scoring, a progress HUD,
-line-clear feedback, and a pause-menu speed slider. Easy is half speed, Medium
-is the default pace, and Hard is 1.5× faster. Difficulty changes gravity
-only; line thresholds and level score multipliers stay unchanged. The user
-reviewed the slider E2E and confirmed the feature works. The full automated
-check last ran before the slider addition.
+line-clear feedback, and an Easy/Medium/Hard pause-menu speed slider. Easy is
+half speed, Medium is the default pace, and Hard is 1.5× faster. The user
+reviewed the slider E2E and confirmed the feature works. Scoring is also scaled
+by difficulty, and the selected difficulty and multiplier appear in the HUD
+and persist on the same device. The user confirmed persistence after reload.
+The current full automated check passes 157 unit/component tests, a production
+build, and all 11 Chromium flows.
 
 1. `compact-block-drop-mobile-layout`: compact header, scoring guide moved
    into a help dialog, playfield-first layout (at least 540 px tall at 390 by
@@ -109,10 +116,12 @@ check last ran before the slider addition.
    slider. Implemented, user-reviewed, and archived.
 6. `scale-block-drop-score-by-difficulty`: apply the selected 0.5×, 1×, or
    1.5× difficulty speed multiplier to awarded points while retaining the
-   level multiplier on line clears. A proposal and spec delta are drafted in
-   `openspec/changes/scale-block-drop-score-by-difficulty/`.
-7. `add-block-drop-wall-kicks`: basic horizontal rotation kicks (not full
-   SRS).
+   level multiplier on line clears. Implemented, reviewed, and archived.
+7. `persist-block-drop-difficulty`: show the selected difficulty and multiplier
+   in the HUD and restore the user's device preference on launch. Implemented,
+   reviewed, and archived.
+8. `add-block-drop-wall-kicks`: basic horizontal rotation kicks (not full
+   SRS); this is the next change.
 
 Changes 2 and 6 are independent and can ship at any point. The design
 rationale and before screenshots are in `plans/block-drop/PLAN.md` in
@@ -120,6 +129,6 @@ rationale and before screenshots are in `plans/block-drop/PLAN.md` in
 
 ## Deferred Work
 
-Hold pieces, advanced rotation kicks, and a generalized game registry/runtime
-remain deferred. Introduce shared platform abstractions only after another game
-exposes concrete duplication.
+Hold pieces, full SRS rotation kicks, upward kicks, and a generalized game
+registry/runtime remain deferred. Introduce shared platform abstractions only
+after another game exposes concrete duplication.

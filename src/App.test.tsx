@@ -40,6 +40,15 @@ function dispatchPointer(
   fireEvent(target, event)
 }
 
+function expectHudDifficulty(label: string, multiplier: string) {
+  expect(
+    document.querySelector('.difficulty-value > span:first-child'),
+  ).toHaveTextContent(label)
+  expect(document.querySelector('.difficulty-multiplier')).toHaveTextContent(
+    multiplier,
+  )
+}
+
 const pendingRestorations: Array<() => void> = []
 
 function mockVibration(supported: boolean, reducedMotion: boolean) {
@@ -627,7 +636,9 @@ describe('App', () => {
     fireEvent.input(slider, { target: { value: '0' } })
     expect(setDifficulty).toHaveBeenCalledWith('easy')
     expect(slider).toHaveAttribute('aria-valuetext', 'Easy, half speed')
-    expect(screen.getByText('Easy · 0.5×')).toBeInTheDocument()
+    expect(
+      document.querySelector('.pause-difficulty output'),
+    ).toHaveTextContent('Easy · Half speed')
     expect(window.localStorage.getItem('games.block-drop.difficulty')).toBe(
       'easy',
     )
@@ -657,7 +668,7 @@ describe('App', () => {
     render(<BlockDrop onReturn={vi.fn()} controllerFactory={factory} />)
 
     expect(initialDifficulty).toBe('hard')
-    expect(screen.getByText('Hard · 1.5×')).toBeInTheDocument()
+    expectHudDifficulty('Hard', '1.5×')
     expect(
       screen.getByRole('group', {
         name: 'Level 1, 0 lines cleared, Hard difficulty',
@@ -686,7 +697,7 @@ describe('App', () => {
     render(<BlockDrop onReturn={vi.fn()} controllerFactory={factory} />)
 
     expect(initialDifficulty).toBe('medium')
-    expect(screen.getByText('Medium · 1×')).toBeInTheDocument()
+    expectHudDifficulty('Medium', '1×')
   })
 
   it('keeps an existing best score when a later run scores less', () => {
@@ -826,7 +837,7 @@ describe('App', () => {
 
     render(<BlockDrop onReturn={vi.fn()} controllerFactory={factory} />)
     expect(screen.getByText('Playing')).toBeInTheDocument()
-    expect(screen.getByText('Medium · 1×')).toBeInTheDocument()
+    expectHudDifficulty('Medium', '1×')
     act(() =>
       publish?.({ ...playing, active: null, status: 'game-over', score: 14 }),
     )

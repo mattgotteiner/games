@@ -79,6 +79,17 @@ const lineClearKeys = [
   'Space',
 ] as const
 
+async function expectHudDifficulty(
+  page: import('@playwright/test').Page,
+  label: string,
+  multiplier: string,
+) {
+  await expect(page.locator('.difficulty-value > span:first-child')).toHaveText(
+    label,
+  )
+  await expect(page.locator('.difficulty-multiplier')).toHaveText(multiplier)
+}
+
 async function expectGameFitsViewport(page: import('@playwright/test').Page) {
   const elements = [
     page.getByRole('img', { name: 'Block Drop board' }),
@@ -753,18 +764,18 @@ test('shows the selected difficulty and restores it after reload', async ({
 }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('./?game=block-drop')
-  await expect(page.getByText('Medium · 1×')).toBeVisible()
+  await expectHudDifficulty(page, 'Medium', '1×')
 
   await page.getByRole('button', { name: 'Pause game' }).click()
   const pause = page.getByRole('group', { name: 'Paused' })
   const slider = pause.getByRole('slider', { name: 'Difficulty' })
   await slider.press('End')
-  await expect(page.getByText('Hard · 1.5×', { exact: true })).toBeVisible()
+  await expectHudDifficulty(page, 'Hard', '1.5×')
   await pause.getByRole('button', { name: 'Resume game' }).click()
   await expectGameFitsViewport(page)
 
   await page.reload()
-  await expect(page.getByText('Hard · 1.5×', { exact: true })).toBeVisible()
+  await expectHudDifficulty(page, 'Hard', '1.5×')
   await page.getByRole('button', { name: 'Pause game' }).click()
   await expect(
     page.getByRole('group', { name: 'Paused' }).getByRole('slider', {
@@ -776,7 +787,7 @@ test('shows the selected difficulty and restores it after reload', async ({
     .click()
 
   await page.setViewportSize({ width: 320, height: 568 })
-  await expect(page.getByText('Hard · 1.5×', { exact: true })).toBeVisible()
+  await expectHudDifficulty(page, 'Hard', '1.5×')
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= window.innerWidth,
