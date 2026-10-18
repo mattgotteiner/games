@@ -7,7 +7,7 @@ Vite game catalog deployed at:
 
 - Repository: `https://github.com/mattgotteiner/games`
 - Application: `https://mattgotteiner.github.io/games/`
-- Published commit: `52d418a`
+- GitHub Pages deploys from pushes to `main`.
 
 Block Drop is the first playable game. It includes deterministic seven-piece-bag
 rules, scoring, next-piece preview, pause/resume, game over and restart,
@@ -35,6 +35,8 @@ unit/component tests, the production build, and all 13 Chromium flows. Hold
 remains centered between movement and action controls with at least 16 px of
 clearance on each side; Rotate and Hard drop are restored to their original
 stack.
+The consolidated Help dialog and its mobile scrollbar clearance were reviewed
+on a phone and approved. The Help change is archived and pushed.
 
 ## Completed OpenSpec Changes
 
@@ -64,6 +66,8 @@ stack.
   - `openspec/changes/archive/2026-10-18-add-block-drop-wall-kicks`
 - `add-block-drop-srs-rotation-kicks`
   - `openspec/changes/archive/2026-10-18-add-block-drop-srs-rotation-kicks`
+- `consolidate-block-drop-help`
+  - `openspec/changes/archive/2026-10-18-consolidate-block-drop-help`
 
 Synchronized capability specs:
 
@@ -82,12 +86,12 @@ The original `bootstrap-offline-game-platform` change remains as a historical
 end-to-end-verifiable seams. `publish-mobile-game-shell` is also a superseded
 completed change retained for history.
 
-## Planned OpenSpec Changes
+## OpenSpec Change History
 
-Eleven incremental Block Drop changes, applied one at a time. Later changes
-modify requirements introduced by earlier ones, so archive each before applying
-the next. The original ten changes are implemented, reviewed E2E, and archived;
-the active Help consolidation is described below. During
+Eleven incremental Block Drop changes were applied one at a time. Later changes
+modified requirements introduced by earlier ones, so each was archived before
+applying the next. The original ten changes and the Help consolidation are
+implemented, reviewed, and archived. During
 implementation of `add-block-drop-touch-repeat`, mobile E2E
 uncovered page panning when dragging from game elements; the fix is recorded in
 that archived change and the canonical Block Drop spec. During E2E review of
@@ -112,11 +116,10 @@ and persist on the same device. The user confirmed persistence after reload.
 The current full automated check passes 215 unit/component tests, a production
 build, and all 13 Chromium flows.
 
-The active `consolidate-block-drop-help` change is implemented in the working
-tree and passes `npm run check`. Browser coverage verifies the pause-only Help
-entry, beginner/reference order, Escape dismissal, focus return, and internal
-scrolling with a reachable close control at 320 px viewport height. It is ready
-for manual phone review before commit and push.
+The Help dialog keeps beginner instructions, scoring, and controls in one
+pause-menu entry. Browser coverage verifies its content order, dismissal, focus
+return, and internal scrolling at narrow viewports. Phone review confirmed the
+mobile scrollbar has adequate clearance from the text.
 
 1. `compact-block-drop-mobile-layout`: compact header, scoring guide moved
    into a help dialog, playfield-first layout (at least 540 px tall at 390 by
@@ -145,6 +148,9 @@ for manual phone review before commit and push.
     clockwise rotations, including upward kicks for supported transitions;
     implemented, automated E2E passing, reviewed on a phone, archived, and
     pushed to `main`.
+11. `consolidate-block-drop-help`: combine beginner rules with the scoring and
+    controls reference in one pause-menu dialog; implemented, reviewed on a
+    phone, archived, and pushed to `main`.
 
 Changes 2 and 6 are independent and can ship at any point. The design
 rationale and before screenshots are in `plans/block-drop/PLAN.md` in
@@ -156,11 +162,12 @@ A generalized game registry/runtime remains deferred.
 Introduce shared platform abstractions only after another game exposes
 concrete duplication.
 
-There are no additional planned changes beyond the active Help consolidation.
+There are no additional planned changes.
 
-## Active OpenSpec Change
+## Most Recent OpenSpec Change
 
 `consolidate-block-drop-help` has a written spec for one Help entry in the
 pause menu. Its dialog begins with beginner-friendly `How to play` guidance,
-then preserves the existing scoring and controls reference. Implementation
-and automated checks are complete; manual phone review remains.
+then preserves the existing scoring and controls reference. Implementation,
+automated checks, and phone review are complete. Its archived spec is at
+`openspec/changes/archive/2026-10-18-consolidate-block-drop-help`.
