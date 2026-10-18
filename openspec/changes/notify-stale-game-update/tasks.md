@@ -13,3 +13,8 @@
 
 - [x] 3.1 Extend the production-browser harness to serve two sequential builds at `/games/` and verify Playwright observes the out-of-date download notice, the loading notice, and one reload into the second build
 - [x] 3.2 Cover update failure and first-install behavior at the highest practical browser/controller seams, then run `npm run check` to verify update handling does not regress normal startup, deep links, gameplay, or offline reloads
+
+## 4. Foreground Resume Update Checks
+
+- [x] 4.1 Explicitly check for updates after startup registration and on visible, focus, and `pageshow` lifecycle events while coalescing rapid checks.
+- [ ] 4.2 Cover resume-triggered updates and offline resume failures, then run the repository checks and verify the two-build browser flow updates without a manual `registration.update()` call.

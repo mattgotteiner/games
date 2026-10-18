@@ -16,6 +16,7 @@ interface ControllingWorker extends InstallingWorker {
 export interface UpdateRegistration {
   readonly installing: InstallingWorker | null
   addEventListener(type: 'updatefound', listener: () => void): void
+  update?(): Promise<unknown>
 }
 
 export interface RegisterServiceWorkerOptions {
@@ -42,10 +43,13 @@ export interface ApplicationUpdateController {
 interface ApplicationUpdateDependencies {
   readonly getController: () => ControllingWorker | null
   readonly listenForControllerChange: (listener: () => void) => void
+  readonly listenForAppResume: (listener: () => void) => void
   readonly loadingDelayMs: number
   readonly reload: () => void
   readonly schedule: (callback: () => void, delayMs: number) => void
 }
+
+const minimumUpdateCheckIntervalMs = 60_000
 
 const defaultDependencies: ApplicationUpdateDependencies = {
   getController: () =>
@@ -54,6 +58,17 @@ const defaultDependencies: ApplicationUpdateDependencies = {
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.addEventListener('controllerchange', listener)
     }
+  },
+  listenForAppResume: (listener) => {
+    const checkWhenVisible = () => {
+      if (document.visibilityState === 'visible') {
+        listener()
+      }
+    }
+
+    document.addEventListener('visibilitychange', checkWhenVisible)
+    window.addEventListener('pageshow', checkWhenVisible)
+    window.addEventListener('focus', checkWhenVisible)
   },
   loadingDelayMs: 1200,
   reload: () => window.location.reload(),
@@ -69,6 +84,7 @@ export function createApplicationUpdateController(
   const {
     getController,
     listenForControllerChange,
+    listenForAppResume,
     loadingDelayMs,
     reload,
     schedule,
@@ -79,7 +95,10 @@ export function createApplicationUpdateController(
   let started = false
   let updateDetected = false
   let reloadStarted = false
+  let updateCheckInProgress = false
+  let lastUpdateCheckAt = 0
   let updateServiceWorker: (() => Promise<void>) | undefined
+  let updateRegistration: UpdateRegistration | undefined
   let controllerAtStart: ControllingWorker | null = null
 
   const setStatus = (nextStatus: ApplicationUpdateStatus) => {
@@ -151,7 +170,34 @@ export function createApplicationUpdateController(
       controller.addEventListener('statechange', handleStateChange)
     }
 
+    const checkForUpdate = () => {
+      const now = Date.now()
+      if (
+        !updateRegistration?.update ||
+        updateCheckInProgress ||
+        status === 'downloading' ||
+        status === 'loading' ||
+        now - lastUpdateCheckAt < minimumUpdateCheckIntervalMs
+      ) {
+        return
+      }
+
+      lastUpdateCheckAt = now
+      updateCheckInProgress = true
+      void updateRegistration
+        .update()
+        .catch(() => {
+          if (updateDetected) {
+            failUpdate()
+          }
+        })
+        .finally(() => {
+          updateCheckInProgress = false
+        })
+    }
+
     listenForControllerChange(reloadLatestCopy)
+    listenForAppResume(checkForUpdate)
     updateServiceWorker = registerServiceWorker({
       immediate: true,
       onRegisteredSW: (_serviceWorkerUrl, registration) => {
@@ -159,10 +205,12 @@ export function createApplicationUpdateController(
           return
         }
 
+        updateRegistration = registration
         observeInstallingWorker(registration.installing)
         registration.addEventListener('updatefound', () => {
           observeInstallingWorker(registration.installing)
         })
+        checkForUpdate()
       },
       onNeedRefresh: () => {
         if (!getController()) {

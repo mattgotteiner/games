@@ -58,3 +58,21 @@ without automatically reloading it.
 - **THEN** the application explains that the latest version could not be loaded
 - **AND** the notification tells the user to check the connection and reload to try again
 - **AND** the application does not automatically reload the current page
+
+### Requirement: Check for updates at startup and when the application resumes
+The application SHALL explicitly check its registered service worker for an
+update after registration and when a running page returns to the foreground,
+including after Safari restores the page without a full navigation.
+
+#### Scenario: A newer version is available after a full reload
+- **WHEN** the page registers an existing service worker and a newer worker script is available
+- **THEN** the application requests an update check and follows the normal download, activation, and single-reload flow
+
+#### Scenario: A newer version is available on resume
+- **WHEN** the page becomes visible, receives focus, or is restored through `pageshow`
+- **AND** the registered service worker has a newer application copy
+- **THEN** the application announces the update and follows the normal download, activation, and single-reload flow
+
+#### Scenario: Resume while offline or already current
+- **WHEN** the page returns to the foreground but no update check can complete or no newer copy exists
+- **THEN** the current application remains usable without showing an update failure

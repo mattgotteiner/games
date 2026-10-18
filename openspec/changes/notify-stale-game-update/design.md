@@ -23,7 +23,7 @@ installation as a stale copy.
 
 - Preserve or restore an in-progress game across an application-version reload.
 - Ask the user to approve, defer, or schedule an update.
-- Add periodic polling beyond the browser and plugin's existing update checks.
+- Run a repeating timer to poll for updates while the page remains visible.
 - Replace the generated Workbox worker or introduce cache-schema migrations.
 
 ## Decisions
@@ -56,6 +56,19 @@ The controller will guard activation and navigation so repeated lifecycle
 events cannot produce duplicate reloads. Reload remains tied to the replacement
 worker taking control rather than to download completion, ensuring the
 navigation actually uses the new copy.
+
+### Check for updates at startup and when the app resumes
+
+Keep the service-worker registration returned by Workbox and explicitly call
+its `update()` method after registration at startup and when the page returns to
+the foreground through `pageshow`, a visible `visibilitychange`, or `focus`.
+Registration alone can reuse an existing registration without guaranteeing a
+fresh worker-script check, so a full page reload must also request an update.
+Resume checks cover a Safari tab or Home Screen app that restores a live page
+without running startup registration again. Coalesce rapid lifecycle events
+and skip checks while an update is already downloading or loading. A failed
+check with no detected replacement remains silent so offline use continues
+normally.
 
 Embedding registration directly in the notification component was considered,
 but separating browser lifecycle effects from rendering permits deterministic
