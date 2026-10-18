@@ -61,6 +61,30 @@ The original `bootstrap-offline-game-platform` change remains as a historical
 end-to-end-verifiable seams. `publish-mobile-game-shell` is also a superseded
 completed change retained for history.
 
+## Planned OpenSpec Changes
+
+Six proposed Block Drop changes, not yet implemented. Apply them in this order,
+one PR each. Later changes modify requirements introduced by earlier ones, so
+archive each before applying the next.
+
+1. `compact-block-drop-mobile-layout`: compact header, scoring guide moved
+   into a help dialog, playfield-first layout (at least 540 px tall at 390 by
+   844), session actions moved away from Drop, and one live announcer.
+2. `add-block-drop-ghost-piece`: landing preview, grid drawn under cells,
+   and cell edge shading.
+3. `add-block-drop-touch-repeat`: press-to-act, hold-to-repeat, thumb
+   clusters, and optional haptics.
+4. `add-block-drop-pause-and-game-over-overlays`: pause veil and panel,
+   game-over card, best score in `localStorage`, and pause when hidden.
+5. `add-block-drop-levels`: lines, levels, a gravity curve, a level score
+   multiplier, and a line-clear callout.
+6. `add-block-drop-wall-kicks`: basic horizontal rotation kicks (not full
+   SRS).
+
+Changes 2 and 6 are independent and can ship at any point. The design
+rationale and before screenshots are in `plans/block-drop/PLAN.md` in
+`mattgotteiner/claude-design-examples`.
+
 ## Deferred Work
 
 Levels, score persistence/high scores, automatic visibility pause, hold pieces,
