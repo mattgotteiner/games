@@ -8,6 +8,7 @@ Block Drop's touch controls act like form buttons. Each one fires on `click`, wh
 - Holding left, right, or soft drop repeats the action: an initial delay of 170 ms, then every 50 ms. Repeat stops on release, on cancel, or when the game leaves active play.
 - On portrait phones, split the gameplay controls into two thumb clusters: left, right, and soft drop on the left, and rotate and hard drop on the right, with larger targets.
 - Where the device supports it, give a short vibration when a piece locks and when lines clear. This is skipped when reduced motion is preferred.
+- Prevent one-finger page panning from drags that begin anywhere in the game screen while preserving pinch zoom.
 
 ## Capabilities
 
@@ -25,3 +26,7 @@ None.
 - `rules.ts`, keyboard mappings, and the controller's logical actions are unchanged. Repeats dispatch the existing `GameAction` values.
 - No new dependencies, APIs, or persisted data.
 - Third of six planned Block Drop changes. It assumes `compact-block-drop-mobile-layout` has already moved pause and restart out of the gameplay controls.
+
+## Implementation Note
+
+During implementation and mobile E2E review, dragging from multiple game elements exposed browser page panning. This was not in the original plan. The game-wide gesture policy now prevents one-finger panning while preserving pinch zoom, with a regression test across the heading, board, HUD, preview, and controls.

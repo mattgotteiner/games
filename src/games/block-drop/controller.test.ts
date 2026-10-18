@@ -217,7 +217,7 @@ describe('BlockDropController', () => {
     const initialState = {
       ...createGame(41),
       board,
-      active: { type: 'O', rotation: 0, x: 3, y: 0 },
+      active: { type: 'O' as const, rotation: 0, x: 3, y: 0 },
     }
     const { controller } = createController(initialState)
     const cellFillOrder = vi.mocked(context.fillRect).mock.invocationCallOrder[1]
@@ -295,6 +295,18 @@ describe('BlockDropController', () => {
     controller.destroy()
   })
 
+  it('publishes a lock event for optional haptic feedback', () => {
+    const { controller, onStateChange } = createController(restingPieceState())
+
+    controller.dispatch('soft-drop')
+
+    expect(onStateChange).toHaveBeenLastCalledWith(
+      expect.anything(),
+      { clearing: false, locked: true },
+    )
+    controller.destroy()
+  })
+
   it('tears down frame, keyboard, and observer resources idempotently', () => {
     const { controller } = createController()
     const before = controller.getState()
@@ -324,7 +336,7 @@ describe('BlockDropController', () => {
     expect(canvas.dataset.clearingRows).toBe('19')
     expect(onStateChange).toHaveBeenLastCalledWith(
       expect.objectContaining({ score: 100 }),
-      { clearing: true, clearedLines: 1 },
+      { clearing: true, clearedLines: 1, locked: true },
     )
     expect(vi.mocked(context.fillRect)).toHaveBeenCalledWith(0, 342, 180, 18)
 
@@ -393,6 +405,7 @@ describe('BlockDropController', () => {
     expect(onStateChange).toHaveBeenLastCalledWith(controller.getState(), {
       clearing: false,
       clearedLines: 1,
+      locked: true,
     })
     controller.destroy()
   })

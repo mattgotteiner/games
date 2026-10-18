@@ -82,3 +82,14 @@ Where the device supports vibration and the user has not requested reduced motio
 #### Scenario: Vibration is unavailable or unwanted
 - **WHEN** a piece locks on a device without vibration support or with reduced motion preferred
 - **THEN** no vibration is requested and gameplay is unaffected
+
+### Requirement: Touch drags do not pan the game page
+While Block Drop is open, one-finger touch drags that begin anywhere within the game screen SHALL NOT pan the browser page. Pinch zoom SHALL remain available.
+
+#### Scenario: User drags a game element
+- **WHEN** the user drags on the heading, board, game information, preview, or a control
+- **THEN** the browser page remains in place
+
+#### Scenario: User pinches to zoom
+- **WHEN** the user pinches on the game screen
+- **THEN** browser pinch zoom remains available

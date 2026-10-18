@@ -222,22 +222,53 @@ and SHALL allow the user to start a fresh game.
 Every gameplay action SHALL be available through visible touch controls and
 through keyboard controls, with both input methods producing the same logical
 actions. The visible controls SHALL use familiar directional and action labels,
-and the pause control SHALL become a resume control while paused.
+and the pause control SHALL become a resume control while paused. Pointer and
+touch activation of a gameplay control SHALL apply its action when the control
+is pressed rather than when it is released. Holding the left, right, or
+soft-drop control SHALL repeat its action after an initial delay of 170
+milliseconds and then every 50 milliseconds until the pointer is released or
+cancelled, or the game leaves active play. Rotation and hard drop SHALL NOT
+repeat while held. Keyboard and assistive-technology activation of a visible
+control SHALL apply its action exactly once.
 
 #### Scenario: Touch action
-- **WHEN** the user activates a visible movement, rotation, soft-drop, hard-drop, pause/resume, or restart control
-- **THEN** the corresponding logical action is applied once
+- **WHEN** the user presses a visible movement, rotation, soft-drop, or hard-drop control
+- **THEN** the corresponding logical action is applied immediately on press
+
+#### Scenario: Short tap on a repeatable control
+- **WHEN** the user presses and releases the left, right, or soft-drop control within 170 milliseconds
+- **THEN** the corresponding logical action is applied exactly once
+
+#### Scenario: Holding a repeatable control
+- **WHEN** the user holds the left, right, or soft-drop control during active play
+- **THEN** the action is applied on press, again after 170 milliseconds, and then every 50 milliseconds until release
+
+#### Scenario: Holding a non-repeatable control
+- **WHEN** the user holds the rotate or hard-drop control
+- **THEN** the action is applied once
+
+#### Scenario: Play stops during a hold
+- **WHEN** the game pauses, begins line-clear feedback, or reaches game over while a control is held
+- **THEN** repetition stops and does not resume until the control is pressed again
+
+#### Scenario: Two controls are used together
+- **WHEN** the user holds one movement control and presses another gameplay control
+- **THEN** both controls apply their actions independently
 
 #### Scenario: Keyboard action
 - **WHEN** the active game receives the documented key for a movement, rotation, soft-drop, hard-drop, pause/resume, or restart action
 - **THEN** the same logical action as the corresponding visible control is applied
+
+#### Scenario: Control activated without a pointer
+- **WHEN** a visible control is activated by keyboard or assistive technology
+- **THEN** its logical action is applied exactly once
 
 #### Scenario: Control meaning is inspected
 - **WHEN** a user or assistive technology inspects a gameplay control
 - **THEN** its movement, drop, pause/resume, or restart action is unambiguous without requiring interpretation of an icon alone
 
 ### Requirement: Clear control hierarchy and feedback
-Block Drop SHALL present catalog, navigation, movement, drop, pause, and restart controls with consistent touch-friendly sizing and a visual hierarchy that distinguishes primary gameplay actions from secondary session actions. The movement group SHALL present left, right, rotate, and soft drop in that visual and reading order, with left and right adjacent and rotate immediately to the right of right. Every control SHALL expose visible keyboard focus and appropriate hover, pressed, and disabled feedback without relying on color alone.
+Block Drop SHALL present catalog, navigation, movement, drop, pause, and restart controls with consistent touch-friendly sizing and a visual hierarchy that distinguishes primary gameplay actions from secondary session actions. Gameplay controls SHALL follow the visual and reading order left, right, soft drop, rotate, and hard drop, with left and right adjacent. On portrait phone viewports, left, right, and soft drop SHALL form a cluster at the left edge and rotate and hard drop SHALL form a cluster at the right edge, with each target at least 56 by 56 CSS pixels. Every control SHALL expose visible keyboard focus and appropriate hover, pressed, and disabled feedback without relying on color alone.
 
 #### Scenario: User scans the gameplay controls
 - **WHEN** the Block Drop play screen is presented
@@ -245,7 +276,11 @@ Block Drop SHALL present catalog, navigation, movement, drop, pause, and restart
 
 #### Scenario: User scans movement controls
 - **WHEN** the movement control group is presented at any supported viewport
-- **THEN** left and right are adjacent, rotate immediately follows right, and soft drop follows rotate in visual and reading order
+- **THEN** the controls follow the order left, right, soft drop, rotate, hard drop in both visual and reading order, with left and right adjacent
+
+#### Scenario: User plays on a portrait phone
+- **WHEN** the gameplay controls are presented on a portrait phone viewport
+- **THEN** left, right, and soft drop form a cluster at the left edge and rotate and hard drop form a cluster at the right edge, with each gameplay target at least 56 by 56 CSS pixels
 
 #### Scenario: User operates a pointer control
 - **WHEN** a pointer hovers over or presses an enabled button
@@ -262,6 +297,32 @@ Block Drop SHALL present catalog, navigation, movement, drop, pause, and restart
 #### Scenario: User operates a touch control
 - **WHEN** the user targets a visible catalog, navigation, or gameplay button on a phone viewport
 - **THEN** the control provides a target of at least 44 by 44 CSS pixels
+
+### Requirement: Optional haptic feedback
+Where the device supports vibration and the user has not requested reduced motion, Block Drop SHALL give a brief vibration when a piece locks and a slightly longer one when lines are cleared. Where vibration is unsupported or reduced motion is preferred, gameplay SHALL behave identically without it.
+
+#### Scenario: Piece locks on a supporting device
+- **WHEN** a piece locks on a device that supports vibration and reduced motion is not preferred
+- **THEN** a brief vibration is requested
+
+#### Scenario: Lines clear on a supporting device
+- **WHEN** one or more lines clear on a device that supports vibration and reduced motion is not preferred
+- **THEN** a slightly longer vibration is requested
+
+#### Scenario: Vibration is unavailable or unwanted
+- **WHEN** a piece locks on a device without vibration support or with reduced motion preferred
+- **THEN** no vibration is requested and gameplay is unaffected
+
+### Requirement: Touch drags do not pan the game page
+While Block Drop is open, one-finger touch drags that begin anywhere within the game screen SHALL NOT pan the browser page. Pinch zoom SHALL remain available.
+
+#### Scenario: User drags a game element
+- **WHEN** the user drags on the heading, board, game information, preview, or a control
+- **THEN** the browser page remains in place
+
+#### Scenario: User pinches to zoom
+- **WHEN** the user pinches on the game screen
+- **THEN** browser pinch zoom remains available
 
 ### Requirement: Session action placement
 Block Drop SHALL present pause/resume, help, and restart as session actions that

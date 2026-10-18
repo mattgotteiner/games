@@ -107,7 +107,7 @@ async function expectGameFitsViewport(page: import('@playwright/test').Page) {
   expect(surfaceBox).not.toBeNull()
   expect(Math.abs(surfaceBox!.width - canvasBox!.width)).toBeLessThanOrEqual(4)
   expect(Math.abs(surfaceBox!.height - canvasBox!.height)).toBeLessThanOrEqual(4)
-  expect(await page.locator('.action-controls button').count()).toBe(1)
+  expect(await page.locator('.action-controls button').count()).toBe(2)
   for (const button of await page.getByRole('button').all()) {
     const box = await button.boundingBox()
     expect(box).not.toBeNull()
@@ -179,29 +179,165 @@ async function expectPreviewCentered(page: import('@playwright/test').Page) {
 }
 
 async function expectMovementOrder(page: import('@playwright/test').Page) {
-  const left = await page.getByRole('button', { name: 'Move left' }).boundingBox()
-  const right = await page
-    .getByRole('button', { name: 'Move right' })
-    .boundingBox()
-  const rotate = await page
-    .getByRole('button', { name: 'Rotate clockwise' })
-    .boundingBox()
-  const softDrop = await page
-    .getByRole('button', { name: 'Soft drop' })
-    .boundingBox()
-
-  for (const box of [left, right, rotate, softDrop]) {
+  const controls = [
+    page.getByRole('button', { name: 'Move left' }),
+    page.getByRole('button', { name: 'Move right' }),
+    page.getByRole('button', { name: 'Soft drop' }),
+    page.getByRole('button', { name: 'Rotate clockwise' }),
+    page.getByRole('button', { name: 'Hard drop' }),
+  ]
+  expect(
+    await page.locator('.game-controls button').evaluateAll((buttons) =>
+      buttons.map((button) => button.getAttribute('aria-label')),
+    ),
+  ).toEqual([
+    'Move left',
+    'Move right',
+    'Soft drop',
+    'Rotate clockwise',
+    'Hard drop',
+  ])
+  const boxes = await Promise.all(
+    controls.map((control) => control.boundingBox()),
+  )
+  for (const box of boxes) {
     expect(box).not.toBeNull()
     expect(box!.width).toBeGreaterThanOrEqual(44)
     expect(box!.height).toBeGreaterThanOrEqual(44)
   }
-  expect(left!.y).toBeCloseTo(right!.y, 0)
-  expect(right!.y).toBeCloseTo(rotate!.y, 0)
-  expect(left!.x + left!.width).toBeLessThanOrEqual(right!.x)
-  expect(right!.x + right!.width).toBeLessThanOrEqual(rotate!.x)
+  const [left, right, softDrop, rotate, hardDrop] = boxes
+  const { width, height } = await page.evaluate(() => ({
+    width: window.innerWidth,
+    height: window.innerHeight,
+  }))
 
-  expect(rotate!.x + rotate!.width).toBeLessThanOrEqual(softDrop!.x)
+  if (width <= 672 && height > width) {
+    for (const box of boxes) {
+      expect(box!.width).toBeGreaterThanOrEqual(56)
+      expect(box!.height).toBeGreaterThanOrEqual(56)
+    }
+    const leftCluster = await page.locator('.movement-controls').boundingBox()
+    const rightCluster = await page.locator('.action-controls').boundingBox()
+    expect(leftCluster).not.toBeNull()
+    expect(rightCluster).not.toBeNull()
+    expect(left!.y).toBeCloseTo(right!.y, 0)
+    expect(softDrop!.y).toBeGreaterThan(left!.y)
+    expect(rotate!.y).toBeCloseTo(left!.y, 0)
+    expect(hardDrop!.y).toBeGreaterThan(rotate!.y)
+    expect(left!.x + left!.width).toBeLessThanOrEqual(right!.x)
+    expect(
+      softDrop!.x + softDrop!.width / 2,
+    ).toBeCloseTo(leftCluster!.x + leftCluster!.width / 2, 0)
+    expect(leftCluster!.x + leftCluster!.width).toBeLessThan(rightCluster!.x)
+  } else {
+    for (const box of boxes) {
+      expect(box!.y).toBeCloseTo(left!.y, 0)
+    }
+    expect(left!.x + left!.width).toBeLessThanOrEqual(right!.x)
+    expect(right!.x + right!.width).toBeLessThanOrEqual(softDrop!.x)
+    expect(softDrop!.x + softDrop!.width).toBeLessThanOrEqual(rotate!.x)
+    expect(rotate!.x + rotate!.width).toBeLessThanOrEqual(hardDrop!.x)
+  }
 }
+
+test('prevents page panning from touch drags anywhere in Block Drop', async ({
+  browser,
+}) => {
+  const context = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    isMobile: true,
+    hasTouch: true,
+  })
+  const page = await context.newPage()
+  const touchInput = await context.newCDPSession(page)
+
+  try {
+    await page.goto('http://127.0.0.1:4173/games/?game=block-drop')
+    await expect(
+      page.getByRole('heading', { level: 1, name: 'Block Drop' }),
+    ).toBeVisible()
+    await expect(page.locator('.key-help')).toBeHidden()
+    const mobileBoard = await page.getByRole('img', {
+      name: 'Block Drop board',
+    }).boundingBox()
+    expect(mobileBoard!.height).toBeGreaterThanOrEqual(540)
+
+    const scrollRange = await page.evaluate(() => {
+      document.documentElement.style.overflow = 'auto'
+      document.body.style.overflow = 'visible'
+      const overflowArea = document.createElement('div')
+      overflowArea.setAttribute('aria-hidden', 'true')
+      overflowArea.style.cssText =
+        'position:absolute;left:0;top:0;width:2000px;height:3000px;pointer-events:none;'
+      document.body.append(overflowArea)
+      return {
+        width: document.documentElement.scrollWidth,
+        height: document.documentElement.scrollHeight,
+        viewportWidth: document.documentElement.clientWidth,
+        viewportHeight: document.documentElement.clientHeight,
+      }
+    })
+    expect(scrollRange.width).toBeGreaterThan(scrollRange.viewportWidth)
+    expect(scrollRange.height).toBeGreaterThan(scrollRange.viewportHeight)
+    await expect(page.locator('.game-shell')).toHaveCSS(
+      'touch-action',
+      'pinch-zoom',
+    )
+
+    const targets = [
+      page.locator('.game-header h1'),
+      page.locator('.board-surface'),
+      page.locator('.game-score'),
+      page.locator('.game-status'),
+      page.locator('.next-piece'),
+      page.getByRole('button', { name: 'Move left' }),
+      page.getByRole('button', { name: 'Help' }),
+    ]
+
+    for (const target of targets) {
+      const box = await target.boundingBox()
+      expect(box).not.toBeNull()
+      const start = {
+        x: box!.x + box!.width / 2,
+        y: box!.y + box!.height / 2,
+      }
+      const before = await page.evaluate(() => ({
+        x: window.scrollX,
+        y: window.scrollY,
+      }))
+
+      for (const axis of ['horizontal', 'vertical'] as const) {
+        if (axis === 'vertical' && start.y < 72) continue
+
+        await touchInput.send('Input.dispatchTouchEvent', {
+          type: 'touchStart',
+          touchPoints: [{ id: 1, ...start }],
+        })
+        await touchInput.send('Input.dispatchTouchEvent', {
+          type: 'touchMove',
+          touchPoints: [
+            {
+              id: 1,
+              x: axis === 'horizontal' ? Math.max(1, start.x - 70) : start.x,
+              y: axis === 'vertical' ? start.y - 70 : start.y,
+            },
+          ],
+        })
+        await touchInput.send('Input.dispatchTouchEvent', {
+          type: 'touchEnd',
+          touchPoints: [],
+        })
+        await page.waitForTimeout(50)
+
+        expect(
+          await page.evaluate(() => ({ x: window.scrollX, y: window.scrollY })),
+        ).toEqual(before)
+      }
+    }
+  } finally {
+    await context.close()
+  }
+})
 
 test('plays Block Drop with touch and keyboard across phone orientations', async ({
   page,
@@ -216,7 +352,7 @@ test('plays Block Drop with touch and keyboard across phone orientations', async
   await expect(
     page.getByRole('heading', { level: 1, name: 'Block Drop' }),
   ).toBeVisible()
-  await expect(page.getByText('Playing')).toBeVisible()
+  await expect(page.getByText('Playing', { exact: true })).toBeVisible()
   const preview = page.getByRole('region', {
     name: /Next piece: [IJLOSTZ] tetromino/,
   })
@@ -244,8 +380,11 @@ test('plays Block Drop with touch and keyboard across phone orientations', async
   }
   const portraitBoard = await canvas.boundingBox()
   const portraitHud = await page.locator('.game-hud').boundingBox()
+  const keyboardHelpVisible = await page.locator('.key-help').isVisible()
   expect(portraitHud!.height).toBeLessThanOrEqual(64)
-  expect(portraitBoard!.height).toBeGreaterThanOrEqual(540)
+  expect(portraitBoard!.height).toBeGreaterThanOrEqual(
+    keyboardHelpVisible ? 520 : 540,
+  )
   expect(portraitHud!.y + portraitHud!.height).toBeLessThanOrEqual(
     portraitBoard!.y,
   )
@@ -253,6 +392,7 @@ test('plays Block Drop with touch and keyboard across phone orientations', async
     canvas.evaluate((element: HTMLCanvasElement) => element.toDataURL())
   const initialBoard = await captureBoard()
 
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur())
   await page.keyboard.press('ArrowLeft')
   const keyboardBoard = await captureBoard()
   expect(keyboardBoard).not.toBe(initialBoard)
@@ -275,7 +415,7 @@ test('plays Block Drop with touch and keyboard across phone orientations', async
 
   const pause = page.getByRole('button', { name: 'Pause game' })
   await pause.click()
-  await expect(page.getByText('Paused')).toBeVisible()
+  await expect(page.getByText('Paused', { exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Move left' })).toBeDisabled()
   await expect(page.getByRole('button', { name: 'Hard drop' })).toBeDisabled()
   await expect(page.getByRole('button', { name: 'Restart game' })).toBeEnabled()
@@ -287,7 +427,7 @@ test('plays Block Drop with touch and keyboard across phone orientations', async
   expect(await captureBoard()).toBe(pausedBoard)
 
   await page.keyboard.press('p')
-  await expect(page.getByText('Playing')).toBeVisible()
+  await expect(page.getByText('Playing', { exact: true })).toBeVisible()
   const resumedBoard = await captureBoard()
   await page.waitForTimeout(400)
   expect(await captureBoard()).toBe(resumedBoard)
@@ -295,7 +435,7 @@ test('plays Block Drop with touch and keyboard across phone orientations', async
 
   await page.getByRole('button', { name: 'Pause game' }).click()
   await page.getByRole('button', { name: 'Restart game' }).click()
-  await expect(page.getByText('Playing')).toBeVisible()
+  await expect(page.getByText('Playing', { exact: true })).toBeVisible()
   await expect(page.getByLabel('Score: 0')).toBeVisible()
 
   await expectGameFitsViewport(page)
@@ -364,6 +504,8 @@ test('presents a prominent right-side HUD and polished button states', async ({
   expect(hudBox!.x).toBeGreaterThanOrEqual(canvasBox!.x + canvasBox!.width)
   expect((await preview.boundingBox())!.width).toBeGreaterThanOrEqual(96)
   await expectScoringGuideVisible(page)
+  await expectGameFitsViewport(page)
+  await expectMovementOrder(page)
   expect(
     Number.parseFloat(
       await page
@@ -462,16 +604,16 @@ test('animates an exact deterministic line clear and gates gameplay', async ({
   }, lineClearKeys)
 
   expect(await canvas.getAttribute('data-clearing-rows')).toBe('14')
-  await expect(page.getByText('Clearing lines')).toBeVisible()
+  await expect(page.getByText('Clearing lines', { exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Move left' })).toBeDisabled()
   await expect(page.getByRole('button', { name: 'Pause game' })).toBeDisabled()
   await expect(page.getByRole('button', { name: 'Restart game' })).toBeEnabled()
 
   await page.keyboard.press('ArrowLeft')
   await page.keyboard.press('p')
-  await expect(page.getByText('Clearing lines')).toBeVisible()
+  await expect(page.getByText('Clearing lines', { exact: true })).toBeVisible()
   await expect(canvas).not.toHaveAttribute('data-clearing-rows')
-  await expect(page.getByText('Paused')).toBeVisible()
+  await expect(page.getByText('Paused', { exact: true })).toBeVisible()
   await expect(page.getByLabel('Score: 442')).toBeVisible()
   await expect(
     page.getByRole('region', {

@@ -105,7 +105,7 @@ test('launches Block Drop from the repository-scoped app offline', async ({
   await expect(preview).not.toHaveAttribute('aria-label', initialPreview!)
 
   await page.getByRole('button', { name: 'Pause game' }).click()
-  await expect(page.getByText('Paused')).toBeVisible()
+  await expect(page.getByText('Paused', { exact: true })).toBeVisible()
   await expect(moveLeft).toBeDisabled()
   const pausedBoard = await canvas.evaluate((element: HTMLCanvasElement) =>
     element.toDataURL(),
@@ -120,6 +120,6 @@ test('launches Block Drop from the repository-scoped app offline', async ({
   await expect(preview).toHaveAttribute('aria-label', pausedPreview!)
 
   await page.getByRole('button', { name: 'Resume game' }).click()
-  await expect(page.getByText('Playing')).toBeVisible()
+  await expect(page.getByText('Playing', { exact: true })).toBeVisible()
   await expect(moveLeft).toBeEnabled()
 })

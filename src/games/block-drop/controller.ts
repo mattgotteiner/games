@@ -44,6 +44,7 @@ export interface BlockDropControllerOptions {
 export interface BlockDropPresentationState {
   readonly clearing: boolean
   readonly clearedLines?: number
+  readonly locked?: boolean
   readonly action?: GameAction
 }
 
@@ -123,8 +124,10 @@ export class BlockDropController {
     }
 
     const previousStatus = this.state.status
+    const previousBoard = this.state.board
     const result = applyActionWithEvents(this.state, action)
     this.state = result.state
+    const locked = action !== 'restart' && result.state.board !== previousBoard
     if (action === 'restart') {
       this.cancelLineClear()
     }
@@ -137,7 +140,7 @@ export class BlockDropController {
     }
     const announcedAction =
       action === 'restart' && previousStatus === 'paused' ? action : undefined
-    this.publish(result.lineClear, announcedAction)
+    this.publish(result.lineClear, announcedAction, locked)
   }
 
   destroy(): void {
@@ -192,8 +195,10 @@ export class BlockDropController {
       let changed = false
       let steps = 0
       let lineClear: LineClearEvent | undefined
+      let locked = false
       while (this.elapsed >= GRAVITY_MS && steps < 2) {
         const result = stepGravityWithEvents(this.state)
+        locked ||= result.state.board !== this.state.board
         this.state = result.state
         this.elapsed -= GRAVITY_MS
         changed = true
@@ -207,7 +212,7 @@ export class BlockDropController {
           break
         }
       }
-      if (changed) this.publish(lineClear)
+      if (changed) this.publish(lineClear, undefined, locked)
     }
     this.previousTime = time
     this.frameId = this.requestFrame(this.tick)
@@ -235,7 +240,11 @@ export class BlockDropController {
     this.draw(cssWidth, cssHeight, ratio)
   }
 
-  private publish(lineClear?: LineClearEvent, action?: GameAction): void {
+  private publish(
+    lineClear?: LineClearEvent,
+    action?: GameAction,
+    locked = false,
+  ): void {
     this.draw(
       this.canvas.width / this.pixelRatio,
       this.canvas.height / this.pixelRatio,
@@ -244,6 +253,7 @@ export class BlockDropController {
     this.onStateChange(this.state, {
       clearing: this.lineClearEffect !== null,
       ...(lineClear ? { clearedLines: lineClear.rows.length } : {}),
+      ...(locked ? { locked: true } : {}),
       ...(action ? { action } : {}),
     })
   }

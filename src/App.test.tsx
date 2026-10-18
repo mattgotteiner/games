@@ -1,5 +1,12 @@
-import { act, fireEvent, render, screen, within } from '@testing-library/preact'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from '@testing-library/preact'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { App } from './App'
 import type {
   ApplicationUpdateController,
@@ -15,6 +22,73 @@ import {
   TETROMINOES,
   type Tetromino,
 } from './games/block-drop/rules'
+
+function dispatchPointer(
+  target: HTMLElement,
+  type: string,
+  pointerId = 1,
+  init: { readonly isPrimary?: boolean; readonly button?: number } = {},
+) {
+  const event = new Event(type, { bubbles: true, cancelable: true })
+  Object.defineProperties(event, {
+    pointerId: { value: pointerId },
+    isPrimary: { value: init.isPrimary ?? true },
+    button: { value: init.button ?? 0 },
+  })
+  fireEvent(target, event)
+}
+
+const pendingRestorations: Array<() => void> = []
+
+function mockVibration(supported: boolean, reducedMotion: boolean) {
+  const previousVibrate = Object.getOwnPropertyDescriptor(navigator, 'vibrate')
+  const previousMatchMedia = Object.getOwnPropertyDescriptor(
+    window,
+    'matchMedia',
+  )
+  const vibrate = vi.fn()
+
+  if (supported) {
+    Object.defineProperty(navigator, 'vibrate', {
+      configurable: true,
+      value: vibrate,
+    })
+  } else {
+    Reflect.deleteProperty(navigator, 'vibrate')
+  }
+  Object.defineProperty(window, 'matchMedia', {
+    configurable: true,
+    value: vi.fn(() => ({ matches: reducedMotion }) as MediaQueryList),
+  })
+
+  let restored = false
+  const restore = () => {
+    if (restored) return
+    restored = true
+    if (previousVibrate) {
+      Object.defineProperty(navigator, 'vibrate', previousVibrate)
+    } else {
+      Reflect.deleteProperty(navigator, 'vibrate')
+    }
+    if (previousMatchMedia) {
+      Object.defineProperty(window, 'matchMedia', previousMatchMedia)
+    } else {
+      Reflect.deleteProperty(window, 'matchMedia')
+    }
+  }
+  pendingRestorations.push(restore)
+
+  return {
+    vibrate,
+    restore,
+  }
+}
+
+afterEach(() => {
+  cleanup()
+  vi.useRealTimers()
+  for (const restore of pendingRestorations.splice(0).reverse()) restore()
+})
 
 function updateController(
   status: ApplicationUpdateStatus,
@@ -65,27 +139,261 @@ describe('App', () => {
       .toBeInTheDocument()
     expect(within(sessionActions).getByRole('button', { name: 'Restart game' }))
       .toBeInTheDocument()
-    expect(container.querySelectorAll('.action-controls button')).toHaveLength(1)
+    expect(container.querySelectorAll('.action-controls button')).toHaveLength(2)
     expect(
       Array.from(
-        container.querySelectorAll<HTMLButtonElement>('.movement-controls button'),
+        container.querySelectorAll<HTMLButtonElement>('.game-controls button'),
         (button) => button.getAttribute('aria-label'),
       ),
-    ).toEqual(['Move left', 'Move right', 'Rotate clockwise', 'Soft drop'])
+    ).toEqual([
+      'Move left',
+      'Move right',
+      'Soft drop',
+      'Rotate clockwise',
+      'Hard drop',
+    ])
     fireEvent.click(screen.getByRole('button', { name: 'Move left' }))
     fireEvent.click(screen.getByRole('button', { name: 'Move right' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Soft drop' }))
     fireEvent.click(screen.getByRole('button', { name: 'Rotate clockwise' }))
     fireEvent.click(screen.getByRole('button', { name: 'Hard drop' }))
     expect(dispatch).toHaveBeenNthCalledWith(1, 'left')
     expect(dispatch).toHaveBeenNthCalledWith(2, 'right')
-    expect(dispatch).toHaveBeenNthCalledWith(3, 'rotate')
-    expect(dispatch).toHaveBeenNthCalledWith(4, 'hard-drop')
+    expect(dispatch).toHaveBeenNthCalledWith(3, 'soft-drop')
+    expect(dispatch).toHaveBeenNthCalledWith(4, 'rotate')
+    expect(dispatch).toHaveBeenNthCalledWith(5, 'hard-drop')
 
     fireEvent.click(screen.getByRole('button', { name: /catalog/i }))
     expect(destroy).toHaveBeenCalledOnce()
     expect(window.location.search).toBe('')
     expect(screen.getByRole('button', { name: 'Play Block Drop' })).toBeInTheDocument()
   })
+
+  it('acts on pointer press and repeats only after the configured delay', () => {
+    vi.useFakeTimers()
+    const dispatch = vi.fn()
+    const factory: BlockDropControllerFactory = () => ({
+      dispatch,
+      destroy: vi.fn(),
+      getState: () => createGame(5),
+    })
+    render(<BlockDrop onReturn={vi.fn()} controllerFactory={factory} />)
+    const left = screen.getByRole('button', { name: 'Move left' })
+
+    dispatchPointer(left, 'pointerdown')
+    expect(dispatch).toHaveBeenNthCalledWith(1, 'left')
+    act(() => {
+      vi.advanceTimersByTime(169)
+    })
+    expect(dispatch).toHaveBeenCalledOnce()
+    act(() => {
+      vi.advanceTimersByTime(1)
+    })
+    expect(dispatch).toHaveBeenNthCalledWith(2, 'left')
+    act(() => {
+      vi.advanceTimersByTime(49)
+    })
+    expect(dispatch).toHaveBeenCalledTimes(2)
+    act(() => {
+      vi.advanceTimersByTime(1)
+    })
+    expect(dispatch).toHaveBeenNthCalledWith(3, 'left')
+
+    dispatchPointer(left, 'pointerup')
+    fireEvent.click(left, { detail: 1 })
+    act(() => {
+      vi.advanceTimersByTime(250)
+    })
+    expect(dispatch).toHaveBeenCalledTimes(3)
+    fireEvent.keyDown(left, { key: 'Enter' })
+    fireEvent.click(left, { detail: 0 })
+    expect(dispatch).toHaveBeenNthCalledWith(4, 'left')
+  })
+
+  it.each(['pointerup', 'pointercancel', 'lostpointercapture'] as const)(
+    'stops hold repeat on %s',
+    (eventType) => {
+      vi.useFakeTimers()
+      const dispatch = vi.fn()
+      const factory: BlockDropControllerFactory = () => ({
+        dispatch,
+        destroy: vi.fn(),
+        getState: () => createGame(5),
+      })
+      render(<BlockDrop onReturn={vi.fn()} controllerFactory={factory} />)
+      const right = screen.getByRole('button', { name: 'Move right' })
+
+      dispatchPointer(right, 'pointerdown')
+      act(() => {
+        vi.advanceTimersByTime(220)
+      })
+      expect(dispatch).toHaveBeenCalledTimes(3)
+      dispatchPointer(right, eventType)
+      act(() => {
+        vi.advanceTimersByTime(250)
+      })
+      expect(dispatch).toHaveBeenCalledTimes(3)
+    },
+  )
+
+  it.each([
+    ['paused', 'paused', { clearing: false }],
+    ['line clearing', 'playing', { clearing: true }],
+    ['game over', 'game-over', { clearing: false }],
+  ] as const)(
+    'stops hold repeat when the game enters %s',
+    (_name, status, presentation) => {
+      vi.useFakeTimers()
+      const initial = createGame(5)
+      let publish: BlockDropStateListener | undefined
+      const dispatch = vi.fn()
+      const factory: BlockDropControllerFactory = (
+        _canvas,
+        _container,
+        onStateChange,
+      ) => {
+        publish = onStateChange
+        return { dispatch, destroy: vi.fn(), getState: () => initial }
+      }
+      render(<BlockDrop onReturn={vi.fn()} controllerFactory={factory} />)
+      const left = screen.getByRole('button', { name: 'Move left' })
+
+      dispatchPointer(left, 'pointerdown')
+      act(() => publish?.({ ...initial, status }, presentation))
+      act(() => {
+        vi.advanceTimersByTime(500)
+      })
+      expect(dispatch).toHaveBeenCalledOnce()
+      expect(left).toBeDisabled()
+    },
+  )
+
+  it('cleans hold timers on unmount and keeps simultaneous controls independent', () => {
+    vi.useFakeTimers()
+    const dispatch = vi.fn()
+    const factory: BlockDropControllerFactory = () => ({
+      dispatch,
+      destroy: vi.fn(),
+      getState: () => createGame(5),
+    })
+    const { unmount } = render(
+      <BlockDrop onReturn={vi.fn()} controllerFactory={factory} />,
+    )
+    const left = screen.getByRole('button', { name: 'Move left' })
+    const rotate = screen.getByRole('button', { name: 'Rotate clockwise' })
+    const drop = screen.getByRole('button', { name: 'Hard drop' })
+
+    dispatchPointer(left, 'pointerdown', 1)
+    dispatchPointer(rotate, 'pointerdown', 2)
+    dispatchPointer(drop, 'pointerdown', 3)
+    expect(dispatch.mock.calls.map(([action]) => action)).toEqual([
+      'left',
+      'rotate',
+      'hard-drop',
+    ])
+    act(() => {
+      vi.advanceTimersByTime(170)
+    })
+    expect(dispatch.mock.calls.map(([action]) => action)).toEqual([
+      'left',
+      'rotate',
+      'hard-drop',
+      'left',
+    ])
+    act(() => {
+      vi.advanceTimersByTime(500)
+    })
+    expect(dispatch.mock.calls.filter(([action]) => action === 'rotate'))
+      .toHaveLength(1)
+    expect(dispatch.mock.calls.filter(([action]) => action === 'hard-drop'))
+      .toHaveLength(1)
+    unmount()
+    expect(vi.getTimerCount()).toBe(0)
+    expect(dispatch.mock.calls.filter(([action]) => action === 'left'))
+      .toHaveLength(12)
+  })
+
+  it('dispatches Enter, Space, and programmatic control activation once', () => {
+    const dispatch = vi.fn()
+    const factory: BlockDropControllerFactory = () => ({
+      dispatch,
+      destroy: vi.fn(),
+      getState: () => createGame(5),
+    })
+    render(<BlockDrop onReturn={vi.fn()} controllerFactory={factory} />)
+    const left = screen.getByRole('button', { name: 'Move left' })
+    const rotate = screen.getByRole('button', { name: 'Rotate clockwise' })
+    const drop = screen.getByRole('button', { name: 'Hard drop' })
+
+    fireEvent.keyDown(left, { key: 'Enter' })
+    fireEvent.click(left, { detail: 0 })
+    fireEvent.keyDown(rotate, { key: ' ' })
+    fireEvent.click(rotate, { detail: 0 })
+    fireEvent.click(drop)
+
+    expect(dispatch.mock.calls.map(([action]) => action)).toEqual([
+      'left',
+      'rotate',
+      'hard-drop',
+    ])
+  })
+
+  it('vibrates for locks and line clears when supported and motion is allowed', () => {
+    const mock = mockVibration(true, false)
+    let publish: BlockDropStateListener | undefined
+    const initial = createGame(5)
+    const factory: BlockDropControllerFactory = (
+      _canvas,
+      _container,
+      onStateChange,
+    ) => {
+      publish = onStateChange
+      return {
+        dispatch: vi.fn(),
+        destroy: vi.fn(),
+        getState: () => initial,
+      }
+    }
+
+    render(<BlockDrop onReturn={vi.fn()} controllerFactory={factory} />)
+    act(() => publish?.(initial, { clearing: false, locked: true }))
+    act(() =>
+      publish?.(initial, { clearing: true, clearedLines: 1, locked: true }),
+    )
+
+    expect(mock.vibrate).toHaveBeenNthCalledWith(1, 10)
+    expect(mock.vibrate).toHaveBeenNthCalledWith(2, 20)
+    mock.restore()
+  })
+
+  it.each([
+    ['unsupported', false, false],
+    ['reduced motion', true, true],
+  ] as const)(
+    'skips haptics when vibration is %s',
+    (_name, supported, reducedMotion) => {
+      const mock = mockVibration(supported, reducedMotion)
+      let publish: BlockDropStateListener | undefined
+      const initial = createGame(5)
+      const factory: BlockDropControllerFactory = (
+        _canvas,
+        _container,
+        onStateChange,
+      ) => {
+        publish = onStateChange
+        return {
+          dispatch: vi.fn(),
+          destroy: vi.fn(),
+          getState: () => initial,
+        }
+      }
+
+      render(<BlockDrop onReturn={vi.fn()} controllerFactory={factory} />)
+      act(() => publish?.(initial, { clearing: false, locked: true }))
+      expect(mock.vibrate).not.toHaveBeenCalled()
+      mock.restore()
+    },
+  )
 
   it('opens a valid deep link directly', () => {
     window.history.replaceState(null, '', '/games/?theme=dark&game=block-drop#play')
@@ -192,7 +500,7 @@ describe('App', () => {
   })
 
   it('shows pause state, disables gameplay, and keeps resume and restart available', () => {
-    let publish: ((state: ReturnType<typeof createGame>) => void) | undefined
+    let publish: BlockDropStateListener | undefined
     const initial = createGame(5)
     const dispatch = vi.fn()
     const factory: BlockDropControllerFactory = (
@@ -226,7 +534,7 @@ describe('App', () => {
   })
 
   it('displays score semantically through play, game over, and restart', () => {
-    let publish: ((state: ReturnType<typeof createGame>) => void) | undefined
+    let publish: BlockDropStateListener | undefined
     const playing = { ...createGame(5), score: 7 }
     const dispatch = vi.fn()
     const factory: BlockDropControllerFactory = (
@@ -271,7 +579,7 @@ describe('App', () => {
     act(() =>
       publish?.({ ...playing, score: 8 }, { clearing: false, action: 'soft-drop' }),
     )
-    expect(announcements).toBeEmptyDOMElement()
+    expect(announcements.textContent).toBe('')
     act(() =>
       publish?.(
         { ...playing, score: 307 },

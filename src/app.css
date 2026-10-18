@@ -255,6 +255,7 @@ button:disabled {
   align-content: start;
   padding-top: max(1rem, env(safe-area-inset-top));
   padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  touch-action: pinch-zoom;
 }
 
 .block-drop {
@@ -545,15 +546,29 @@ button:disabled {
 }
 
 .movement-controls {
-  grid-template-columns: repeat(4, minmax(2.75rem, 1fr));
+  grid-template-columns: repeat(3, minmax(2.75rem, 1fr));
 }
 
 .action-controls {
-  grid-template-columns: minmax(4.25rem, auto);
+  grid-template-columns: repeat(2, minmax(2.75rem, auto));
 }
 
 .action-controls button {
   min-height: 2.75rem;
+}
+
+.game-controls button,
+.game-controls button * {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.control-hard-drop {
+  display: grid;
+  place-items: center;
+  gap: 0.1rem;
+  padding: 0.35rem;
 }
 
 .control-symbol {
@@ -750,9 +765,39 @@ button:disabled {
     align-self: center;
     font-size: 0.78rem;
   }
+}
 
+@media (max-width: 42rem) and (orientation: portrait) {
   .game-controls {
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) 3.5rem;
+    align-items: start;
+    gap: 0.45rem;
+  }
+
+  .movement-controls {
+    width: calc(7rem + 0.35rem);
+    grid-template-columns: repeat(2, 3.5rem);
+    grid-template-rows: repeat(2, 3.5rem);
+  }
+
+  .action-controls {
+    width: 3.5rem;
+    grid-template-columns: 3.5rem;
+    grid-template-rows: repeat(2, 3.5rem);
+    justify-self: end;
+  }
+
+  .movement-controls button,
+  .action-controls button {
+    box-sizing: border-box;
+    width: 3.5rem;
+    min-width: 3.5rem;
+    min-height: 3.5rem;
+  }
+
+  .control-soft-drop {
+    grid-column: 1 / -1;
+    justify-self: center;
   }
 }
 

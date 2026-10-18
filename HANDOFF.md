@@ -28,10 +28,10 @@ and service-worker-controlled offline deep links are covered.
 The locked `npm run check` command passes:
 
 - TypeScript project typecheck
-- 45 Vitest unit/component tests
+- 106 Vitest unit/component tests
 - Production Vite/PWA build
-- 3 Chromium production flows covering responsive play, direct/history
-  navigation, and offline deep-link play
+- 8 Chromium production flows covering touch interaction, responsive play,
+  direct/history navigation, and offline deep-link play
 
 ## Completed OpenSpec Changes
 
@@ -43,6 +43,8 @@ The locked `npm run check` command passes:
   - `openspec/changes/archive/2026-09-01-add-block-drop-score-preview-pause`
 - `add-game-deep-links`
   - `openspec/changes/archive/2026-09-01-add-game-deep-links`
+- `add-block-drop-touch-repeat`
+  - `openspec/changes/archive/2026-10-17-add-block-drop-touch-repeat`
 
 Synchronized capability specs:
 
@@ -66,8 +68,12 @@ completed change retained for history.
 Six proposed Block Drop changes, applied in this order, one PR each. Later
 changes modify requirements introduced by earlier ones, so archive each
 before applying the next. `compact-block-drop-mobile-layout` and
-`add-block-drop-ghost-piece` have been implemented, reviewed E2E, and archived.
-`add-block-drop-touch-repeat` is the next change to implement.
+`add-block-drop-ghost-piece` and `add-block-drop-touch-repeat` have been
+implemented, reviewed E2E, and archived. During implementation of
+`add-block-drop-touch-repeat`, mobile E2E uncovered page panning when dragging
+from game elements; this was fixed and recorded in the archived change and
+canonical Block Drop spec. The next change is
+`add-block-drop-pause-and-game-over-overlays`.
 
 1. `compact-block-drop-mobile-layout`: compact header, scoring guide moved
    into a help dialog, playfield-first layout (at least 540 px tall at 390 by

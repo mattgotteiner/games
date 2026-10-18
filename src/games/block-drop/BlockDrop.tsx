@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'preact/hooks'
+import type { JSX } from 'preact'
 import {
   BlockDropController,
   type BlockDropControllerOptions,
@@ -33,9 +34,201 @@ const movementControls: ReadonlyArray<
 > = [
   ['left', 'Move left', '←', 'Left'],
   ['right', 'Move right', '→', 'Right'],
-  ['rotate', 'Rotate clockwise', '↻', 'Rotate'],
   ['soft-drop', 'Soft drop', '↓', 'Down'],
 ]
+
+interface GameplayControlProps {
+  readonly action: GameAction
+  readonly label: string
+  readonly symbol: string
+  readonly caption?: string
+  readonly className: string
+  readonly disabled: boolean
+  readonly repeatable?: boolean
+  readonly isGameActive: Readonly<{ current: boolean }>
+  readonly onAction: (action: GameAction) => void
+}
+
+function GameplayControl({
+  action,
+  label,
+  symbol,
+  caption,
+  className,
+  disabled,
+  repeatable = false,
+  isGameActive,
+  onAction,
+}: GameplayControlProps) {
+  const heldPointer = useRef<number | null>(null)
+  const initialRepeat = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const repeatInterval = useRef<ReturnType<typeof setInterval> | null>(null)
+  const clickSuppression = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const ignoreNextClick = useRef(false)
+  const dispatchRef = useRef(onAction)
+  const disabledRef = useRef(disabled)
+  dispatchRef.current = onAction
+  disabledRef.current = disabled
+
+  const clearRepeatTimers = () => {
+    if (initialRepeat.current !== null) {
+      clearTimeout(initialRepeat.current)
+      initialRepeat.current = null
+    }
+    if (repeatInterval.current !== null) {
+      clearInterval(repeatInterval.current)
+      repeatInterval.current = null
+    }
+  }
+
+  const canAct = () => !disabledRef.current && isGameActive.current
+
+  const expireClickSuppression = () => {
+    if (clickSuppression.current !== null) {
+      clearTimeout(clickSuppression.current)
+    }
+    clickSuppression.current = window.setTimeout(() => {
+      ignoreNextClick.current = false
+      clickSuppression.current = null
+    }, 0)
+  }
+
+  const stopForInactiveGame = () => {
+    clearRepeatTimers()
+    heldPointer.current = null
+  }
+
+  useEffect(() => {
+    if (disabled || !isGameActive.current) stopForInactiveGame()
+  }, [disabled, isGameActive.current])
+
+  useEffect(
+    () => () => {
+      clearRepeatTimers()
+      if (clickSuppression.current !== null) {
+        clearTimeout(clickSuppression.current)
+      }
+    },
+    [],
+  )
+
+  const handlePointerDown = (
+    event: JSX.TargetedPointerEvent<HTMLButtonElement>,
+  ) => {
+    if (!event.isPrimary || event.button !== 0 || !canAct()) return
+    if (heldPointer.current !== null) return
+
+    heldPointer.current = event.pointerId
+    ignoreNextClick.current = true
+    if (clickSuppression.current !== null) {
+      clearTimeout(clickSuppression.current)
+      clickSuppression.current = null
+    }
+    try {
+      event.currentTarget.setPointerCapture(event.pointerId)
+    } catch {
+      // Pointer capture can fail if the browser has already cancelled the pointer.
+    }
+    dispatchRef.current(action)
+
+    if (!repeatable) return
+    initialRepeat.current = window.setTimeout(() => {
+      initialRepeat.current = null
+      if (!canAct()) {
+        stopForInactiveGame()
+        return
+      }
+      dispatchRef.current(action)
+      if (!canAct()) {
+        stopForInactiveGame()
+        return
+      }
+      repeatInterval.current = window.setInterval(() => {
+        if (!canAct()) {
+          stopForInactiveGame()
+          return
+        }
+        dispatchRef.current(action)
+      }, 50)
+    }, 170)
+  }
+
+  const handlePointerUp = (
+    event: JSX.TargetedPointerEvent<HTMLButtonElement>,
+  ) => {
+    if (heldPointer.current !== event.pointerId) return
+    clearRepeatTimers()
+    heldPointer.current = null
+    expireClickSuppression()
+  }
+
+  const handlePointerCancel = (
+    event: JSX.TargetedPointerEvent<HTMLButtonElement>,
+  ) => {
+    if (heldPointer.current !== event.pointerId) return
+    clearRepeatTimers()
+    heldPointer.current = null
+    ignoreNextClick.current = false
+    if (clickSuppression.current !== null) {
+      clearTimeout(clickSuppression.current)
+      clickSuppression.current = null
+    }
+  }
+
+  const handleLostPointerCapture = (
+    event: JSX.TargetedPointerEvent<HTMLButtonElement>,
+  ) => {
+    if (heldPointer.current !== event.pointerId) return
+    clearRepeatTimers()
+    heldPointer.current = null
+    expireClickSuppression()
+  }
+
+  const handleClick = (event: JSX.TargetedMouseEvent<HTMLButtonElement>) => {
+    if (event.detail !== 0 || ignoreNextClick.current || !canAct()) {
+      ignoreNextClick.current = false
+      return
+    }
+    dispatchRef.current(action)
+  }
+
+  return (
+    <button
+      class={className}
+      type="button"
+      aria-label={label}
+      disabled={disabled}
+      onPointerDown={handlePointerDown}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerCancel}
+      onLostPointerCapture={handleLostPointerCapture}
+      onClick={handleClick}
+    >
+      <span class="control-symbol" aria-hidden="true">
+        {symbol}
+      </span>
+      {caption && <span class="control-caption">{caption}</span>}
+    </button>
+  )
+}
+
+function vibrateForGameEvent(
+  presentation: Parameters<BlockDropStateListener>[1],
+) {
+  const duration = presentation?.clearedLines
+    ? 20
+    : presentation?.locked
+      ? 10
+      : 0
+  if (
+    duration === 0 ||
+    window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ||
+    typeof navigator.vibrate !== 'function'
+  ) {
+    return
+  }
+  navigator.vibrate(duration)
+}
 
 const PREVIEW_FRAME_SIZE = 6
 
@@ -143,6 +336,7 @@ export function BlockDrop({
   const boardRef = useRef<HTMLDivElement>(null)
   const helpButtonRef = useRef<HTMLButtonElement>(null)
   const helpDialogRef = useRef<HTMLDialogElement>(null)
+  const isGameActive = useRef(false)
   const lastAnnouncedStatus = useRef<GameStatus | null>(null)
   const [controller, setController] =
     useState<
@@ -160,10 +354,13 @@ export function BlockDrop({
       canvasRef.current,
       boardRef.current,
       (state, presentation) => {
+        isGameActive.current =
+          state.status === 'playing' && !(presentation?.clearing ?? false)
         setStatus(state.status)
         setScore(state.score)
         setNext(state.next)
         setClearing(presentation?.clearing ?? false)
+        vibrateForGameEvent(presentation)
 
         const previousStatus = lastAnnouncedStatus.current
         let message = ''
@@ -199,8 +396,10 @@ export function BlockDrop({
     setStatus(initialState.status)
     setScore(initialState.score)
     setNext(initialState.next)
+    isGameActive.current = initialState.status === 'playing'
     lastAnnouncedStatus.current = initialState.status
     return () => {
+      isGameActive.current = false
       controller.destroy()
     }
   }, [controllerFactory])
@@ -325,42 +524,56 @@ export function BlockDrop({
           </aside>
         </div>
 
-        <div class="game-controls" aria-label="Block Drop controls">
+        <div
+          class="game-controls"
+          role="group"
+          aria-label="Block Drop controls"
+        >
           <div
             class="control-group movement-controls"
             role="group"
-            aria-label="Movement controls"
+            aria-label="Movement and soft drop controls"
           >
             {movementControls.map(([action, label, symbol, caption]) => (
-              <button
-                class={`button-control control-${action}`}
-                type="button"
-                aria-label={label}
+              <GameplayControl
+                className={`button-control control-${action}`}
+                action={action}
+                label={label}
+                symbol={symbol}
+                caption={caption}
                 disabled={gameplayDisabled}
-                onClick={() => act(action)}
+                repeatable
+                isGameActive={isGameActive}
+                onAction={act}
                 key={action}
-              >
-                <span class="control-symbol" aria-hidden="true">
-                  {symbol}
-                </span>
-                <span class="control-caption">{caption}</span>
-              </button>
+              />
             ))}
           </div>
           <div
             class="control-group action-controls"
             role="group"
-            aria-label="Drop control"
+            aria-label="Rotation and drop controls"
           >
-            <button
-              class="button-primary control-hard-drop"
-              type="button"
-              aria-label="Hard drop"
+            <GameplayControl
+              className="button-control control-rotate"
+              action="rotate"
+              label="Rotate clockwise"
+              symbol="↻"
+              caption="Rotate"
               disabled={gameplayDisabled}
-              onClick={() => act('hard-drop')}
-            >
-              Drop
-            </button>
+              isGameActive={isGameActive}
+              onAction={act}
+            />
+            <GameplayControl
+              className="button-primary control-hard-drop"
+              action="hard-drop"
+              label="Hard drop"
+              symbol="⇊"
+              caption="Drop"
+              disabled={gameplayDisabled}
+              isGameActive={isGameActive}
+              onAction={act}
+            />
           </div>
           <p class="key-help">
             Keys: arrows move and rotate, Space drops, P pauses, R restarts.
