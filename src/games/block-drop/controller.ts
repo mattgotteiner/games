@@ -2,7 +2,9 @@ import {
   BOARD_HEIGHT,
   BOARD_WIDTH,
   applyActionWithEvents,
+  type BlockDropDifficulty,
   createGame,
+  getGravityInterval,
   getLandingPiece,
   getPieceCells,
   stepGravityWithEvents,
@@ -13,8 +15,6 @@ import {
 } from './rules'
 import { TETROMINO_COLORS } from './piece-metadata'
 
-const GRAVITY_MS = 700
-const MAX_FRAME_MS = GRAVITY_MS * 2
 const LINE_CLEAR_MS = 180
 
 export const KEY_ACTIONS: Readonly<Record<string, GameAction>> = {
@@ -44,6 +44,7 @@ export interface BlockDropControllerOptions {
 export interface BlockDropPresentationState {
   readonly clearing: boolean
   readonly clearedLines?: number
+  readonly clearPoints?: number
   readonly locked?: boolean
   readonly action?: GameAction
 }
@@ -61,6 +62,7 @@ interface LineClearEffect {
 
 export class BlockDropController {
   private state: BlockDropState
+  private difficulty: BlockDropDifficulty = 'medium'
   private frameId: number | null = null
   private previousTime: number | null = null
   private elapsed = 0
@@ -111,6 +113,13 @@ export class BlockDropController {
 
   getState(): BlockDropState {
     return this.state
+  }
+
+  setDifficulty(difficulty: BlockDropDifficulty): void {
+    if (this.destroyed || this.difficulty === difficulty) return
+    this.difficulty = difficulty
+    this.elapsed = 0
+    this.previousTime = null
   }
 
   dispatch(action: GameAction): void {
@@ -189,16 +198,28 @@ export class BlockDropController {
     if (this.lineClearEffect !== null) {
       this.advanceLineClear(time)
     } else if (this.previousTime !== null && this.state.status === 'playing') {
-      this.elapsed += Math.min(Math.max(time - this.previousTime, 0), MAX_FRAME_MS)
+      const gravityInterval = getGravityInterval(
+        this.state.level,
+        this.difficulty,
+      )
+      this.elapsed += Math.min(
+        Math.max(time - this.previousTime, 0),
+        gravityInterval * 2,
+      )
       let changed = false
       let steps = 0
       let lineClear: LineClearEvent | undefined
       let locked = false
-      while (this.elapsed >= GRAVITY_MS && steps < 2) {
+      while (steps < 2) {
+        const currentInterval = getGravityInterval(
+          this.state.level,
+          this.difficulty,
+        )
+        if (this.elapsed < currentInterval) break
         const result = stepGravityWithEvents(this.state)
         locked ||= result.state.board !== this.state.board
         this.state = result.state
-        this.elapsed -= GRAVITY_MS
+        this.elapsed -= currentInterval
         changed = true
         steps += 1
         if (result.lineClear) {
@@ -250,7 +271,12 @@ export class BlockDropController {
     )
     this.onStateChange(this.state, {
       clearing: this.lineClearEffect !== null,
-      ...(lineClear ? { clearedLines: lineClear.rows.length } : {}),
+      ...(lineClear
+        ? {
+            clearedLines: lineClear.rows.length,
+            clearPoints: lineClear.points,
+          }
+        : {}),
       ...(locked ? { locked: true } : {}),
       ...(action ? { action } : {}),
     })

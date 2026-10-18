@@ -780,6 +780,10 @@ describe('App', () => {
     expect(
       screen.getByRole('complementary', { name: 'Game information' }),
     ).toBeInTheDocument()
+    expect(screen.getByText('Level')).toBeInTheDocument()
+    expect(screen.getByText('Lines')).toBeInTheDocument()
+    expect(screen.getByText('1')).toBeInTheDocument()
+    expect(screen.getByText('0')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Help' }))
     expect(dispatch).toHaveBeenCalledOnce()
     expect(dispatch).toHaveBeenCalledWith('pause')
@@ -792,9 +796,19 @@ describe('App', () => {
     expect(within(scoring).getByText('Gravity')).toBeInTheDocument()
     expect(within(scoring).getByText('+0')).toBeInTheDocument()
     expect(within(scoring).getByText('Lines cleared')).toBeInTheDocument()
-    for (const value of ['1: +100', '2: +300', '3: +500', '4: +800']) {
+    for (const value of [
+      '1: +100 × level',
+      '2: +300 × level',
+      '3: +500 × level',
+      '4: +800 × level',
+    ]) {
       expect(within(scoring).getByText(value)).toBeInTheDocument()
     }
+    expect(
+      within(scoring).getByText(
+        'Line-clear points multiply by your level. Level increases every 10 lines and makes pieces fall faster.',
+      ),
+    ).toBeInTheDocument()
     expect(within(dialog).getByText('Keyboard controls')).toBeInTheDocument()
     fireEvent.click(within(dialog).getByRole('button', { name: 'Close help' }))
     expect(screen.getByRole('button', { name: 'Help' })).toHaveFocus()
@@ -805,13 +819,43 @@ describe('App', () => {
       publish?.({ ...playing, score: 8 }, { clearing: false, action: 'soft-drop' }),
     )
     expect(announcements.textContent).toBe('')
+    vi.useFakeTimers()
     act(() =>
       publish?.(
-        { ...playing, score: 307 },
-        { clearing: true, clearedLines: 2 },
+        { ...playing, score: 307, lines: 10, level: 2 },
+        { clearing: true, clearedLines: 2, clearPoints: 300 },
       ),
     )
-    expect(announcements).toHaveTextContent('Cleared 2 lines. Score 307.')
+    expect(announcements).toHaveTextContent(
+      'Cleared 2 lines. +300 points. Score 307. Level 2.',
+    )
+    const callouts = [
+      { clearedLines: 1, clearPoints: 100, name: 'Single' },
+      { clearedLines: 2, clearPoints: 300, name: 'Double' },
+      { clearedLines: 3, clearPoints: 500, name: 'Triple' },
+      { clearedLines: 4, clearPoints: 800, name: 'Quad' },
+    ]
+    for (const callout of callouts) {
+      act(() =>
+        publish?.(
+          { ...playing, score: 307, lines: 10, level: 2 },
+          {
+            clearing: true,
+            clearedLines: callout.clearedLines,
+            clearPoints: callout.clearPoints,
+          },
+        ),
+      )
+      expect(
+        screen.getByText(`+${callout.clearPoints} · ${callout.name}`),
+      ).toHaveAttribute('aria-hidden', 'true')
+    }
+    expect(screen.getByText('2')).toHaveClass('level-value-highlight')
+    expect(screen.getByText('10')).toBeInTheDocument()
+    act(() => {
+      vi.advanceTimersByTime(780)
+    })
+    expect(screen.queryByText('+300 · Double')).not.toBeInTheDocument()
 
     act(() =>
       publish?.({ ...playing, active: null, status: 'game-over', score: 42 }),

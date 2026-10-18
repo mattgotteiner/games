@@ -32,11 +32,32 @@ export interface BlockDropState {
   readonly initialSeed: number
   readonly status: GameStatus
   readonly score: number
+  readonly lines: number
+  readonly level: number
 }
+
+export const BLOCK_DROP_DIFFICULTY_ORDER = ['easy', 'medium', 'hard'] as const
+export type BlockDropDifficulty = (typeof BLOCK_DROP_DIFFICULTY_ORDER)[number]
+
+export const BLOCK_DROP_DIFFICULTIES: Readonly<
+  Record<
+    BlockDropDifficulty,
+    {
+      readonly label: string
+      readonly speed: number
+      readonly description: string
+    }
+  >
+> = Object.freeze({
+  easy: Object.freeze({ label: 'Easy', speed: 0.5, description: 'Half speed' }),
+  medium: Object.freeze({ label: 'Medium', speed: 1, description: 'Normal speed' }),
+  hard: Object.freeze({ label: 'Hard', speed: 1.5, description: '1.5× speed' }),
+})
 
 export interface LineClearEvent {
   readonly rows: ReadonlyArray<number>
   readonly board: Board
+  readonly points: number
 }
 
 export interface BlockDropTransition {
@@ -238,6 +259,8 @@ export function createGame(seed: number): BlockDropState {
     initialSeed: seed >>> 0,
     status: 'playing',
     score: 0,
+    lines: 0,
+    level: 1,
   })
 }
 
@@ -252,6 +275,14 @@ export const BLOCK_DROP_SCORING = Object.freeze({
     4: 800,
   }),
 })
+
+export function getGravityInterval(
+  level: number,
+  difficulty: BlockDropDifficulty = 'medium',
+): number {
+  const speed = BLOCK_DROP_DIFFICULTIES[difficulty].speed
+  return Math.max(80, Math.round((700 * 0.85 ** (level - 1)) / speed))
+}
 
 function clearFullRows(board: Board): {
   readonly board: Board
@@ -286,13 +317,17 @@ function lockActive(state: BlockDropState): BlockDropTransition {
     board[y][x] = state.active.type
   }
   const cleared = clearFullRows(board)
+  const clearPoints =
+    (BLOCK_DROP_SCORING.lineClears[cleared.completedRows.length] ?? 0) *
+    state.level
+  const lines = state.lines + cleared.completedRows.length
   const nextState = spawnNext({
     ...state,
     board: cleared.board,
     active: null,
-    score:
-      state.score +
-      (BLOCK_DROP_SCORING.lineClears[cleared.completedRows.length] ?? 0),
+    score: state.score + clearPoints,
+    lines,
+    level: Math.floor(lines / 10) + 1,
   })
 
   return cleared.completedRows.length === 0
@@ -302,6 +337,7 @@ function lockActive(state: BlockDropState): BlockDropTransition {
         lineClear: {
           rows: cleared.completedRows,
           board,
+          points: clearPoints,
         },
       }
 }

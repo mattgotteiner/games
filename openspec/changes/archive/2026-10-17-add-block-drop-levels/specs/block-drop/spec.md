@@ -69,11 +69,11 @@ Block Drop SHALL make a scoring guide available on demand from a labelled help c
 ## ADDED Requirements
 
 ### Requirement: Level progression
-Block Drop SHALL count the lines cleared in the current game and SHALL derive the level as the number of lines cleared divided by ten, rounded down, plus one. The automatic descent interval SHALL be the greater of 80 milliseconds and 700 milliseconds multiplied by 0.85 raised to the power of one less than the level, rounded to the nearest millisecond. Lines and level SHALL be part of the deterministic game state, SHALL reset on restart, and SHALL be shown with readable labels in the game HUD at every supported viewport. A level change SHALL be announced and SHALL briefly highlight the displayed level unless reduced motion is preferred.
+Block Drop SHALL count the lines cleared in the current game and SHALL derive the level as the number of lines cleared divided by ten, rounded down, plus one. At Medium difficulty, the automatic descent interval SHALL be the greater of 80 milliseconds and 700 milliseconds multiplied by 0.85 raised to the power of one less than the level, rounded to the nearest millisecond. The selected difficulty SHALL scale that interval as defined by the Difficulty selection requirement. Lines and level SHALL be part of the deterministic game state, SHALL reset on restart, and SHALL be shown with readable labels in the game HUD at every supported viewport. A level change SHALL be announced and SHALL briefly highlight the displayed level unless reduced motion is preferred.
 
 #### Scenario: New game starts
 - **WHEN** a new Block Drop game starts
-- **THEN** lines is zero, level is one, and automatic descent occurs every 700 milliseconds
+- **THEN** lines is zero, level is one, difficulty is Medium, and automatic descent occurs every 700 milliseconds
 
 #### Scenario: Tenth line is cleared
 - **WHEN** the total lines cleared reaches ten
@@ -90,6 +90,33 @@ Block Drop SHALL count the lines cleared in the current game and SHALL derive th
 #### Scenario: Progress is inspected
 - **WHEN** a user or assistive technology inspects the game HUD
 - **THEN** the current level and lines cleared are available as readable text
+
+### Requirement: Difficulty selection
+Block Drop SHALL start at Medium difficulty and SHALL provide an accessible three-position difficulty slider in the pause menu. Easy SHALL make automatic descent half as fast as the selected level curve, Medium SHALL use the level curve unchanged, and Hard SHALL make it 1.5 times as fast, subject to the 80-millisecond minimum interval. Changing difficulty SHALL affect gravity only. It SHALL NOT change line progression, score, or the level-based line-clear multiplier. A selection SHALL apply when play resumes and SHALL remain selected after restarting within the same session.
+
+#### Scenario: Difficulty slider is inspected
+- **WHEN** the user opens the pause menu
+- **THEN** the slider exposes Easy, Medium, and Hard as its three named choices and starts at Medium for a new session
+
+#### Scenario: Easy is selected
+- **WHEN** the user selects Easy and resumes at Level 1
+- **THEN** automatic descent occurs every 1400 milliseconds
+
+#### Scenario: Hard is selected
+- **WHEN** the user selects Hard and resumes at Level 1
+- **THEN** automatic descent occurs every 467 milliseconds
+
+#### Scenario: Difficulty is changed while paused
+- **WHEN** the user changes difficulty in the pause menu
+- **THEN** the board, active piece, next piece, score, lines, and level stay unchanged until play resumes
+
+#### Scenario: Difficulty does not alter level scoring
+- **WHEN** a line clear is scored at any difficulty
+- **THEN** its points use the same level multiplier as at Medium difficulty
+
+#### Scenario: Restart after choosing difficulty
+- **WHEN** the user restarts during the same game session after changing difficulty
+- **THEN** lines, level, and score reset while the selected difficulty remains active
 
 ### Requirement: Line-clear callout
 When a lock clears lines, Block Drop SHALL briefly show a callout over the playfield with the points earned and the size of the clear. The callout SHALL NOT be the only way this information is conveyed, SHALL NOT block input once line-clear feedback ends, and SHALL appear without movement when reduced motion is preferred.

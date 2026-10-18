@@ -84,6 +84,7 @@ async function expectGameFitsViewport(page: import('@playwright/test').Page) {
     page.getByRole('img', { name: 'Block Drop board' }),
     page.getByLabel(/^Score:/),
     page.locator('.game-status'),
+    page.locator('.game-progress'),
     page.getByRole('region', { name: /Next piece:/ }),
     page.locator('.game-controls'),
   ]
@@ -145,10 +146,11 @@ async function expectScoringGuideVisible(page: import('@playwright/test').Page) 
     'Gravity',
     '+0',
     'Lines cleared',
-    '1: +100',
-    '2: +300',
-    '3: +500',
-    '4: +800',
+    '1: +100 × level',
+    '2: +300 × level',
+    '3: +500 × level',
+    '4: +800 × level',
+    'Line-clear points multiply by your level. Level increases every 10 lines and makes pieces fall faster.',
   ]) {
     await expect(guide.getByText(text, { exact: true })).toBeVisible()
   }
@@ -369,6 +371,10 @@ test('plays Block Drop with touch and keyboard across phone orientations', async
     page.getByRole('heading', { level: 1, name: 'Block Drop' }),
   ).toBeVisible()
   await expect(page.getByText('Playing', { exact: true })).toBeVisible()
+  await expect(page.locator('.game-progress')).toContainText('Level')
+  await expect(page.locator('.game-progress')).toContainText('1')
+  await expect(page.locator('.game-progress')).toContainText('Lines')
+  await expect(page.locator('.game-progress')).toContainText('0')
   const preview = page.getByRole('region', {
     name: /Next piece: [IJLOSTZ] tetromino/,
   })
@@ -626,6 +632,8 @@ test('animates an exact deterministic line clear and gates gameplay', async ({
 
   expect(await canvas.getAttribute('data-clearing-rows')).toBe('14')
   await expect(page.getByText('Clearing lines', { exact: true })).toBeVisible()
+  await expect(page.locator('.line-clear-callout')).toHaveText('+100 · Single')
+  await expect(page.locator('.game-progress')).toContainText('1')
   await expect(page.getByRole('button', { name: 'Move left' })).toBeDisabled()
   await expect(page.getByRole('button', { name: 'Pause game' })).toBeDisabled()
   await expect(

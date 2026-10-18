@@ -8,6 +8,7 @@ import {
   applyActionWithEvents,
   createEmptyBoard,
   createGame,
+  getGravityInterval,
   getLandingPiece,
   getInitialPieceCells,
   getPieceCells,
@@ -46,8 +47,131 @@ function stateWith(
     initialSeed: 123,
     status: 'playing',
     score: 0,
+    lines: 0,
+    level: 1,
   }
 }
+
+function lineClearState(clearedLines: number, lines = 0): BlockDropState {
+  const board = createEmptyBoard().map((row) => [...row])
+  const gaps = new Map<number, ReadonlyArray<number>>()
+  let active: ActivePiece
+
+  if (clearedLines === 1) {
+    gaps.set(19, [4, 5])
+    active = { type: 'O', rotation: 0, x: 3, y: 18 }
+  } else if (clearedLines === 2) {
+    gaps.set(18, [4, 5])
+    gaps.set(19, [4, 5])
+    active = { type: 'O', rotation: 0, x: 3, y: 18 }
+  } else if (clearedLines === 3) {
+    gaps.set(17, [4])
+    gaps.set(18, [4, 5])
+    gaps.set(19, [4])
+    active = { type: 'T', rotation: 1, x: 3, y: 17 }
+  } else {
+    for (let y = 16; y < BOARD_HEIGHT; y += 1) gaps.set(y, [5])
+    active = { type: 'I', rotation: 1, x: 3, y: 16 }
+  }
+
+  for (const [y, emptyColumns] of gaps) {
+    for (let x = 0; x < BOARD_WIDTH; x += 1) {
+      if (!emptyColumns.includes(x)) board[y][x] = 'J'
+    }
+  }
+
+  return {
+    ...stateWith(active, board),
+    lines,
+    level: Math.floor(lines / 10) + 1,
+  }
+}
+
+describe('level progression', () => {
+  it('starts at level one with no lines cleared', () => {
+    expect(createGame(8)).toMatchObject({ level: 1, lines: 0 })
+  })
+
+  it.each([
+    [1, 700],
+    [2, 595],
+    [10, 162],
+    [14, 85],
+    [15, 80],
+    [30, 80],
+  ])('uses the gravity curve at level %i', (level, milliseconds) => {
+    expect(getGravityInterval(level)).toBe(milliseconds)
+  })
+
+  it.each([1, 2, 3, 4])(
+    'multiplies a %i-line clear by the level before the clear',
+    (clearedLines) => {
+      for (const level of [1, 3]) {
+        const initialLines = level === 1 ? 0 : 20
+        const initial = lineClearState(clearedLines, initialLines)
+        const result = applyActionWithEvents(initial, 'hard-drop')
+        const basePoints = BLOCK_DROP_SCORING.lineClears[clearedLines]
+
+        expect(result.lineClear?.rows).toHaveLength(clearedLines)
+        expect(result.lineClear?.points).toBe(basePoints * level)
+        expect(result.state.score).toBe(basePoints * level)
+        expect(result.state.lines).toBe(initialLines + clearedLines)
+        expect(result.state.level).toBe(
+          Math.floor((initialLines + clearedLines) / 10) + 1,
+        )
+      }
+    },
+  )
+
+  it('scores a level-crossing clear with the level before the clear', () => {
+    const result = applyActionWithEvents(lineClearState(2, 9), 'hard-drop')
+
+    expect(result.lineClear?.points).toBe(300)
+    expect(result.state.score).toBe(300)
+    expect(result.state.lines).toBe(11)
+    expect(result.state.level).toBe(2)
+  })
+
+  it('replays line-count and level transitions deterministically', () => {
+    const initial = lineClearState(2, 9)
+    const replay = () => applyActionWithEvents(initial, 'hard-drop').state
+
+    expect(replay()).toEqual(replay())
+    expect(replay()).toMatchObject({ lines: 11, level: 2 })
+  })
+
+  it.each([
+    [9, 1, 10, 2],
+    [19, 1, 20, 3],
+  ])('advances from %i lines to level %i at the next tenth line', (
+    initialLines,
+    clearedLines,
+    totalLines,
+    expectedLevel,
+  ) => {
+    const result = applyActionWithEvents(
+      lineClearState(clearedLines, initialLines),
+      'hard-drop',
+    )
+
+    expect(result.state.lines).toBe(totalLines)
+    expect(result.state.level).toBe(expectedLevel)
+  })
+
+  it('keeps soft-drop and hard-drop distance points unchanged at higher levels', () => {
+    const levelThree = {
+      ...createGame(8),
+      lines: 20,
+      level: 3,
+    }
+
+    expect(applyAction(levelThree, 'soft-drop').score).toBe(1)
+    const landing = getLandingPiece(levelThree)!
+    const hardDropped = applyAction(levelThree, 'hard-drop')
+    const landingRows = landing.y - (levelThree.active?.y ?? 0)
+    expect(hardDropped.score).toBe(landingRows * 2)
+  })
+})
 
 describe('seeded pieces', () => {
   it('shuffles every tetromino into each complete bag', () => {

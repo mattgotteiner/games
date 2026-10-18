@@ -86,9 +86,9 @@ Block Drop SHALL visibly acknowledge every completed row before presenting the c
 ### Requirement: Deterministic score
 Block Drop SHALL start each new game at zero points, add one point for every row
 successfully advanced by soft drop, add two points for every row advanced by
-hard drop, and add 100, 300, 500, or 800 points when a lock clears one, two,
-three, or four rows together respectively. Automatic descent SHALL NOT award
-drop points.
+hard drop, and add 100, 300, 500, or 800 points multiplied by the level before
+the clear when a lock clears one, two, three, or four rows together
+respectively. Automatic descent SHALL NOT award drop points.
 
 #### Scenario: New game starts
 - **WHEN** a new Block Drop game starts
@@ -108,7 +108,11 @@ drop points.
 
 #### Scenario: Rows clear together
 - **WHEN** a lock clears one, two, three, or four rows simultaneously
-- **THEN** the score additionally increases by 100, 300, 500, or 800 points respectively
+- **THEN** the score additionally increases by 100, 300, 500, or 800 points respectively, multiplied by the level before the clear
+
+#### Scenario: Clear reaches a new level
+- **WHEN** a lock clears lines that move the game from one level to the next
+- **THEN** the line-clear points use the earlier level's multiplier
 
 #### Scenario: Game ends
 - **WHEN** the game reaches game over
@@ -124,14 +128,16 @@ control that is always visible in the game header. The guide SHALL open in a
 modal dialog that states that each successful soft-drop row earns 1 point, each
 hard-drop row earns 2 points, automatic gravity earns no points, and clearing
 one, two, three, or four lines at once earns 100, 300, 500, or 800 points
-respectively, and SHALL also list the keyboard controls. The displayed values
-SHALL remain consistent with the deterministic score calculation. Opening the
-guide during active play SHALL pause the game, and closing the guide SHALL leave
-the game paused and return focus to the help control.
+respectively multiplied by the current level, and SHALL explain that the level
+rises every ten lines and increases the falling speed. The guide SHALL also
+list the keyboard controls. The displayed values SHALL remain consistent with
+the deterministic score calculation. Opening the guide during active play SHALL
+pause the game, and closing the guide SHALL leave the game paused and return
+focus to the help control.
 
 #### Scenario: Player inspects the score
 - **WHEN** the user activates the help control
-- **THEN** a dialog identifies every action that can change the score, the number of points it awards, and the keyboard controls
+- **THEN** a dialog identifies every action that can change the score, the number of points it awards, the level multiplier, and the keyboard controls
 
 #### Scenario: Guide opens during active play
 - **WHEN** the user opens the scoring guide while the game is playing
@@ -156,6 +162,87 @@ the game paused and return focus to the help control.
 #### Scenario: Scoring guide is inspected semantically
 - **WHEN** a user or assistive technology inspects the scoring guide
 - **THEN** the dialog has a readable name and associates each scoring action with its point value
+
+### Requirement: Level progression
+Block Drop SHALL count the lines cleared in the current game and SHALL derive
+the level as the number of lines cleared divided by ten, rounded down, plus one.
+At Medium difficulty, the automatic descent interval SHALL be the greater of
+80 milliseconds and 700 milliseconds multiplied by 0.85 raised to the power of
+one less than the level, rounded to the nearest millisecond. The selected
+difficulty SHALL scale that interval as defined by the Difficulty selection
+requirement. Lines and level SHALL be part of the deterministic game state,
+SHALL reset on restart, and SHALL be shown with readable labels in the game HUD
+at every supported viewport. A level change SHALL be announced and SHALL
+briefly highlight the displayed level unless reduced motion is preferred.
+
+#### Scenario: New game starts
+- **WHEN** a new Block Drop game starts
+- **THEN** lines is zero, level is one, difficulty is Medium, and automatic descent occurs every 700 milliseconds
+
+#### Scenario: Tenth line is cleared
+- **WHEN** the total lines cleared reaches ten
+- **THEN** the level becomes two, automatic descent occurs every 595 milliseconds, and the new level is announced
+
+#### Scenario: High level is reached
+- **WHEN** the level is high enough that the formula would fall below 80 milliseconds
+- **THEN** automatic descent occurs every 80 milliseconds
+
+#### Scenario: Replay identical actions
+- **WHEN** two games start with the same seed and receive the same logical actions
+- **THEN** their lines and level are identical at every step
+
+#### Scenario: Progress is inspected
+- **WHEN** a user or assistive technology inspects the game HUD
+- **THEN** the current level and lines cleared are available as readable text
+
+### Requirement: Difficulty selection
+Block Drop SHALL start at Medium difficulty and SHALL provide an accessible
+three-position difficulty slider in the pause menu. Easy SHALL make automatic
+descent half as fast as the selected level curve, Medium SHALL use the level
+curve unchanged, and Hard SHALL make it 1.5 times as fast, subject to the
+80-millisecond minimum interval. Changing difficulty SHALL affect gravity
+only. It SHALL NOT change line progression, score, or the level-based line
+clear multiplier. A selection SHALL apply when play resumes and SHALL remain
+selected after restarting within the same session.
+
+#### Scenario: Difficulty slider is inspected
+- **WHEN** the user opens the pause menu
+- **THEN** the slider exposes Easy, Medium, and Hard as its three named choices and starts at Medium for a new session
+
+#### Scenario: Easy is selected
+- **WHEN** the user selects Easy and resumes at Level 1
+- **THEN** automatic descent occurs every 1400 milliseconds
+
+#### Scenario: Hard is selected
+- **WHEN** the user selects Hard and resumes at Level 1
+- **THEN** automatic descent occurs every 467 milliseconds
+
+#### Scenario: Difficulty is changed while paused
+- **WHEN** the user changes difficulty in the pause menu
+- **THEN** the board, active piece, next piece, score, lines, and level stay unchanged until play resumes
+
+#### Scenario: Difficulty does not alter level scoring
+- **WHEN** a line clear is scored at any difficulty
+- **THEN** its points use the same level multiplier as at Medium difficulty
+
+#### Scenario: Restart after choosing difficulty
+- **WHEN** the user restarts during the same game session after changing difficulty
+- **THEN** lines, level, and score reset while the selected difficulty remains active
+
+### Requirement: Line-clear callout
+When a lock clears lines, Block Drop SHALL briefly show a callout over the
+playfield with the points earned and the size of the clear. The callout SHALL
+NOT be the only way this information is conveyed, SHALL NOT block input once
+line-clear feedback ends, and SHALL appear without movement when reduced motion
+is preferred.
+
+#### Scenario: Lines are cleared
+- **WHEN** a lock clears one or more lines
+- **THEN** a callout shows the points awarded and names the clear size, then disappears shortly after the line-clear feedback ends
+
+#### Scenario: Reduced motion is preferred
+- **WHEN** reduced motion is preferred and lines are cleared
+- **THEN** the callout appears and disappears without animated movement
 
 ### Requirement: Next-piece preview
 Block Drop SHALL identify and visualize the exact tetromino that will become

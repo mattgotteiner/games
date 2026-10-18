@@ -1,6 +1,6 @@
 ## Context
 
-`BlockDropState` holds the board, active and next piece, bag, random state, seed, status, and score. `lockActive` adds `BLOCK_DROP_SCORING.lineClears[count]` to the score. `controller.ts` uses the constants `GRAVITY_MS = 700` and `MAX_FRAME_MS = GRAVITY_MS * 2`. After `compact-block-drop-mobile-layout`, the HUD is a compact strip on portrait phones and a side column elsewhere, and a status announcer reports game events. See `proposal.md` and `specs/block-drop/spec.md`.
+`BlockDropState` holds the board, active and next piece, bag, random state, seed, status, and score. `lockActive` adds `BLOCK_DROP_SCORING.lineClears[count]` to the score. `controller.ts` previously used a fixed 700 ms gravity interval. After `compact-block-drop-mobile-layout`, the HUD is a compact strip on portrait phones and a side column elsewhere, and a status announcer reports game events. See `proposal.md` and `specs/block-drop/spec.md`.
 
 ## Goals / Non-Goals
 
@@ -9,6 +9,7 @@
 - Make the game get harder in a predictable, deterministic way, starting at today's pace.
 - Make progress visible: level, lines, and the points from each clear.
 - Keep the scoring guide accurate.
+- Let players choose a comfortable gravity speed without changing level progression or scoring.
 
 **Non-Goals:**
 
@@ -32,7 +33,7 @@ Deriving the level in the controller was rejected because scoring needs it in th
 |---|---|---|---|---|---|---|---|
 | ms | 700 | 595 | 506 | 365 | 162 | 85 | 80 |
 
-The controller replaces `GRAVITY_MS` with `getGravityInterval(state.level)` and computes `MAX_FRAME_MS` per tick as twice that interval, so the existing bounded catch-up logic keeps working.
+The controller uses `getGravityInterval(state.level, difficulty)` and computes `MAX_FRAME_MS` per tick as twice that interval, so the existing bounded catch-up logic keeps working. The difficulty scale divides the level interval by its speed: Easy is 0.5× (twice the interval), Medium is 1×, and Hard is 1.5× (two-thirds the interval). The 80 ms floor applies after scaling.
 
 A lookup table modelled on a specific commercial game was rejected. The formula is original, easy to test, and starts at the current pace.
 
@@ -47,15 +48,20 @@ Line-clear points are `lineClears[count] × level`, using the level before the c
 - A line-clear callout ("+300 · Double", "+800 · Quad") appears centred over the playfield for the 180 ms clear effect plus about 600 ms. It is `aria-hidden`, because the announcer reports the same information. Under reduced motion it appears and disappears without movement.
 - The announcer adds "Level 3." to the line-clear message when a level is reached.
 
+### Difficulty changes gravity only
+
+The pause panel has a three-position native range input labelled Easy, Medium, and Hard. It starts at Medium, changes the gravity interval on resume, and remains selected if the player restarts within the same session. The setting stays outside deterministic rules state: it does not change the board, piece sequence, line count, level, score, or the level multiplier.
+
 ## Risks / Trade-offs
 
 - [Adding state fields breaks fixtures that build states by hand] -> Give fixtures defaults through `createGame` spreads, as the tests already do, and add the fields where literals are used.
+- [A faster or slower setting could accidentally change scoring] -> Keep difficulty in the controller's gravity configuration; line scoring continues to read level from rules state only.
 - [Higher scores make old best scores easy to beat] -> This is acceptable. The best score is per device and informal.
 - [80 ms gravity at high levels may be too hard on touch] -> The floor is 80 ms, not the 1–2 frame speeds of some games. The curve can be tuned in one function.
 
 ## Migration Plan
 
-1. Add the state fields, gravity helper, and scaled scoring with rules tests.
-2. Switch the controller to the level-based interval, with controller tests.
-3. Add the HUD fields, highlight, callout, announcements, and scoring-guide text, with component tests.
+1. Add the state fields, gravity helper, scaled scoring, and three difficulty intervals.
+2. Switch the controller to the level and difficulty interval.
+3. Add the HUD fields, highlight, callout, announcements, scoring-guide text, and pause-menu slider.
 4. Extend browser checks and run `npm run check`. Roll back by reverting. No persisted data changes shape.

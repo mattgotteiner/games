@@ -25,14 +25,10 @@ and service-worker-controlled offline deep links are covered.
 
 ## Validation
 
-The locked `npm run check` command passes:
-
-- TypeScript project typecheck
-- 120 Vitest unit/component tests
-- Production Vite/PWA build
-- 9 Chromium production flows covering touch interaction, responsive play,
-  direct/history navigation, seeded game over, best-score persistence, and
-  offline deep-link play
+The last full `npm run check` passed on the levels-only implementation:
+typechecking, 137 unit/component tests, the production build, and all 9
+Chromium flows. The user then reviewed the pause-menu difficulty slider E2E
+and confirmed it works; the automated check was not rerun after that addition.
 
 ## Completed OpenSpec Changes
 
@@ -52,6 +48,8 @@ The locked `npm run check` command passes:
   - `openspec/changes/archive/2026-10-17-add-block-drop-touch-repeat`
 - `add-block-drop-pause-and-game-over-overlays`
   - `openspec/changes/archive/2026-10-17-add-block-drop-pause-and-game-over-overlays`
+- `add-block-drop-levels`
+  - `openspec/changes/archive/2026-10-17-add-block-drop-levels`
 
 Synchronized capability specs:
 
@@ -89,8 +87,13 @@ inactive, so taps land on the wide controls container. Mobile Playwright
 emulation confirmed the hit target and that a Drop tap still works immediately
 after resume; user E2E review confirmed the reported zoom stopped. Pinch zoom
 is blocked over paused/game-over controls and during the brief post-resume
-gesture guard, while remaining available elsewhere. The next change is
-`add-block-drop-levels`.
+gesture guard, while remaining available elsewhere. `add-block-drop-levels`
+adds line and level tracking, level-scaled line-clear scoring, a progress HUD,
+line-clear feedback, and a pause-menu speed slider. Easy is half speed, Medium
+is the default pace, and Hard is 1.5× faster. Difficulty changes gravity
+only; line thresholds and level score multipliers stay unchanged. The user
+reviewed the slider E2E and confirmed the feature works. The full automated
+check last ran before the slider addition.
 
 1. `compact-block-drop-mobile-layout`: compact header, scoring guide moved
    into a help dialog, playfield-first layout (at least 540 px tall at 390 by
@@ -102,8 +105,12 @@ gesture guard, while remaining available elsewhere. The next change is
 4. `add-block-drop-pause-and-game-over-overlays`: pause veil and panel,
    game-over card, best score in `localStorage`, and pause when hidden.
 5. `add-block-drop-levels`: lines, levels, a gravity curve, a level score
-   multiplier, and a line-clear callout.
-6. `add-block-drop-wall-kicks`: basic horizontal rotation kicks (not full
+   multiplier, a line-clear callout, and an Easy/Medium/Hard pause-menu speed
+   slider. Implemented, user-reviewed, and archived.
+6. `scale-block-drop-score-by-difficulty`: apply the selected 0.5×, 1×, or
+   1.5× difficulty speed multiplier to awarded points while retaining the
+   level multiplier on line clears.
+7. `add-block-drop-wall-kicks`: basic horizontal rotation kicks (not full
    SRS).
 
 Changes 2 and 6 are independent and can ship at any point. The design

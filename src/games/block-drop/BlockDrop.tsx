@@ -6,8 +6,11 @@ import {
   type BlockDropStateListener,
 } from './controller'
 import {
+  BLOCK_DROP_DIFFICULTIES,
+  BLOCK_DROP_DIFFICULTY_ORDER,
   BLOCK_DROP_SCORING,
   getInitialPieceCells,
+  type BlockDropDifficulty,
   type GameAction,
   type GameStatus,
   type Tetromino,
@@ -19,7 +22,13 @@ export type BlockDropControllerFactory = (
   container: HTMLElement,
   onStateChange: BlockDropStateListener,
   options?: BlockDropControllerOptions,
-) => Pick<BlockDropController, 'dispatch' | 'destroy' | 'getState'>
+) => BlockDropControllerHandle
+
+type BlockDropControllerHandle = Pick<
+  BlockDropController,
+  'dispatch' | 'destroy' | 'getState'
+> &
+  Partial<Pick<BlockDropController, 'setDifficulty'>>
 
 export interface BlockDropProps {
   readonly onReturn: () => void
@@ -29,7 +38,8 @@ export interface BlockDropProps {
 type BlockDropControllerInstance = Pick<
   BlockDropController,
   'dispatch' | 'destroy' | 'getState'
->
+> &
+  Partial<Pick<BlockDropController, 'setDifficulty'>>
 
 const createBlockDropController: BlockDropControllerFactory = (...args) =>
   new BlockDropController(...args)
@@ -41,6 +51,16 @@ const movementControls: ReadonlyArray<
   ['right', 'Move right', '→', 'Right'],
   ['soft-drop', 'Soft drop', '↓', 'Down'],
 ]
+
+const LINE_CLEAR_NAMES = ['', 'Single', 'Double', 'Triple', 'Quad'] as const
+const LEVEL_HIGHLIGHT_MS = 380
+const LINE_CLEAR_CALLOUT_MS = 780
+
+interface LineClearCallout {
+  readonly id: number
+  readonly points: number
+  readonly clearedLines: number
+}
 
 interface GameplayControlProps {
   readonly action: GameAction
@@ -342,14 +362,18 @@ function ScoringGuide() {
           <dd>
             {Object.entries(BLOCK_DROP_SCORING.lineClears).map(
               ([count, points]) => (
-              <span key={count}>
-                {count}: +{points}
-              </span>
+                <span key={count}>
+                  {count}: +{points} × level
+                </span>
               ),
             )}
           </dd>
         </div>
       </dl>
+      <p class="scoring-level-note">
+        Line-clear points multiply by your level. Level increases every 10 lines
+        and makes pieces fall faster. Choose Easy, Medium, or Hard from Pause.
+      </p>
     </section>
   )
 }
@@ -361,14 +385,19 @@ export function BlockDrop({
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const boardRef = useRef<HTMLDivElement>(null)
   const boardSurfaceRef = useRef<HTMLDivElement>(null)
+  const controlsRef = useRef<HTMLDivElement>(null)
   const helpButtonRef = useRef<HTMLButtonElement>(null)
   const resumeButtonRef = useRef<HTMLButtonElement>(null)
   const playAgainButtonRef = useRef<HTMLButtonElement>(null)
   const helpDialogRef = useRef<HTMLDialogElement>(null)
   const isGameActive = useRef(false)
   const lastAnnouncedStatus = useRef<GameStatus | null>(null)
+  const lastAnnouncedLevel = useRef(1)
   const focusStatus = useRef<GameStatus>('playing')
   const postOverlayGestureTimer = useRef<number | null>(null)
+  const levelHighlightTimer = useRef<number | null>(null)
+  const lineClearCalloutTimer = useRef<number | null>(null)
+  const lineClearCalloutSequence = useRef(0)
   const statusRef = useRef<GameStatus>('playing')
   const controllerRef = useRef<BlockDropControllerInstance | null>(null)
   const [bestScore, setBestScore] = useState(readBestScore)
@@ -377,8 +406,14 @@ export function BlockDrop({
   const [controller, setController] =
     useState<BlockDropControllerInstance | null>(null)
   const [status, setStatus] = useState<GameStatus>('playing')
+  const [difficulty, setDifficulty] = useState<BlockDropDifficulty>('medium')
   const [postOverlayGestureLock, setPostOverlayGestureLock] = useState(false)
   const [score, setScore] = useState(0)
+  const [lines, setLines] = useState(0)
+  const [level, setLevel] = useState(1)
+  const [levelHighlight, setLevelHighlight] = useState(false)
+  const [lineClearCallout, setLineClearCallout] =
+    useState<LineClearCallout | null>(null)
   const [next, setNext] = useState<Tetromino>('I')
   const [clearing, setClearing] = useState(false)
   const [announcement, setAnnouncement] = useState('')
@@ -401,14 +436,53 @@ export function BlockDrop({
       boardRef.current,
       (state, presentation) => {
         const previousStatus = lastAnnouncedStatus.current
+        const previousLevel = lastAnnouncedLevel.current
         statusRef.current = state.status
         isGameActive.current =
           state.status === 'playing' && !(presentation?.clearing ?? false)
         setStatus(state.status)
         setScore(state.score)
+        setLines(state.lines)
+        setLevel(state.level)
         setNext(state.next)
         setClearing(presentation?.clearing ?? false)
         vibrateForGameEvent(presentation)
+
+        if (state.level > previousLevel) {
+          setLevelHighlight(true)
+          if (levelHighlightTimer.current !== null) {
+            window.clearTimeout(levelHighlightTimer.current)
+          }
+          levelHighlightTimer.current = window.setTimeout(() => {
+            setLevelHighlight(false)
+            levelHighlightTimer.current = null
+          }, LEVEL_HIGHLIGHT_MS)
+        } else if (state.level < previousLevel) {
+          setLevelHighlight(false)
+          if (levelHighlightTimer.current !== null) {
+            window.clearTimeout(levelHighlightTimer.current)
+            levelHighlightTimer.current = null
+          }
+        }
+        lastAnnouncedLevel.current = state.level
+
+        if (
+          presentation?.clearedLines !== undefined &&
+          presentation.clearPoints !== undefined
+        ) {
+          setLineClearCallout({
+            id: ++lineClearCalloutSequence.current,
+            points: presentation.clearPoints,
+            clearedLines: presentation.clearedLines,
+          })
+          if (lineClearCalloutTimer.current !== null) {
+            window.clearTimeout(lineClearCalloutTimer.current)
+          }
+          lineClearCalloutTimer.current = window.setTimeout(() => {
+            setLineClearCallout(null)
+            lineClearCalloutTimer.current = null
+          }, LINE_CLEAR_CALLOUT_MS)
+        }
 
         if (
           state.status === 'playing' &&
@@ -426,6 +500,16 @@ export function BlockDrop({
 
         if (presentation?.action === 'restart') {
           setNewBest(false)
+          setLevelHighlight(false)
+          setLineClearCallout(null)
+          if (levelHighlightTimer.current !== null) {
+            window.clearTimeout(levelHighlightTimer.current)
+            levelHighlightTimer.current = null
+          }
+          if (lineClearCalloutTimer.current !== null) {
+            window.clearTimeout(lineClearCalloutTimer.current)
+            lineClearCalloutTimer.current = null
+          }
           boardSurfaceRef.current?.focus()
         } else if (
           state.status === 'game-over' &&
@@ -442,9 +526,16 @@ export function BlockDrop({
         let message = ''
         if (presentation?.clearedLines) {
           const count = presentation.clearedLines
+          const pointsMessage =
+            presentation.clearPoints === undefined
+              ? ''
+              : ` +${presentation.clearPoints} points.`
           message =
-            `Cleared ${count} ${count === 1 ? 'line' : 'lines'}. ` +
-            `Score ${state.score}.`
+            `Cleared ${count} ${count === 1 ? 'line' : 'lines'}.` +
+            `${pointsMessage} Score ${state.score}.`
+          if (state.level > previousLevel) {
+            message += ` Level ${state.level}.`
+          }
           if (state.status === 'game-over') message += ' Game over.'
         } else if (
           previousStatus === 'playing' &&
@@ -473,6 +564,9 @@ export function BlockDrop({
     statusRef.current = initialState.status
     setStatus(initialState.status)
     setScore(initialState.score)
+    setLines(initialState.lines)
+    setLevel(initialState.level)
+    lastAnnouncedLevel.current = initialState.level
     setNext(initialState.next)
     isGameActive.current = initialState.status === 'playing'
     lastAnnouncedStatus.current = initialState.status
@@ -484,6 +578,14 @@ export function BlockDrop({
       if (postOverlayGestureTimer.current !== null) {
         window.clearTimeout(postOverlayGestureTimer.current)
         postOverlayGestureTimer.current = null
+      }
+      if (levelHighlightTimer.current !== null) {
+        window.clearTimeout(levelHighlightTimer.current)
+        levelHighlightTimer.current = null
+      }
+      if (lineClearCalloutTimer.current !== null) {
+        window.clearTimeout(lineClearCalloutTimer.current)
+        lineClearCalloutTimer.current = null
       }
       controllerRef.current = null
       controller.destroy()
@@ -503,6 +605,14 @@ export function BlockDrop({
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
+  }, [])
+
+  useEffect(() => {
+    const controls = controlsRef.current
+    if (controls === null) return
+    const preventSelection = (event: Event) => event.preventDefault()
+    controls.addEventListener('selectstart', preventSelection)
+    return () => controls.removeEventListener('selectstart', preventSelection)
   }, [])
 
   useEffect(() => {
@@ -620,6 +730,16 @@ export function BlockDrop({
                 role="img"
               />
             </div>
+            {lineClearCallout && (
+              <div
+                class="line-clear-callout"
+                aria-hidden="true"
+                key={lineClearCallout.id}
+              >
+                +{lineClearCallout.points} ·{' '}
+                {LINE_CLEAR_NAMES[lineClearCallout.clearedLines]}
+              </div>
+            )}
             {paused && (
               <div
                 class="game-overlay pause-overlay"
@@ -628,6 +748,43 @@ export function BlockDrop({
               >
                 <div class="game-overlay-card">
                   <h2 id="pause-overlay-heading">Paused</h2>
+                  <fieldset class="pause-difficulty">
+                    <legend>
+                      <span>Difficulty</span>
+                      <output>
+                        {BLOCK_DROP_DIFFICULTIES[difficulty].label} ·{' '}
+                        {BLOCK_DROP_DIFFICULTIES[difficulty].description}
+                      </output>
+                    </legend>
+                    <input
+                      type="range"
+                      min={0}
+                      max={BLOCK_DROP_DIFFICULTY_ORDER.length - 1}
+                      step={1}
+                      value={BLOCK_DROP_DIFFICULTY_ORDER.indexOf(difficulty)}
+                      aria-label="Difficulty"
+                      aria-valuetext={`${BLOCK_DROP_DIFFICULTIES[difficulty].label}, ${BLOCK_DROP_DIFFICULTIES[difficulty].description.toLowerCase()}`}
+                      onInput={(event) => {
+                        const selected = BLOCK_DROP_DIFFICULTY_ORDER[
+                          Number(event.currentTarget.value)
+                        ]
+                        if (selected !== undefined) {
+                          setDifficulty(selected)
+                          controllerRef.current?.setDifficulty?.(selected)
+                        }
+                      }}
+                    />
+                    <div class="difficulty-ticks" aria-hidden="true">
+                      {BLOCK_DROP_DIFFICULTY_ORDER.map((option) => (
+                        <span
+                          class={option === difficulty ? 'selected' : ''}
+                          key={option}
+                        >
+                          {BLOCK_DROP_DIFFICULTIES[option].label}
+                        </span>
+                      ))}
+                    </div>
+                  </fieldset>
                   <div class="overlay-actions">
                     <button
                       class="button-primary"
@@ -701,6 +858,25 @@ export function BlockDrop({
               <span class="hud-label">Score</span>
               <strong class="game-score-value">{score}</strong>
             </p>
+            <div
+              class="game-progress"
+              role="group"
+              aria-label={`Level ${level}, ${lines} lines cleared`}
+            >
+              <p class="game-progress-item">
+                <span class="hud-label">Level</span>
+                <strong
+                  class={`level-value${levelHighlight ? ' level-value-highlight' : ''}`}
+                  key={level}
+                >
+                  {level}
+                </strong>
+              </p>
+              <p class="game-progress-item">
+                <span class="hud-label">Lines</span>
+                <strong>{lines}</strong>
+              </p>
+            </div>
             <p
               class={`game-status status-${clearing ? 'clearing' : status}`}
             >
@@ -712,12 +888,12 @@ export function BlockDrop({
         </div>
 
         <div
+          ref={controlsRef}
           class={`game-controls${
             controlsGestureLocked ? ' gesture-locked' : ''
           }${controlsInactive ? ' controls-inactive' : ''}`}
           role="group"
           aria-label="Block Drop controls"
-          onSelectStart={(event) => event.preventDefault()}
         >
           <div
             class="control-group movement-controls"

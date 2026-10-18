@@ -134,6 +134,23 @@ describe('BlockDropController', () => {
     controller.destroy()
   })
 
+  it('uses the shorter gravity interval after reaching level two', () => {
+    const initial = {
+      ...createGame(41),
+      lines: 10,
+      level: 2,
+    }
+    const { controller } = createController(initial)
+    const startY = initial.active?.y
+
+    frameCallback(0)
+    frameCallback(594)
+    expect(controller.getState().active?.y).toBe(startY)
+    frameCallback(595)
+    expect(controller.getState().active?.y).toBe((startY ?? 0) + 1)
+    controller.destroy()
+  })
+
   it('leaves gameplay keys available to focused controls while keeping global shortcuts', () => {
     const { controller } = createController()
     const button = document.createElement('button')
@@ -377,7 +394,7 @@ describe('BlockDropController', () => {
     expect(canvas.dataset.clearingRows).toBe('19')
     expect(onStateChange).toHaveBeenLastCalledWith(
       expect.objectContaining({ score: 100 }),
-      { clearing: true, clearedLines: 1, locked: true },
+      { clearing: true, clearedLines: 1, clearPoints: 100, locked: true },
     )
     expect(vi.mocked(context.fillRect)).toHaveBeenCalledWith(0, 342, 180, 18)
 
@@ -447,6 +464,7 @@ describe('BlockDropController', () => {
     expect(onStateChange).toHaveBeenLastCalledWith(controller.getState(), {
       clearing: false,
       clearedLines: 1,
+      clearPoints: 100,
       locked: true,
     })
     controller.destroy()
