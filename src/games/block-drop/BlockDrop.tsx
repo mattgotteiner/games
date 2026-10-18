@@ -26,6 +26,11 @@ export interface BlockDropProps {
   readonly controllerFactory?: BlockDropControllerFactory
 }
 
+type BlockDropControllerInstance = Pick<
+  BlockDropController,
+  'dispatch' | 'destroy' | 'getState'
+>
+
 const createBlockDropController: BlockDropControllerFactory = (...args) =>
   new BlockDropController(...args)
 
@@ -230,6 +235,27 @@ function vibrateForGameEvent(
   navigator.vibrate(duration)
 }
 
+const BEST_SCORE_STORAGE_KEY = 'games.block-drop.best-score'
+
+function readBestScore(): number {
+  try {
+    const value = window.localStorage.getItem(BEST_SCORE_STORAGE_KEY)
+    if (value === null || !/^\d+$/.test(value)) return 0
+    const score = Number(value)
+    return Number.isSafeInteger(score) ? score : 0
+  } catch {
+    return 0
+  }
+}
+
+function writeBestScore(score: number): void {
+  try {
+    window.localStorage.setItem(BEST_SCORE_STORAGE_KEY, String(score))
+  } catch {
+    // Best-score persistence is optional; the current game stays playable.
+  }
+}
+
 const PREVIEW_FRAME_SIZE = 6
 
 function getPreviewShape(type: Tetromino) {
@@ -334,19 +360,39 @@ export function BlockDrop({
 }: BlockDropProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const boardRef = useRef<HTMLDivElement>(null)
+  const boardSurfaceRef = useRef<HTMLDivElement>(null)
   const helpButtonRef = useRef<HTMLButtonElement>(null)
+  const resumeButtonRef = useRef<HTMLButtonElement>(null)
+  const playAgainButtonRef = useRef<HTMLButtonElement>(null)
   const helpDialogRef = useRef<HTMLDialogElement>(null)
   const isGameActive = useRef(false)
   const lastAnnouncedStatus = useRef<GameStatus | null>(null)
+  const focusStatus = useRef<GameStatus>('playing')
+  const postOverlayGestureTimer = useRef<number | null>(null)
+  const statusRef = useRef<GameStatus>('playing')
+  const controllerRef = useRef<BlockDropControllerInstance | null>(null)
+  const [bestScore, setBestScore] = useState(readBestScore)
+  const bestScoreRef = useRef(bestScore)
+  const [newBest, setNewBest] = useState(false)
   const [controller, setController] =
-    useState<
-      Pick<BlockDropController, 'dispatch' | 'destroy' | 'getState'> | null
-    >(null)
+    useState<BlockDropControllerInstance | null>(null)
   const [status, setStatus] = useState<GameStatus>('playing')
+  const [postOverlayGestureLock, setPostOverlayGestureLock] = useState(false)
   const [score, setScore] = useState(0)
   const [next, setNext] = useState<Tetromino>('I')
   const [clearing, setClearing] = useState(false)
   const [announcement, setAnnouncement] = useState('')
+
+  const recordFinalScore = (finalScore: number) => {
+    if (finalScore > bestScoreRef.current) {
+      bestScoreRef.current = finalScore
+      setBestScore(finalScore)
+      setNewBest(true)
+      writeBestScore(finalScore)
+    } else {
+      setNewBest(false)
+    }
+  }
 
   useEffect(() => {
     if (canvasRef.current === null || boardRef.current === null) return
@@ -354,6 +400,8 @@ export function BlockDrop({
       canvasRef.current,
       boardRef.current,
       (state, presentation) => {
+        const previousStatus = lastAnnouncedStatus.current
+        statusRef.current = state.status
         isGameActive.current =
           state.status === 'playing' && !(presentation?.clearing ?? false)
         setStatus(state.status)
@@ -362,7 +410,35 @@ export function BlockDrop({
         setClearing(presentation?.clearing ?? false)
         vibrateForGameEvent(presentation)
 
-        const previousStatus = lastAnnouncedStatus.current
+        if (
+          state.status === 'playing' &&
+          (previousStatus === 'paused' || previousStatus === 'game-over')
+        ) {
+          setPostOverlayGestureLock(true)
+          if (postOverlayGestureTimer.current !== null) {
+            window.clearTimeout(postOverlayGestureTimer.current)
+          }
+          postOverlayGestureTimer.current = window.setTimeout(() => {
+            setPostOverlayGestureLock(false)
+            postOverlayGestureTimer.current = null
+          }, 500)
+        }
+
+        if (presentation?.action === 'restart') {
+          setNewBest(false)
+          boardSurfaceRef.current?.focus()
+        } else if (
+          state.status === 'game-over' &&
+          previousStatus !== 'game-over'
+        ) {
+          recordFinalScore(state.score)
+        } else if (
+          state.status === 'playing' &&
+          (previousStatus === 'paused' || previousStatus === 'game-over')
+        ) {
+          setNewBest(false)
+        }
+
         let message = ''
         if (presentation?.clearedLines) {
           const count = presentation.clearedLines
@@ -391,21 +467,64 @@ export function BlockDrop({
         lastAnnouncedStatus.current = state.status
       },
     )
+    controllerRef.current = controller
     setController(controller)
     const initialState = controller.getState()
+    statusRef.current = initialState.status
     setStatus(initialState.status)
     setScore(initialState.score)
     setNext(initialState.next)
     isGameActive.current = initialState.status === 'playing'
     lastAnnouncedStatus.current = initialState.status
+    if (initialState.status === 'game-over') {
+      recordFinalScore(initialState.score)
+    }
     return () => {
       isGameActive.current = false
+      if (postOverlayGestureTimer.current !== null) {
+        window.clearTimeout(postOverlayGestureTimer.current)
+        postOverlayGestureTimer.current = null
+      }
+      controllerRef.current = null
       controller.destroy()
     }
   }, [controllerFactory])
 
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (
+        document.visibilityState === 'hidden' &&
+        statusRef.current === 'playing'
+      ) {
+        controllerRef.current?.dispatch('pause')
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [])
+
+  useEffect(() => {
+    const previousStatus = focusStatus.current
+    if (status === 'paused') {
+      resumeButtonRef.current?.focus()
+    } else if (status === 'game-over') {
+      playAgainButtonRef.current?.focus()
+    } else if (
+      status === 'playing' &&
+      (previousStatus === 'paused' || previousStatus === 'game-over')
+    ) {
+      boardSurfaceRef.current?.focus()
+    }
+    focusStatus.current = status
+  }, [status])
+
   const act = (action: GameAction) => controller?.dispatch(action)
   const paused = status === 'paused'
+  const controlsInactive = paused || status === 'game-over'
+  const controlsGestureLocked =
+    controlsInactive || postOverlayGestureLock
   const gameplayDisabled =
     controller === null || paused || clearing || status === 'game-over'
   const statusText = clearing
@@ -482,29 +601,97 @@ export function BlockDrop({
             <span class="control-symbol" aria-hidden="true">?</span>
             <span class="button-caption">Help</span>
           </button>
-          <button
-            class="button-quiet session-action"
-            type="button"
-            aria-label="Restart game"
-            disabled={controller === null}
-            onClick={() => act('restart')}
-          >
-            <span class="control-symbol" aria-hidden="true">↻</span>
-            <span class="button-caption">Restart</span>
-          </button>
         </div>
       </header>
 
       <div class="game-layout">
         <div class="game-stage">
           <div class="board-frame" ref={boardRef}>
-            <div class="board-surface">
+            <div
+              class="board-surface"
+              ref={boardSurfaceRef}
+              tabIndex={-1}
+              role="region"
+              aria-label="Block Drop playfield"
+            >
               <canvas
                 ref={canvasRef}
                 aria-label="Block Drop board"
                 role="img"
               />
             </div>
+            {paused && (
+              <div
+                class="game-overlay pause-overlay"
+                role="group"
+                aria-labelledby="pause-overlay-heading"
+              >
+                <div class="game-overlay-card">
+                  <h2 id="pause-overlay-heading">Paused</h2>
+                  <div class="overlay-actions">
+                    <button
+                      class="button-primary"
+                      type="button"
+                      aria-label="Resume game"
+                      ref={resumeButtonRef}
+                      onClick={() => act('pause')}
+                    >
+                      Resume
+                    </button>
+                    <button
+                      class="button-secondary"
+                      type="button"
+                      aria-label="Restart game"
+                      onClick={() => act('restart')}
+                    >
+                      Restart
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+            {status === 'game-over' && (
+              <div
+                class="game-overlay game-over-overlay"
+                role="group"
+                aria-labelledby="game-over-heading"
+                onDblClick={(event) => event.preventDefault()}
+              >
+                <div class="game-overlay-card">
+                  <h2 id="game-over-heading">Game over</h2>
+                  {newBest && <p class="new-best-indicator">New best</p>}
+                  <dl class="game-over-scores">
+                    <div>
+                      <dt>Final score</dt>
+                      <dd>{score}</dd>
+                    </div>
+                    <div>
+                      <dt>Best score</dt>
+                      <dd>{bestScore}</dd>
+                    </div>
+                  </dl>
+                  <div class="overlay-actions">
+                    <button
+                      class="button-primary"
+                      type="button"
+                      aria-label="Play again"
+                      ref={playAgainButtonRef}
+                      onClick={() => act('restart')}
+                    >
+                      Play again
+                    </button>
+                    <button
+                      class="button-secondary"
+                      type="button"
+                      aria-label="Back to catalog"
+                      onClick={onReturn}
+                    >
+                      Back to catalog
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
           <aside class="game-hud" aria-label="Game information">
             <p
@@ -525,9 +712,12 @@ export function BlockDrop({
         </div>
 
         <div
-          class="game-controls"
+          class={`game-controls${
+            controlsGestureLocked ? ' gesture-locked' : ''
+          }${controlsInactive ? ' controls-inactive' : ''}`}
           role="group"
           aria-label="Block Drop controls"
+          onSelectStart={(event) => event.preventDefault()}
         >
           <div
             class="control-group movement-controls"

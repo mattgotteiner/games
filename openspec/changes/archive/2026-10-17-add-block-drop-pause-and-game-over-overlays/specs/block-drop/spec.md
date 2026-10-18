@@ -57,6 +57,33 @@ Block Drop SHALL present pause/resume, help, and restart as session actions that
 - **WHEN** the user presses the documented restart key in any game state
 - **THEN** a fresh game starts
 
+### Requirement: Touch drags do not pan the game page
+While Block Drop is open, one-finger touch drags that begin anywhere within the game screen SHALL NOT pan the browser page. Double-tap gestures that begin anywhere within the game screen SHALL NOT zoom the browser page. Pinch zoom SHALL remain available over the playfield and other game-screen regions that are not temporarily gesture-locked. Pinch zoom SHALL be blocked when it begins over the gameplay controls while paused, after game over, or during the brief post-resume/restart gesture guard.
+
+#### Scenario: User drags a game element
+- **WHEN** the user drags on the heading, board, game information, preview, a control, or an overlay
+- **THEN** the browser page remains in place
+
+#### Scenario: User double-taps an overlay
+- **WHEN** the user double-taps the pause panel or game-over card
+- **THEN** the browser page does not zoom
+
+#### Scenario: User taps a gameplay control immediately after resuming
+- **WHEN** the user resumes or restarts and quickly taps a gameplay control
+- **THEN** the browser page does not zoom during the transition back to play
+
+#### Scenario: User taps an inactive gameplay control
+- **WHEN** the user taps a visible gameplay control while the game is paused or over
+- **THEN** the browser page does not zoom
+
+#### Scenario: User pinches over an unlocked game region
+- **WHEN** the user pinches over the playfield or another game-screen region that is not temporarily gesture-locked
+- **THEN** browser pinch zoom remains available
+
+#### Scenario: User pinches over temporarily locked gameplay controls
+- **WHEN** the user pinches over the gameplay controls while paused, after game over, or during the brief post-resume/restart gesture guard
+- **THEN** browser pinch zoom is blocked in that control region
+
 ## ADDED Requirements
 
 ### Requirement: Best score persistence

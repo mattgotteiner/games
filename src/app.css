@@ -264,6 +264,7 @@ button:disabled {
   min-height: 0;
   grid-template-rows: auto minmax(0, 1fr);
   gap: 0.65rem;
+  touch-action: manipulation;
 }
 
 .game-header {
@@ -337,6 +338,7 @@ button:disabled {
 }
 
 .board-frame {
+  position: relative;
   display: grid;
   min-width: 0;
   min-height: 0;
@@ -345,6 +347,7 @@ button:disabled {
 }
 
 .board-surface {
+  position: relative;
   display: grid;
   max-width: 100%;
   max-height: 100%;
@@ -361,6 +364,106 @@ button:disabled {
   max-width: 100%;
   max-height: 100%;
   border-radius: 0.5rem;
+}
+
+.game-overlay {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 0.65rem;
+  background: rgb(7 17 31 / 24%);
+  touch-action: manipulation;
+}
+
+.game-overlay-card {
+  display: grid;
+  width: min(100%, 24rem);
+  max-height: 100%;
+  gap: 0.55rem;
+  overflow: auto;
+  border: 1px solid #52749c;
+  border-radius: 1rem;
+  padding: clamp(0.85rem, 2.5vh, 1.25rem);
+  color: #f8fafc;
+  background: linear-gradient(155deg, #1a3557, #0a192d 82%);
+  box-shadow: 0 1rem 3rem rgb(0 0 0 / 55%);
+  text-align: center;
+  touch-action: manipulation;
+}
+
+.game-over-overlay,
+.game-over-overlay * {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.game-overlay button:focus:not(:focus-visible) {
+  outline: none;
+}
+
+.game-overlay-card h2 {
+  margin: 0;
+  font-size: clamp(1.25rem, 4.5vh, 1.8rem);
+  line-height: 1;
+}
+
+.overlay-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.overlay-actions button {
+  min-width: 0;
+  min-height: 2.75rem;
+  padding: 0.55rem 0.65rem;
+}
+
+.game-over-scores {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.game-over-scores > div {
+  border: 1px solid rgb(125 211 252 / 20%);
+  border-radius: 0.7rem;
+  padding: 0.45rem;
+  background: rgb(7 17 31 / 32%);
+}
+
+.game-over-scores dt {
+  color: #a8c4df;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.game-over-scores dd {
+  margin: 0.1rem 0 0;
+  font-size: clamp(1.2rem, 4vh, 1.65rem);
+  font-weight: 900;
+  line-height: 1;
+}
+
+.new-best-indicator {
+  justify-self: center;
+  margin: 0;
+  border: 1px solid rgb(74 222 128 / 52%);
+  border-radius: 999px;
+  padding: 0.18rem 0.65rem;
+  color: #bbf7d0;
+  background: rgb(22 101 52 / 45%);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .game-hud {
@@ -420,7 +523,7 @@ button:disabled {
 .next-piece-grid-cell,
 .next-piece-cell {
   margin: 0.08rem;
-  border-radius: 0.22rem;
+  border-radius: 0;
 }
 
 .next-piece-grid-cell {
@@ -539,6 +642,14 @@ button:disabled {
   gap: 0.4rem 0.55rem;
 }
 
+.game-controls.gesture-locked {
+  touch-action: none;
+}
+
+.game-controls.controls-inactive > * {
+  pointer-events: none;
+}
+
 .control-group {
   display: grid;
   min-width: 0;
@@ -557,8 +668,10 @@ button:disabled {
   min-height: 2.75rem;
 }
 
-.game-controls button,
-.game-controls button * {
+.game-controls,
+.game-controls *,
+.block-drop button,
+.block-drop button * {
   -webkit-touch-callout: none;
   -webkit-user-select: none;
   user-select: none;
@@ -913,6 +1026,34 @@ button:disabled {
   .game-controls {
     align-content: center;
     grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .game-overlay {
+    padding: 0.25rem;
+  }
+
+  .game-overlay-card {
+    gap: 0.3rem;
+    border-radius: 0.75rem;
+    padding: 0.5rem 0.65rem;
+  }
+
+  .game-overlay-card h2 {
+    font-size: 1.1rem;
+  }
+
+  .game-over-scores > div {
+    padding: 0.25rem;
+  }
+
+  .game-over-scores dd {
+    font-size: 1.15rem;
+  }
+
+  .overlay-actions button {
+    min-height: 2.5rem;
+    padding: 0.4rem;
+    font-size: 0.75rem;
   }
 }
 

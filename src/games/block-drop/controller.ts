@@ -123,7 +123,6 @@ export class BlockDropController {
       return
     }
 
-    const previousStatus = this.state.status
     const previousBoard = this.state.board
     const result = applyActionWithEvents(this.state, action)
     this.state = result.state
@@ -138,8 +137,7 @@ export class BlockDropController {
     if (result.lineClear && !this.reducedMotion()) {
       this.startLineClear(result.lineClear)
     }
-    const announcedAction =
-      action === 'restart' && previousStatus === 'paused' ? action : undefined
+    const announcedAction = action === 'restart' ? action : undefined
     this.publish(result.lineClear, announcedAction, locked)
   }
 
@@ -334,14 +332,12 @@ export class BlockDropController {
       }
     }
 
-    if (this.state.status === 'game-over') {
+    if (this.state.status === 'paused') {
+      context.fillStyle = 'rgb(7 17 31 / 84%)'
+      context.fillRect(offsetX, offsetY, boardWidth, boardHeight)
+    } else if (this.state.status === 'game-over') {
       context.fillStyle = 'rgb(7 17 31 / 76%)'
       context.fillRect(offsetX, offsetY, boardWidth, boardHeight)
-      context.fillStyle = '#f8fafc'
-      context.font = `700 ${Math.max(16, cell)}px system-ui`
-      context.textAlign = 'center'
-      context.textBaseline = 'middle'
-      context.fillText('GAME OVER', width / 2, height / 2)
     }
   }
 

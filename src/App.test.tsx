@@ -20,6 +20,7 @@ import type { BlockDropStateListener } from './games/block-drop/controller'
 import {
   createGame,
   TETROMINOES,
+  type GameAction,
   type Tetromino,
 } from './games/block-drop/rules'
 
@@ -84,6 +85,21 @@ function mockVibration(supported: boolean, reducedMotion: boolean) {
   }
 }
 
+function setVisibilityState(value: DocumentVisibilityState) {
+  const previous = Object.getOwnPropertyDescriptor(document, 'visibilityState')
+  Object.defineProperty(document, 'visibilityState', {
+    configurable: true,
+    value,
+  })
+  pendingRestorations.push(() => {
+    if (previous) {
+      Object.defineProperty(document, 'visibilityState', previous)
+    } else {
+      Reflect.deleteProperty(document, 'visibilityState')
+    }
+  })
+}
+
 afterEach(() => {
   cleanup()
   vi.useRealTimers()
@@ -106,6 +122,7 @@ function updateController(
 describe('App', () => {
   beforeEach(() => {
     window.history.replaceState(null, '', '/games/')
+    window.localStorage.clear()
   })
 
   it('launches Block Drop, routes touch actions, and returns with cleanup', () => {
@@ -137,8 +154,9 @@ describe('App', () => {
       .toBeInTheDocument()
     expect(within(sessionActions).getByRole('button', { name: 'Help' }))
       .toBeInTheDocument()
-    expect(within(sessionActions).getByRole('button', { name: 'Restart game' }))
-      .toBeInTheDocument()
+    expect(
+      within(sessionActions).queryByRole('button', { name: 'Restart game' }),
+    ).not.toBeInTheDocument()
     expect(container.querySelectorAll('.action-controls button')).toHaveLength(2)
     expect(
       Array.from(
@@ -478,9 +496,14 @@ describe('App', () => {
     removeEventListener.mockRestore()
   })
 
-  it('shows game over semantically with restart available', () => {
+  it('shows a focused game-over card with final and best scores', () => {
     const dispatch = vi.fn()
-    const gameOver = { ...createGame(5), active: null, status: 'game-over' as const }
+    const gameOver = {
+      ...createGame(5),
+      active: null,
+      status: 'game-over' as const,
+      score: 42,
+    }
     const factory: BlockDropControllerFactory = (
       _canvas,
       _container,
@@ -492,14 +515,25 @@ describe('App', () => {
     })
 
     render(<BlockDrop onReturn={vi.fn()} controllerFactory={factory} />)
-    expect(screen.getByText('Game over')).toBeInTheDocument()
+    const card = screen.getByRole('group', { name: 'Game over' })
+    expect(within(card).getByText('Final score')).toBeInTheDocument()
+    expect(within(card).getByText('Best score')).toBeInTheDocument()
+    expect(card.querySelectorAll('.game-over-scores dd')).toHaveLength(2)
+    expect(card.querySelectorAll('.game-over-scores dd')[0]).toHaveTextContent(
+      '42',
+    )
+    expect(within(card).getByText('New best')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Play again' })).toHaveFocus()
     expect(screen.getByRole('button', { name: 'Move left' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Hard drop' })).toBeDisabled()
-    fireEvent.click(screen.getByRole('button', { name: 'Restart game' }))
+    expect(
+      screen.queryByRole('button', { name: 'Restart game' }),
+    ).not.toBeInTheDocument()
+    fireEvent.click(within(card).getByRole('button', { name: 'Play again' }))
     expect(dispatch).toHaveBeenCalledWith('restart')
   })
 
-  it('shows pause state, disables gameplay, and keeps resume and restart available', () => {
+  it('focuses pause actions and returns focus to the board after resume or restart', () => {
     let publish: BlockDropStateListener | undefined
     const initial = createGame(5)
     const dispatch = vi.fn()
@@ -521,17 +555,208 @@ describe('App', () => {
     expect(dispatch).toHaveBeenCalledWith('pause')
 
     act(() => publish?.({ ...initial, status: 'paused' }))
-    expect(screen.getByText('Paused')).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Paused' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Move left' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Hard drop' })).toBeDisabled()
-    expect(screen.getByRole('button', { name: 'Resume game' })).toBeEnabled()
-    expect(screen.getByRole('button', { name: 'Restart game' })).toBeEnabled()
+    const pausePanel = screen.getByRole('group', { name: 'Paused' })
+    expect(
+      within(pausePanel).getByRole('button', { name: 'Resume game' }),
+    ).toHaveFocus()
+    expect(
+      within(pausePanel).getByRole('button', { name: 'Restart game' }),
+    ).toBeEnabled()
+    expect(
+      within(screen.getByRole('group', { name: 'Session actions' })).queryByRole(
+        'button',
+        { name: 'Restart game' },
+      ),
+    ).not.toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Resume game' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Restart game' }))
+    fireEvent.click(
+      within(pausePanel).getByRole('button', { name: 'Resume game' }),
+    )
+    act(() => publish?.(initial))
+    expect(
+      screen.getByRole('region', { name: 'Block Drop playfield' }),
+    ).toHaveFocus()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Pause game' }))
+    act(() => publish?.({ ...initial, status: 'paused' }))
+    const restartedPanel = screen.getByRole('group', { name: 'Paused' })
+    fireEvent.click(
+      within(restartedPanel).getByRole('button', { name: 'Restart game' }),
+    )
+    act(() => publish?.(initial))
+    expect(
+      screen.getByRole('region', { name: 'Block Drop playfield' }),
+    ).toHaveFocus()
     expect(dispatch).toHaveBeenNthCalledWith(2, 'pause')
-    expect(dispatch).toHaveBeenNthCalledWith(3, 'restart')
+    expect(dispatch).toHaveBeenNthCalledWith(4, 'restart')
   })
+
+  it('keeps an existing best score when a later run scores less', () => {
+    window.localStorage.setItem('games.block-drop.best-score', '250')
+    const gameOver = {
+      ...createGame(5),
+      active: null,
+      status: 'game-over' as const,
+      score: 42,
+    }
+    const factory: BlockDropControllerFactory = () => ({
+      dispatch: vi.fn(),
+      destroy: vi.fn(),
+      getState: () => gameOver,
+    })
+
+    render(<BlockDrop onReturn={vi.fn()} controllerFactory={factory} />)
+
+    const card = screen.getByRole('group', { name: 'Game over' })
+    const scores = card.querySelectorAll('.game-over-scores dd')
+    expect(scores[0]).toHaveTextContent('42')
+    expect(scores[1]).toHaveTextContent('250')
+    expect(within(card).queryByText('New best')).not.toBeInTheDocument()
+    expect(window.localStorage.getItem('games.block-drop.best-score')).toBe(
+      '250',
+    )
+  })
+
+  it.each(['', '-1', '1.5', 'not-a-score', '9007199254740992'])(
+    'treats malformed stored best score %j as zero',
+    (storedScore) => {
+      window.localStorage.setItem(
+        'games.block-drop.best-score',
+        storedScore,
+      )
+      const gameOver = {
+        ...createGame(5),
+        active: null,
+        status: 'game-over' as const,
+      }
+      const factory: BlockDropControllerFactory = () => ({
+        dispatch: vi.fn(),
+        destroy: vi.fn(),
+        getState: () => gameOver,
+      })
+
+      render(<BlockDrop onReturn={vi.fn()} controllerFactory={factory} />)
+
+      const scores = screen
+        .getByRole('group', { name: 'Game over' })
+        .querySelectorAll('.game-over-scores dd')
+      expect(scores[1]).toHaveTextContent('0')
+      expect(window.localStorage.getItem('games.block-drop.best-score')).toBe(
+        storedScore,
+      )
+    },
+  )
+
+  it('remains playable when device storage throws during read and write', () => {
+    const previousStorage = Object.getOwnPropertyDescriptor(window, 'localStorage')
+    Object.defineProperty(window, 'localStorage', {
+      configurable: true,
+      get: () => {
+        throw new DOMException('Storage unavailable', 'SecurityError')
+      },
+    })
+    pendingRestorations.push(() => {
+      if (previousStorage) {
+        Object.defineProperty(window, 'localStorage', previousStorage)
+      }
+    })
+
+    let publish: BlockDropStateListener | undefined
+    const playing = createGame(5)
+    const factory: BlockDropControllerFactory = (
+      _canvas,
+      _container,
+      onStateChange,
+    ) => {
+      publish = onStateChange
+      return {
+        dispatch: vi.fn(),
+        destroy: vi.fn(),
+        getState: () => playing,
+      }
+    }
+
+    render(<BlockDrop onReturn={vi.fn()} controllerFactory={factory} />)
+    expect(screen.getByText('Playing')).toBeInTheDocument()
+    act(() =>
+      publish?.({ ...playing, active: null, status: 'game-over', score: 14 }),
+    )
+
+    const card = screen.getByRole('group', { name: 'Game over' })
+    expect(card.querySelectorAll('.game-over-scores dd')[1]).toHaveTextContent(
+      '14',
+    )
+    expect(within(card).getByText('New best')).toBeInTheDocument()
+  })
+
+  it('pauses once when hidden, remains paused when visible, and removes its listener', () => {
+    let state = createGame(5)
+    let publish: BlockDropStateListener | undefined
+    const dispatch = vi.fn((action: GameAction) => {
+      if (action !== 'pause') return
+      state = { ...state, status: state.status === 'playing' ? 'paused' : 'playing' }
+      publish?.(state)
+    })
+    const factory: BlockDropControllerFactory = (
+      _canvas,
+      _container,
+      onStateChange,
+    ) => {
+      publish = onStateChange
+      return {
+        dispatch,
+        destroy: vi.fn(),
+        getState: () => state,
+      }
+    }
+    const { unmount } = render(
+      <BlockDrop onReturn={vi.fn()} controllerFactory={factory} />,
+    )
+
+    setVisibilityState('hidden')
+    fireEvent(document, new Event('visibilitychange'))
+    expect(dispatch).toHaveBeenCalledOnce()
+    expect(dispatch).toHaveBeenCalledWith('pause')
+    expect(screen.getByRole('group', { name: 'Paused' })).toBeInTheDocument()
+    expect(
+      within(screen.getByRole('group', { name: 'Paused' })).getByRole(
+        'button',
+        { name: 'Resume game' },
+      ),
+    ).toHaveFocus()
+
+    setVisibilityState('visible')
+    fireEvent(document, new Event('visibilitychange'))
+    expect(screen.getByRole('group', { name: 'Paused' })).toBeInTheDocument()
+    expect(dispatch).toHaveBeenCalledOnce()
+
+    unmount()
+    setVisibilityState('hidden')
+    fireEvent(document, new Event('visibilitychange'))
+    expect(dispatch).toHaveBeenCalledOnce()
+  })
+
+  it.each(['paused', 'game-over'] as const)(
+    'does not change the %s state when the hidden event fires',
+    (status) => {
+      const initial = { ...createGame(5), status }
+      const dispatch = vi.fn()
+      const factory: BlockDropControllerFactory = () => ({
+        dispatch,
+        destroy: vi.fn(),
+        getState: () => initial,
+      })
+      render(<BlockDrop onReturn={vi.fn()} controllerFactory={factory} />)
+
+      setVisibilityState('hidden')
+      fireEvent(document, new Event('visibilitychange'))
+
+      expect(dispatch).not.toHaveBeenCalled()
+    },
+  )
 
   it('displays score semantically through play, game over, and restart', () => {
     let publish: BlockDropStateListener | undefined
@@ -591,7 +816,7 @@ describe('App', () => {
     act(() =>
       publish?.({ ...playing, active: null, status: 'game-over', score: 42 }),
     )
-    expect(screen.getByText('Game over')).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Game over' })).toBeInTheDocument()
     expect(announcements).toHaveTextContent('Game over.')
     expect(screen.getByLabelText('Score: 42')).toBeInTheDocument()
 
@@ -680,7 +905,9 @@ describe('App', () => {
     expect(screen.getByRole('button', { name: 'Move left' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Hard drop' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Pause game' })).toBeDisabled()
-    expect(screen.getByRole('button', { name: 'Restart game' })).toBeEnabled()
+    expect(
+      screen.queryByRole('button', { name: 'Restart game' }),
+    ).not.toBeInTheDocument()
 
     act(() => publish?.({ ...initial, score: 100 }, { clearing: false }))
     expect(screen.getByText('Playing')).toBeInTheDocument()

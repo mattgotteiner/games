@@ -41,12 +41,21 @@ Listen for `visibilitychange` on `document`. When it becomes `hidden` while play
 
 Remove restart from the header. It appears in the pause panel next to Resume and on the game-over card as Play again. The `R` shortcut still restarts in any state. During the brief line-clear feedback, restart stays reachable by keyboard, and the catalog stays reachable from the header, which keeps the line-clear requirement satisfied.
 
+### Inactive controls and reported iOS page zoom
+
+During mobile E2E review, the user narrowed the remaining page-zoom report to rapid taps on the disabled gameplay controls that remain visible below the pause and game-over board overlays. Earlier fixes disabled text selection and applied `touch-action: none` to the controls, but did not stop the report.
+
+The research points to a plausible explanation, but does not establish the exact Safari gesture path on the user's device. [Apple's archived Safari guide](https://developer.apple.com/library/archive/documentation/AppleApplications/Reference/SafariWebContent/AdjustingtheTextSize/AdjustingtheTextSize.html) says double-tapping an HTML block such as a `div` can scale the viewport to fit that block, which could explain zoom near the control labels. The [Pointer Events specification](https://www.w3.org/TR/pointerevents3/#the-touch-action-css-property) says `touch-action` controls viewport panning and zooming, separately from text selection and highlighting. This explains why preventing selection alone need not prevent viewport zoom. WebKit's [iOS tapping guidance](https://webkit.org/blog/5610/more-responsive-tapping-on-ios/) says `touch-action: manipulation` allows panning and pinch zoom while excluding double-tap gestures. A [July 2026 WebKit change](https://commits.webkit.org/317443@main) records that the iOS implementation previously only suppressed double-tap zoom for `touch-action: none` and changed it to honor `manipulation`; this documents a platform mismatch, but does not identify the Safari/WebKit version involved in this E2E report.
+
+Keep the controls visible but remove their child text and button boxes as pointer hit targets while paused or game over: `.game-controls.controls-inactive > *` receives `pointer-events: none`, leaving the wide `.game-controls` container itself as the target. The container has `touch-action: none`, so taps there cannot start viewport panning or zooming. This also means pinch zoom is unavailable when a gesture starts over the inactive controls, and during the brief post-resume/restart gesture guard; pinch zoom remains available on the board and other unlocked regions. The guard does not set `controls-inactive`, so the first Drop tap after resume still reaches its button. Mobile Playwright emulation confirmed that an inactive-state tap hit the controls container and that an immediate hard-drop tap after resume still worked. The user confirmed the reported zoom stopped in E2E review. Chromium cannot emulate Safari's native viewport zoom, so the browser emulation verifies hit-testing and gameplay action delivery, not Safari's zoom recognizer.
+
 ## Risks / Trade-offs
 
 - [Touch players cannot restart mid-run without pausing] -> This is intended. Pause is one tap in the header, and Restart is beside Resume.
 - [A veil hides the board, so the player cannot study it while paused] -> This is the standard choice in falling-block games and stops pause from being used to plan moves. The veil is not fully opaque, so the game is still recognisable.
 - [`visibilitychange` can fire during the iOS app switcher] -> Pausing on any hide is the safe outcome.
 - [Storage can be cleared by the browser] -> The best score is a convenience, and losing it is acceptable.
+- [Pinch zoom is unavailable when it begins over paused or game-over controls, or during the short post-resume/restart gesture guard] -> This is limited to the gameplay-control region; pinch zoom remains available on the board and other unlocked game regions.
 
 ## Migration Plan
 

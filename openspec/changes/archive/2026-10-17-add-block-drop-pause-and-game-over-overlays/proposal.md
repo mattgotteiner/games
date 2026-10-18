@@ -26,3 +26,7 @@ None.
 - Adds one `localStorage` key, `games.block-drop.best-score`. No other persisted data, dependencies, or APIs.
 - Rules, scoring, and keyboard mappings are unchanged.
 - Fourth of six planned Block Drop changes. It assumes `compact-block-drop-mobile-layout` (header session actions and announcer).
+
+## Mobile E2E Findings
+
+Mobile E2E review found that rapid taps could zoom the page when they landed on the still-visible, disabled gameplay controls below the board overlay. Research found that Safari can double-tap zoom to fit an HTML block, independently of text selection; this is a plausible explanation, not a confirmed event trace from the user's device. In inactive states, the controls remain visible but their children no longer receive pointer hit tests, so taps target the wide controls container with `touch-action: none`. The user confirmed this stopped the reported zoom. The finding, source links, pinch-zoom trade-off, and fix are recorded in `design.md` and task 4.8.

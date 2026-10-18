@@ -227,6 +227,29 @@ describe('BlockDropController', () => {
     controller.destroy()
   })
 
+  it('veils paused and game-over boards without drawing game-over text', () => {
+    const { controller } = createController()
+    vi.mocked(context.fillRect).mockClear()
+
+    controller.dispatch('pause')
+
+    expect(context.fillRect).toHaveBeenLastCalledWith(0, 0, 180, 360)
+    expect(context.fillStyle).toBe('rgb(7 17 31 / 84%)')
+
+    vi.mocked(context.fillRect).mockClear()
+    controller.dispatch('pause')
+    expect(context.fillStyle).not.toBe('rgb(7 17 31 / 84%)')
+    expect(context.fillRect).not.toHaveBeenLastCalledWith(0, 0, 180, 360)
+    controller.destroy()
+
+    vi.mocked(context.fillText).mockClear()
+    const over = createController(gameOverState())
+    expect(context.fillRect).toHaveBeenLastCalledWith(0, 0, 180, 360)
+    expect(context.fillStyle).toBe('rgb(7 17 31 / 76%)')
+    expect(context.fillText).not.toHaveBeenCalled()
+    over.controller.destroy()
+  })
+
   it('draws a ghost for a floating piece and skips it at rest or game over', () => {
     const floating = createController()
     expect(context.strokeRect).toHaveBeenCalledTimes(4)
@@ -290,10 +313,28 @@ describe('BlockDropController', () => {
     expect(controller.getState().board.flat().every((cell) => cell === null)).toBe(true)
     expect(onStateChange).toHaveBeenLastCalledWith(
       expect.objectContaining({ status: 'playing' }),
-      { clearing: false },
+      { clearing: false, action: 'restart' },
     )
     controller.destroy()
   })
+
+  it.each(['playing', 'paused', 'game-over'] as const)(
+    'keeps the R restart shortcut available while %s',
+    (status) => {
+      const initial = {
+        ...createGame(41),
+        active: status === 'game-over' ? null : createGame(41).active,
+        score: 123,
+        status,
+      }
+      const { controller } = createController(initial)
+
+      fireEvent.keyDown(window, { key: 'r' })
+
+      expect(controller.getState()).toEqual(createGame(41))
+      controller.destroy()
+    },
+  )
 
   it('publishes a lock event for optional haptic feedback', () => {
     const { controller, onStateChange } = createController(restingPieceState())
@@ -389,6 +430,7 @@ describe('BlockDropController', () => {
     expect(canvas.dataset.clearingRows).toBeUndefined()
     expect(onStateChange).toHaveBeenLastCalledWith(controller.getState(), {
       clearing: false,
+      action: 'restart',
     })
     controller.destroy()
   })

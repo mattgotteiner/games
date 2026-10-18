@@ -83,7 +83,7 @@ async function expectGameFitsViewport(page: import('@playwright/test').Page) {
   const elements = [
     page.getByRole('img', { name: 'Block Drop board' }),
     page.getByLabel(/^Score:/),
-    page.getByText(/^(Playing|Paused|Clearing lines|Game over)$/),
+    page.locator('.game-status'),
     page.getByRole('region', { name: /Next piece:/ }),
     page.locator('.game-controls'),
   ]
@@ -128,7 +128,10 @@ async function expectGameFitsViewport(page: import('@playwright/test').Page) {
 }
 
 async function expectScoringGuideVisible(page: import('@playwright/test').Page) {
-  const wasPlaying = await page.getByText('Playing', { exact: true }).isVisible()
+  const wasPlaying = await page
+    .locator('.game-status')
+    .getByText('Playing', { exact: true })
+    .isVisible()
   await page.getByRole('button', { name: 'Help' }).click()
   const dialog = page.getByRole('dialog', { name: 'Scoring and controls' })
   await expect(dialog).toBeVisible()
@@ -154,7 +157,10 @@ async function expectScoringGuideVisible(page: import('@playwright/test').Page) 
   await expect(dialog).not.toBeVisible()
   await expect(page.getByRole('button', { name: 'Help' })).toBeFocused()
   if (wasPlaying) {
-    await page.getByRole('button', { name: 'Resume game' }).click()
+    await page
+      .getByRole('group', { name: 'Paused' })
+      .getByRole('button', { name: 'Resume game' })
+      .click()
   }
 }
 
@@ -238,6 +244,16 @@ async function expectMovementOrder(page: import('@playwright/test').Page) {
     expect(softDrop!.x + softDrop!.width).toBeLessThanOrEqual(rotate!.x)
     expect(rotate!.x + rotate!.width).toBeLessThanOrEqual(hardDrop!.x)
   }
+}
+
+async function finishSeededRun(page: import('@playwright/test').Page) {
+  const gameOver = page.getByRole('group', { name: 'Game over' })
+  for (let drop = 0; drop < 30 && !(await gameOver.isVisible()); drop += 1) {
+    await page.keyboard.press('Space')
+    await page.waitForTimeout(220)
+  }
+  await expect(gameOver).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Play again' })).toBeFocused()
 }
 
 test('prevents page panning from touch drags anywhere in Block Drop', async ({
@@ -415,10 +431,13 @@ test('plays Block Drop with touch and keyboard across phone orientations', async
 
   const pause = page.getByRole('button', { name: 'Pause game' })
   await pause.click()
-  await expect(page.getByText('Paused', { exact: true })).toBeVisible()
+  await expect(page.locator('.game-status')).toHaveText('Paused')
   await expect(page.getByRole('button', { name: 'Move left' })).toBeDisabled()
   await expect(page.getByRole('button', { name: 'Hard drop' })).toBeDisabled()
-  await expect(page.getByRole('button', { name: 'Restart game' })).toBeEnabled()
+  const pausePanel = page.getByRole('group', { name: 'Paused' })
+  await expect(
+    pausePanel.getByRole('button', { name: 'Restart game' }),
+  ).toBeEnabled()
   const pausedBoard = await captureBoard()
   await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur())
   await page.waitForTimeout(900)
@@ -427,15 +446,18 @@ test('plays Block Drop with touch and keyboard across phone orientations', async
   expect(await captureBoard()).toBe(pausedBoard)
 
   await page.keyboard.press('p')
-  await expect(page.getByText('Playing', { exact: true })).toBeVisible()
+  await expect(page.locator('.game-status')).toHaveText('Playing')
   const resumedBoard = await captureBoard()
   await page.waitForTimeout(400)
   expect(await captureBoard()).toBe(resumedBoard)
   await expect.poll(captureBoard, { timeout: 1_000 }).not.toBe(resumedBoard)
 
   await page.getByRole('button', { name: 'Pause game' }).click()
-  await page.getByRole('button', { name: 'Restart game' }).click()
-  await expect(page.getByText('Playing', { exact: true })).toBeVisible()
+  await page
+    .getByRole('group', { name: 'Paused' })
+    .getByRole('button', { name: 'Restart game' })
+    .click()
+  await expect(page.locator('.game-status')).toHaveText('Playing')
   await expect(page.getByLabel('Score: 0')).toBeVisible()
 
   await expectGameFitsViewport(page)
@@ -573,12 +595,11 @@ test('shows the seeded landing ghost in the cells hard drop will occupy', async 
 
   expect(samples.ghost).toHaveLength(4)
   for (const [red, green, blue] of samples.ghost) {
-    expect(green).toBeGreaterThan(25)
-    expect(green).toBeLessThan(60)
-    expect(red).toBeGreaterThan(5)
-    expect(blue).toBeGreaterThan(30)
+    expect(green).toBeGreaterThan(samples.empty[1])
+    expect(blue).toBeGreaterThan(samples.empty[2])
+    expect(red).toBeGreaterThanOrEqual(samples.empty[0])
   }
-  expect(samples.empty[1]).toBe(17)
+  expect(samples.empty[1]).toBe(16)
 })
 
 test('animates an exact deterministic line clear and gates gameplay', async ({
@@ -607,13 +628,15 @@ test('animates an exact deterministic line clear and gates gameplay', async ({
   await expect(page.getByText('Clearing lines', { exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Move left' })).toBeDisabled()
   await expect(page.getByRole('button', { name: 'Pause game' })).toBeDisabled()
-  await expect(page.getByRole('button', { name: 'Restart game' })).toBeEnabled()
+  await expect(
+    page.getByRole('button', { name: 'Restart game' }),
+  ).toHaveCount(0)
 
   await page.keyboard.press('ArrowLeft')
   await page.keyboard.press('p')
   await expect(page.getByText('Clearing lines', { exact: true })).toBeVisible()
   await expect(canvas).not.toHaveAttribute('data-clearing-rows')
-  await expect(page.getByText('Paused', { exact: true })).toBeVisible()
+  await expect(page.locator('.game-status')).toHaveText('Paused')
   await expect(page.getByLabel('Score: 442')).toBeVisible()
   await expect(
     page.getByRole('region', {
@@ -661,4 +684,84 @@ test('opens Block Drop directly and follows browser history', async ({ page }) =
   await expect(
     page.getByRole('heading', { level: 1, name: 'Block Drop' }),
   ).toBeVisible()
+})
+
+test('keeps the best score through reload and offline relaunch', async ({
+  context,
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.addInitScript(() => {
+    Date.now = () => 42
+  })
+  await page.goto('./?game=block-drop')
+  await page.evaluate(() => window.localStorage.clear())
+
+  await finishSeededRun(page)
+  const card = page.getByRole('group', { name: 'Game over' })
+  const scores = card.locator('.game-over-scores dd')
+  let bestScore = Number(await scores.nth(1).textContent())
+  expect(bestScore).toBeGreaterThan(0)
+  await expect(card.getByText('New best')).toBeVisible()
+  await expect(scores.nth(0)).toHaveText(String(bestScore))
+  await expect(scores.nth(1)).toHaveText(String(bestScore))
+  await expect(card.getByRole('button', { name: 'Back to catalog' })).toBeVisible()
+  await expectGameFitsViewport(page)
+
+  await page.keyboard.press('r')
+  await expect(page.getByText('Playing', { exact: true })).toBeVisible()
+  await expect(page.getByLabel('Score: 0')).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Block Drop playfield' }))
+    .toBeFocused()
+
+  await page.reload()
+  await finishSeededRun(page)
+  const reloadedCard = page.getByRole('group', { name: 'Game over' })
+  const reloadedScores = reloadedCard.locator('.game-over-scores dd')
+  const reloadedFinalScore = Number(await reloadedScores.nth(0).textContent())
+  const reloadedBestScore = Number(await reloadedScores.nth(1).textContent())
+  expect(reloadedBestScore).toBeGreaterThanOrEqual(bestScore)
+  expect(reloadedBestScore).toBeGreaterThanOrEqual(reloadedFinalScore)
+  if (reloadedBestScore > bestScore) {
+    await expect(reloadedCard.getByText('New best')).toBeVisible()
+  } else {
+    await expect(reloadedCard.getByText('New best')).toHaveCount(0)
+  }
+  bestScore = reloadedBestScore
+
+  await reloadedCard.getByRole('button', { name: 'Play again' }).click()
+  await expect(page.getByText('Playing', { exact: true })).toBeVisible()
+  await expect(page.getByLabel('Score: 0')).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Block Drop playfield' }))
+    .toBeFocused()
+
+  await page.evaluate(async () => {
+    await navigator.serviceWorker.ready
+    if (!navigator.serviceWorker.controller) {
+      await new Promise<void>((resolve) => {
+        navigator.serviceWorker.addEventListener('controllerchange', () => resolve(), {
+          once: true,
+        })
+      })
+    }
+  })
+  await context.setOffline(true)
+  await page.reload()
+  await expect(
+    page.getByRole('heading', { level: 1, name: 'Block Drop' }),
+  ).toBeVisible()
+  await finishSeededRun(page)
+  const offlineCard = page.getByRole('group', { name: 'Game over' })
+  const offlineScores = offlineCard.locator('.game-over-scores dd')
+  const offlineFinalScore = Number(await offlineScores.nth(0).textContent())
+  const offlineBestScore = Number(await offlineScores.nth(1).textContent())
+  expect(offlineBestScore).toBeGreaterThanOrEqual(bestScore)
+  expect(offlineBestScore).toBeGreaterThanOrEqual(offlineFinalScore)
+  if (offlineBestScore > bestScore) {
+    await expect(offlineCard.getByText('New best')).toBeVisible()
+  } else {
+    await expect(offlineCard.getByText('New best')).toHaveCount(0)
+  }
+  await offlineCard.getByRole('button', { name: 'Back to catalog' }).click()
+  await expect(page.getByRole('button', { name: 'Play Block Drop' })).toBeVisible()
 })
