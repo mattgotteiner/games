@@ -25,11 +25,11 @@ and service-worker-controlled offline deep links are covered.
 
 ## Validation
 
-The latest `npm run check` passes after aligning test selectors with the
-rendered HUD: typechecking, 157 unit/component tests, the production build, and
-all 11 Chromium flows. The user has reviewed difficulty persistence on a phone
-and confirmed the saved choice survives reload. The next planned change is
-`add-block-drop-wall-kicks`.
+Difficulty persistence was reviewed on a phone, archived, and pushed in
+`e3434bd`; the user confirmed the saved choice survives reload. Wall kicks
+passed `npm run check` (typechecking, 165 unit/component tests, production
+build, and all 11 Chromium flows), and the user confirmed the phone E2E works.
+The change is archived locally and ready to push.
 
 ## Completed OpenSpec Changes
 
@@ -55,6 +55,8 @@ and confirmed the saved choice survives reload. The next planned change is
   - `openspec/changes/archive/2026-10-17-scale-block-drop-score-by-difficulty`
 - `persist-block-drop-difficulty`
   - `openspec/changes/archive/2026-10-18-persist-block-drop-difficulty`
+- `add-block-drop-wall-kicks`
+  - `openspec/changes/archive/2026-10-18-add-block-drop-wall-kicks`
 
 Synchronized capability specs:
 
@@ -121,7 +123,7 @@ build, and all 11 Chromium flows.
    in the HUD and restore the user's device preference on launch. Implemented,
    reviewed, and archived.
 8. `add-block-drop-wall-kicks`: basic horizontal rotation kicks (not full
-   SRS); this is the next change.
+   SRS); implemented, reviewed on a phone, and archived.
 
 Changes 2 and 6 are independent and can ship at any point. The design
 rationale and before screenshots are in `plans/block-drop/PLAN.md` in
@@ -129,6 +131,7 @@ rationale and before screenshots are in `plans/block-drop/PLAN.md` in
 
 ## Deferred Work
 
-Hold pieces, full SRS rotation kicks, upward kicks, and a generalized game
-registry/runtime remain deferred. Introduce shared platform abstractions only
-after another game exposes concrete duplication.
+Full SRS rotation kicks, upward kicks, and a generalized game registry/runtime
+remain deferred. Hold-piece gameplay is the next planned Block Drop change.
+Introduce shared platform abstractions only after another game exposes
+concrete duplication.

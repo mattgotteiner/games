@@ -130,6 +130,17 @@ const SHAPE_SIZE: Readonly<Record<Tetromino, number>> = {
   Z: 3,
 }
 
+const ROTATION_KICK_OFFSETS: Readonly<Record<Tetromino, ReadonlyArray<number>>> =
+  Object.freeze({
+    I: Object.freeze([0, 1, -1, 2, -2]),
+    J: Object.freeze([0, 1, -1]),
+    L: Object.freeze([0, 1, -1]),
+    O: Object.freeze([0]),
+    S: Object.freeze([0, 1, -1]),
+    T: Object.freeze([0, 1, -1]),
+    Z: Object.freeze([0, 1, -1]),
+  })
+
 export function createEmptyBoard(): Board {
   return Array.from({ length: BOARD_HEIGHT }, () =>
     Array<Cell>(BOARD_WIDTH).fill(null),
@@ -359,6 +370,24 @@ function tryActive(
   return isValidPiece(state.board, active) ? { ...state, active } : state
 }
 
+function rotateActive(state: BlockDropState): BlockDropState {
+  const piece = state.active
+  if (piece === null || piece.type === 'O') return state
+
+  const rotation = (piece.rotation + 1) % 4
+  for (const offset of ROTATION_KICK_OFFSETS[piece.type]) {
+    const candidate = {
+      ...piece,
+      rotation,
+      x: piece.x + offset,
+    }
+    if (isValidPiece(state.board, candidate)) {
+      return { ...state, active: candidate }
+    }
+  }
+  return state
+}
+
 export function stepGravityWithEvents(
   state: BlockDropState,
 ): BlockDropTransition {
@@ -451,12 +480,7 @@ export function applyActionWithEvents(
         tryActive(state, (piece) => ({ ...piece, x: piece.x + 1 })),
       )
     case 'rotate':
-      return transition(
-        tryActive(state, (piece) => ({
-          ...piece,
-          rotation: (piece.rotation + 1) % 4,
-        })),
-      )
+      return transition(rotateActive(state))
     case 'soft-drop':
       return softDrop(state)
     case 'hard-drop':

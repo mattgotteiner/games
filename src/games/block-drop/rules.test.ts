@@ -266,10 +266,97 @@ describe('movement and rotation', () => {
     expect(applyAction(blocked, 'right')).toBe(blocked)
   })
 
-  it('rejects a clockwise rotation outside the board', () => {
-    const verticalAtWall = stateWith({ type: 'I', rotation: 1, x: -2, y: 2 })
+  it.each([
+    {
+      edge: 'left wall in rotation 1',
+      active: { type: 'I', rotation: 1, x: -2, y: 4 } as const,
+      expectedX: 0,
+    },
+    {
+      edge: 'right wall in rotation 1',
+      active: { type: 'I', rotation: 1, x: 7, y: 4 } as const,
+      expectedX: 6,
+    },
+    {
+      edge: 'left wall in rotation 3',
+      active: { type: 'I', rotation: 3, x: -1, y: 4 } as const,
+      expectedX: 0,
+    },
+    {
+      edge: 'right wall in rotation 3',
+      active: { type: 'I', rotation: 3, x: 8, y: 4 } as const,
+      expectedX: 6,
+    },
+  ])('kicks an I piece away from the $edge', ({ active, expectedX }) => {
+    const initial = stateWith(active)
+    const rotated = applyAction(initial, 'rotate')
 
-    expect(applyAction(verticalAtWall, 'rotate')).toBe(verticalAtWall)
+    expect(rotated.active).toEqual({
+      ...active,
+      rotation: (active.rotation + 1) % 4,
+      x: expectedX,
+    })
+    expect(isValidPiece(rotated.board, rotated.active!)).toBe(true)
+  })
+
+  it.each([
+    {
+      edge: 'left wall',
+      active: { type: 'T', rotation: 0, x: 0, y: 4 } as const,
+      blocker: [1, 6, 'Z'] as const,
+      expectedX: 1,
+    },
+    {
+      edge: 'right wall',
+      active: { type: 'T', rotation: 0, x: 7, y: 4 } as const,
+      blocker: [8, 6, 'Z'] as const,
+      expectedX: 6,
+    },
+  ])('kicks a T piece away from the $edge', ({ active, blocker, expectedX }) => {
+    const initial = stateWith(active, boardWith([blocker]))
+    const rotated = applyAction(initial, 'rotate')
+
+    expect(rotated.active).toEqual({
+      ...active,
+      rotation: 1,
+      x: expectedX,
+    })
+    expect(isValidPiece(rotated.board, rotated.active!)).toBe(true)
+  })
+
+  it('kicks a J piece away from a nearby stack', () => {
+    const active = { type: 'J', rotation: 0, x: 4, y: 4 } as const
+    const initial = stateWith(
+      active,
+      boardWith([
+        [5, 3, 'Z'],
+        [5, 4, 'Z'],
+      ]),
+    )
+    const rotated = applyAction(initial, 'rotate')
+
+    expect(rotated.active).toEqual({ ...active, rotation: 1, x: 5 })
+    expect(isValidPiece(rotated.board, rotated.active!)).toBe(true)
+  })
+
+  it('keeps a rotation in place when every kick offset collides', () => {
+    const active = { type: 'T', rotation: 0, x: 3, y: 5 } as const
+    const occupied = new Set(
+      getPieceCells(active).map(({ x, y }) => `${x},${y}`),
+    )
+    const board: Board = createEmptyBoard().map((row, y) =>
+      row.map((_, x): Cell => (occupied.has(`${x},${y}`) ? null : 'Z')),
+    )
+    const initial = stateWith(active, board)
+
+    expect(isValidPiece(board, active)).toBe(true)
+    expect(applyAction(initial, 'rotate')).toBe(initial)
+  })
+
+  it('keeps O-piece rotation unchanged', () => {
+    const initial = stateWith({ type: 'O', rotation: 0, x: 3, y: 5 })
+
+    expect(applyAction(initial, 'rotate')).toBe(initial)
   })
 })
 

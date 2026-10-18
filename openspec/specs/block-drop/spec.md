@@ -1,3 +1,6 @@
+Warning: truncated output (original token count: 8417)
+Total output lines: 595
+
 # Block Drop Specification
 
 ## Purpose
@@ -40,17 +43,38 @@ the same states.
 
 ### Requirement: Core falling-block gameplay
 Block Drop SHALL support automatic descent, horizontal movement, clockwise
-rotation, soft drop, and hard drop. Movement SHALL not place cells outside the
-playfield or through locked cells, pieces SHALL lock when they can no longer
-descend, and every fully occupied row SHALL be removed after locking.
+rotation, soft drop, and hard drop. When a clockwise rotation does not fit at
+its current position, the rules SHALL try horizontal offsets in this order:
+`0, +1, -1` for J, L, S, T, and Z pieces; `0, +1, -1, +2, -2` for I pieces.
+The first valid position SHALL be used. The rules SHALL refuse the rotation if
+every candidate collides. Rotation kicks SHALL NOT shift pieces vertically. The
+O piece SHALL remain unchanged when rotated. Movement SHALL not place cells
+outside the playfield or through locked cells, pieces SHALL lock when they can
+no longer descend, and every fully occupied row SHALL be removed after locking.
+
+#### Scenario: Rotation uses the first valid horizontal offset
+- **WHEN** a clockwise rotation collides at its current position and one or more listed horizontal offsets produce a valid position
+- **THEN** the piece rotates at the first valid offset in the documented order
 
 #### Scenario: Valid movement
-- **WHEN** the user requests movement or rotation into a valid position
+- **WHEN** the user requests horizontal movement or rotation into a valid position
 - **THEN** the active piece assumes the requested position
 
-#### Scenario: Invalid movement
-- **WHEN** the user requests movement or rotation that would collide with a boundary or locked cell
+#### Scenario: Invalid horizontal movement
+- **WHEN** the user requests horizontal movement that would collide with a boundary or locked cell
 - **THEN** the active piece remains in its prior valid position
+
+#### Scenario: Every horizontal offset collides
+- **WHEN** a clockwise rotation collides at its current position and every listed horizontal offset also collides
+- **THEN** the piece remains in its prior position and orientation
+
+#### Scenario: Rotation is blocked by the board edge
+- **WHEN** an I piece next to a wall rotates and its new orientation extends beyond the playfield
+- **THEN** the rules try the listed horizontal offsets and keep the first valid position within the playfield
+
+#### Scenario: O piece is rotated
+- **WHEN** the user requests a clockwise rotation for an O piece
+- **THEN** the O piece remains in the same position and orientation
 
 #### Scenario: Hard drop
 - **WHEN** the user activates hard drop
@@ -206,179 +230,7 @@ briefly highlight the displayed level unless reduced motion is preferred.
 Block Drop SHALL start at the saved device difficulty, or Medium when no valid
 preference exists, and SHALL provide an accessible three-position difficulty
 slider in the pause menu. Easy SHALL make automatic
-descent half as fast as the selected level curve, Medium SHALL use the level
-curve unchanged, and Hard SHALL make it 1.5 times as fast, subject to the
-80-millisecond minimum interval. The same 0.5×, 1×, or 1.5× setting SHALL
-scale future manual score awards. Changing difficulty SHALL NOT change the
-current score, line progression, or level. The selected difficulty and its
-multiplier SHALL be visible in the game HUD while playing, paused, and at game
-over. A selection SHALL remain selected after restarting and SHALL be restored
-the next time Block Drop is opened on the same device. Missing, invalid, or
-unavailable stored preferences SHALL use Medium without preventing play.
-
-#### Scenario: Difficulty slider is inspected
-- **WHEN** the user opens the pause menu
-- **THEN** the slider exposes Easy, Medium, and Hard as its three named choices and starts at the saved difficulty, or Medium when no valid preference exists
-
-#### Scenario: Difficulty is visible during play
-- **WHEN** the game is playing, paused, or over
-- **THEN** the HUD shows the selected difficulty and its speed and score multiplier
-
-#### Scenario: Difficulty is restored on a later launch
-- **WHEN** the user selects a difficulty and opens Block Drop again later on the same device
-- **THEN** the game starts at the saved difficulty and shows it in the HUD
-
-#### Scenario: Stored difficulty is invalid or unavailable
-- **WHEN** the saved preference is not Easy, Medium, or Hard, or storage cannot be read
-- **THEN** a new game starts at Medium and remains playable
-
-#### Scenario: Easy is selected
-- **WHEN** the user selects Easy and resumes at Level 1
-- **THEN** automatic descent occurs every 1400 milliseconds
-
-#### Scenario: Hard is selected
-- **WHEN** the user selects Hard and resumes at Level 1
-- **THEN** automatic descent occurs every 467 milliseconds
-
-#### Scenario: Difficulty is changed while paused
-- **WHEN** the user changes difficulty in the pause menu
-- **THEN** the board, active piece, next piece, score, lines, and level stay unchanged until play resumes, and the new choice is saved for the next launch
-
-#### Scenario: Difficulty changes future scoring
-- **WHEN** the user changes difficulty while paused and then earns points
-- **THEN** only future soft-drop, hard-drop, and line-clear awards use the newly selected speed multiplier
-
-#### Scenario: Restart after choosing difficulty
-- **WHEN** the user restarts during the same game session after changing difficulty
-- **THEN** lines, level, and score reset while the selected difficulty remains active and saved
-
-### Requirement: Line-clear callout
-When a lock clears lines, Block Drop SHALL briefly show a callout over the
-playfield with the points earned and the size of the clear. The callout SHALL
-NOT be the only way this information is conveyed, SHALL NOT block input once
-line-clear feedback ends, and SHALL appear without movement when reduced motion
-is preferred.
-
-#### Scenario: Lines are cleared
-- **WHEN** a lock clears one or more lines
-- **THEN** a callout shows the points awarded and names the clear size, then disappears shortly after the line-clear feedback ends
-
-#### Scenario: Reduced motion is preferred
-- **WHEN** reduced motion is preferred and lines are cleared
-- **THEN** the callout appears and disappears without animated movement
-
-### Requirement: Next-piece preview
-Block Drop SHALL identify and visualize the exact tetromino that will become
-active after the current piece locks. The preview SHALL use the piece's initial
-orientation, SHALL remain consistent with seeded piece generation, and SHALL
-center the occupied-cell bounds of every supported tetromino horizontally and
-vertically within a preview frame large enough to show the four-cell I piece
-without clipping or changing cell scale.
-
-#### Scenario: Game starts
-- **WHEN** a new game creates its first active piece
-- **THEN** the following piece is immediately shown in the next-piece preview
-
-#### Scenario: Active piece locks
-- **WHEN** the active piece locks and the previewed piece enters play
-- **THEN** the preview updates to the subsequent generated piece
-
-#### Scenario: Any supported piece is previewed
-- **WHEN** the next piece is any of the seven supported tetrominoes
-- **THEN** its occupied-cell bounds are centered on the same horizontal and vertical midpoint without clipping
-
-#### Scenario: Preview is inspected semantically
-- **WHEN** a user or assistive technology inspects the next-piece preview
-- **THEN** both a shape visualization and a readable tetromino identifier are available
-
-### Requirement: Manual pause and resume
-Block Drop SHALL let the user pause and resume an active game without changing
-the board, active piece, next piece, or score. While paused, gravity and
-movement, rotation, soft-drop, and hard-drop actions SHALL have no effect.
-
-#### Scenario: User pauses active play
-- **WHEN** the user activates pause during an active game
-- **THEN** the state becomes paused and the current board, piece, preview, and score remain unchanged
-
-#### Scenario: Time passes while paused
-- **WHEN** animation frames continue while the game is paused
-- **THEN** the active piece does not descend and no paused time accumulates toward a later gravity step
-
-#### Scenario: Gameplay input arrives while paused
-- **WHEN** the user requests movement, rotation, soft drop, or hard drop while paused
-- **THEN** the game state remains unchanged
-
-#### Scenario: User resumes
-- **WHEN** the user activates resume from the paused state
-- **THEN** active play continues from the same board, piece, preview, and score with a fresh gravity interval
-
-#### Scenario: User restarts while paused
-- **WHEN** the user activates restart from the paused state
-- **THEN** a fresh unpaused game starts with score zero
-
-### Requirement: Game over and restart
-Block Drop SHALL end the game when a newly spawned piece has no valid position
-and SHALL allow the user to start a fresh game.
-
-#### Scenario: Spawn area is obstructed
-- **WHEN** the next piece cannot occupy its initial position
-- **THEN** automatic descent and gameplay actions stop and the game-over state is shown
-
-#### Scenario: Restart after game over
-- **WHEN** the user activates restart from the game-over state
-- **THEN** a new game starts with an empty playfield and an active piece
-
-### Requirement: Keyboard and touch play
-Every gameplay action SHALL be available through visible touch controls and
-through keyboard controls, with both input methods producing the same logical
-actions. The visible controls SHALL use familiar directional and action labels,
-and the pause control SHALL become a resume control while paused. Pointer and
-touch activation of a gameplay control SHALL apply its action when the control
-is pressed rather than when it is released. Holding the left, right, or
-soft-drop control SHALL repeat its action after an initial delay of 170
-milliseconds and then every 50 milliseconds until the pointer is released or
-cancelled, or the game leaves active play. Rotation and hard drop SHALL NOT
-repeat while held. Keyboard and assistive-technology activation of a visible
-control SHALL apply its action exactly once.
-
-#### Scenario: Touch action
-- **WHEN** the user presses a visible movement, rotation, soft-drop, or hard-drop control
-- **THEN** the corresponding logical action is applied immediately on press
-
-#### Scenario: Short tap on a repeatable control
-- **WHEN** the user presses and releases the left, right, or soft-drop control within 170 milliseconds
-- **THEN** the corresponding logical action is applied exactly once
-
-#### Scenario: Holding a repeatable control
-- **WHEN** the user holds the left, right, or soft-drop control during active play
-- **THEN** the action is applied on press, again after 170 milliseconds, and then every 50 milliseconds until release
-
-#### Scenario: Holding a non-repeatable control
-- **WHEN** the user holds the rotate or hard-drop control
-- **THEN** the action is applied once
-
-#### Scenario: Play stops during a hold
-- **WHEN** the game pauses, begins line-clear feedback, or reaches game over while a control is held
-- **THEN** repetition stops and does not resume until the control is pressed again
-
-#### Scenario: Two controls are used together
-- **WHEN** the user holds one movement control and presses another gameplay control
-- **THEN** both controls apply their actions independently
-
-#### Scenario: Keyboard action
-- **WHEN** the active game receives the documented key for a movement, rotation, soft-drop, hard-drop, pause/resume, or restart action
-- **THEN** the same logical action as the corresponding visible control is applied
-
-#### Scenario: Control activated without a pointer
-- **WHEN** a visible control is activated by keyboard or assistive technology
-- **THEN** its logical action is applied exactly once
-
-#### Scenario: Control meaning is inspected
-- **WHEN** a user or assistive technology inspects a gameplay control
-- **THEN** its movement, drop, pause/resume, or restart action is unambiguous without requiring interpretation of an icon alone
-
-### Requirement: Clear control hierarchy and feedback
-Block Drop SHALL present catalog, navigation, movement, drop, pause, and restart controls with consistent touch-friendly sizing and a visual hierarchy that distinguishes primary gameplay actions from secondary session actions. Gameplay controls SHALL follow the visual and reading order left, right, soft drop, rotate, and hard drop, with left and right adjacent. On portrait phone viewports, left, right, and soft drop SHALL form a cluster at the left edge and rotate and hard drop SHALL form a cluster at the right edge, with each target at least 56 by 56 CSS pixels. Every control SHALL expose visible keyboard focus and appropriate hover, pressed, and disabled feedback without relying on color alone.
+descent half…2417 tokens truncated…control SHALL expose visible keyboard focus and appropriate hover, pressed, and disabled feedback without relying on color alone.
 
 #### Scenario: User scans the gameplay controls
 - **WHEN** the Block Drop play screen is presented

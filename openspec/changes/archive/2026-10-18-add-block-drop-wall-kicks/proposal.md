@@ -23,4 +23,4 @@ None.
 - Affects the `rotate` case in `rules.ts` and the rules tests. The landing preview, controller, and presentation pick up the change automatically.
 - Seeded replay stays deterministic. Replays recorded under the old rules may diverge after a rotation that now succeeds.
 - No new dependencies, APIs, or persisted data.
-- Last of six planned Block Drop changes. It does not depend on the others and can ship at any point.
+- A focused Block Drop rules change. It does not depend on the difficulty preference or persistence work.
