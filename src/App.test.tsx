@@ -135,7 +135,7 @@ describe('App', () => {
     window.localStorage.clear()
   })
 
-  it('launches Block Drop, routes touch actions, and returns with cleanup', () => {
+  it('launches Block Drop and cleans up when history changes', () => {
     const dispatch = vi.fn()
     const destroy = vi.fn()
     const factory: BlockDropControllerFactory = vi.fn(() => ({
@@ -200,10 +200,16 @@ describe('App', () => {
     expect(screen.getByRole('button', { name: 'Hold piece' }))
       .toHaveAttribute('aria-keyshortcuts', 'C')
 
-    fireEvent.click(screen.getByRole('button', { name: /catalog/i }))
+    expect(
+      screen.queryByRole('button', { name: /catalog/i }),
+    ).not.toBeInTheDocument()
+    window.history.replaceState(null, '', '/games/')
+    fireEvent(window, new PopStateEvent('popstate'))
     expect(destroy).toHaveBeenCalledOnce()
     expect(window.location.search).toBe('')
-    expect(screen.getByRole('button', { name: 'Play Block Drop' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Play Block Drop' }),
+    ).toBeInTheDocument()
   })
 
   it('acts on pointer press and repeats only after the configured delay', () => {
@@ -214,7 +220,7 @@ describe('App', () => {
       destroy: vi.fn(),
       getState: () => createGame(5),
     })
-    render(<BlockDrop onReturn={vi.fn()} controllerFactory={factory} />)
+    render(<BlockDrop controllerFactory={factory} />)
     const left = screen.getByRole('button', { name: 'Move left' })
 
     dispatchPointer(left, 'pointerdown')
@@ -257,7 +263,7 @@ describe('App', () => {
         destroy: vi.fn(),
         getState: () => createGame(5),
       })
-      render(<BlockDrop onReturn={vi.fn()} controllerFactory={factory} />)
+      render(<BlockDrop controllerFactory={factory} />)
       const right = screen.getByRole('button', { name: 'Move right' })
 
       dispatchPointer(right, 'pointerdown')
@@ -292,7 +298,7 @@ describe('App', () => {
         publish = onStateChange
         return { dispatch, destroy: vi.fn(), getState: () => initial }
       }
-      render(<BlockDrop onReturn={vi.fn()} controllerFactory={factory} />)
+      render(<BlockDrop controllerFactory={factory} />)
       const left = screen.getByRole('button', { name: 'Move left' })
 
       dispatchPointer(left, 'pointerdown')
@@ -314,7 +320,7 @@ describe('App', () => {
       getState: () => createGame(5),
     })
     const { unmount } = render(
-      <BlockDrop onReturn={vi.fn()} controllerFactory={factory} />,
+      <BlockDrop controllerFactory={factory} />,
     )
     const left = screen.getByRole('button', { name: 'Move left' })
     const rotate = screen.getByRole('button', { name: 'Rotate clockwise' })
@@ -363,7 +369,7 @@ describe('App', () => {
       destroy: vi.fn(),
       getState: () => createGame(5),
     })
-    render(<BlockDrop onReturn={vi.fn()} controllerFactory={factory} />)
+    render(<BlockDrop controllerFactory={factory} />)
     const left = screen.getByRole('button', { name: 'Move left' })
     const rotate = screen.getByRole('button', { name: 'Rotate clockwise' })
     const drop = screen.getByRole('button', { name: 'Hard drop' })
@@ -398,7 +404,7 @@ describe('App', () => {
       }
     }
 
-    render(<BlockDrop onReturn={vi.fn()} controllerFactory={factory} />)
+    render(<BlockDrop controllerFactory={factory} />)
     act(() => publish?.(initial, { clearing: false, locked: true }))
     act(() =>
       publish?.(initial, { clearing: true, clearedLines: 1, locked: true }),
@@ -431,7 +437,7 @@ describe('App', () => {
         }
       }
 
-      render(<BlockDrop onReturn={vi.fn()} controllerFactory={factory} />)
+      render(<BlockDrop controllerFactory={factory} />)
       act(() => publish?.(initial, { clearing: false, locked: true }))
       expect(mock.vibrate).not.toHaveBeenCalled()
       mock.restore()
@@ -539,7 +545,7 @@ describe('App', () => {
       getState: () => gameOver,
     })
 
-    render(<BlockDrop onReturn={vi.fn()} controllerFactory={factory} />)
+    render(<BlockDrop controllerFactory={factory} />)
     const card = screen.getByRole('group', { name: 'Game over' })
     expect(within(card).getByText('Final score')).toBeInTheDocument()
     expect(within(card).getByText('Best score')).toBeInTheDocument()
@@ -575,7 +581,7 @@ describe('App', () => {
       }
     }
 
-    render(<BlockDrop onReturn={vi.fn()} controllerFactory={factory} />)
+    render(<BlockDrop controllerFactory={factory} />)
     fireEvent.click(screen.getByRole('button', { name: 'Pause game' }))
     expect(dispatch).toHaveBeenCalledWith('pause')
 
@@ -649,7 +655,7 @@ describe('App', () => {
       }
     }
 
-    render(<BlockDrop onReturn={vi.fn()} controllerFactory={factory} />)
+    render(<BlockDrop controllerFactory={factory} />)
     fireEvent.click(screen.getByRole('button', { name: 'Pause game' }))
     act(() => {
       state = { ...state, status: 'paused' }
@@ -689,7 +695,7 @@ describe('App', () => {
       }
     }
 
-    render(<BlockDrop onReturn={vi.fn()} controllerFactory={factory} />)
+    render(<BlockDrop controllerFactory={factory} />)
 
     expect(initialDifficulty).toBe('hard')
     expectHudDifficulty('Hard', '1.5×')
@@ -718,7 +724,7 @@ describe('App', () => {
       }
     }
 
-    render(<BlockDrop onReturn={vi.fn()} controllerFactory={factory} />)
+    render(<BlockDrop controllerFactory={factory} />)
 
     expect(initialDifficulty).toBe('medium')
     expectHudDifficulty('Medium', '1×')
@@ -738,7 +744,7 @@ describe('App', () => {
       getState: () => gameOver,
     })
 
-    render(<BlockDrop onReturn={vi.fn()} controllerFactory={factory} />)
+    render(<BlockDrop controllerFactory={factory} />)
 
     const card = screen.getByRole('group', { name: 'Game over' })
     const scores = card.querySelectorAll('.game-over-scores dd')
@@ -768,7 +774,7 @@ describe('App', () => {
         getState: () => gameOver,
       })
 
-      render(<BlockDrop onReturn={vi.fn()} controllerFactory={factory} />)
+      render(<BlockDrop controllerFactory={factory} />)
 
       const scores = screen
         .getByRole('group', { name: 'Game over' })
@@ -793,7 +799,7 @@ describe('App', () => {
       getState: () => gameOver,
     })
 
-    render(<BlockDrop onReturn={vi.fn()} controllerFactory={factory} />)
+    render(<BlockDrop controllerFactory={factory} />)
 
     const scores = screen
       .getByRole('group', { name: 'Game over' })
@@ -818,7 +824,7 @@ describe('App', () => {
       getState: () => gameOver,
     })
 
-    render(<BlockDrop onReturn={vi.fn()} controllerFactory={factory} />)
+    render(<BlockDrop controllerFactory={factory} />)
 
     const scores = screen
       .getByRole('group', { name: 'Game over' })
@@ -859,7 +865,7 @@ describe('App', () => {
       }
     }
 
-    render(<BlockDrop onReturn={vi.fn()} controllerFactory={factory} />)
+    render(<BlockDrop controllerFactory={factory} />)
     expect(screen.getByText('Playing')).toBeInTheDocument()
     expectHudDifficulty('Medium', '1×')
     act(() =>
@@ -894,7 +900,7 @@ describe('App', () => {
       }
     }
     const { unmount } = render(
-      <BlockDrop onReturn={vi.fn()} controllerFactory={factory} />,
+      <BlockDrop controllerFactory={factory} />,
     )
 
     setVisibilityState('hidden')
@@ -930,7 +936,7 @@ describe('App', () => {
         destroy: vi.fn(),
         getState: () => initial,
       })
-      render(<BlockDrop onReturn={vi.fn()} controllerFactory={factory} />)
+      render(<BlockDrop controllerFactory={factory} />)
 
       setVisibilityState('hidden')
       fireEvent(document, new Event('visibilitychange'))
@@ -956,7 +962,7 @@ describe('App', () => {
       }
     }
 
-    render(<BlockDrop onReturn={vi.fn()} controllerFactory={factory} />)
+    render(<BlockDrop controllerFactory={factory} />)
     expect(screen.getByLabelText('Score: 7')).toBeInTheDocument()
     expect(
       screen.getByRole('complementary', { name: 'Game information' }),
@@ -1108,7 +1114,7 @@ describe('App', () => {
       }
     }
 
-    render(<BlockDrop onReturn={vi.fn()} controllerFactory={factory} />)
+    render(<BlockDrop controllerFactory={factory} />)
 
     for (const type of TETROMINOES) {
       act(() => publish?.({ ...initial, next: type }))
@@ -1155,7 +1161,7 @@ describe('App', () => {
       }
     }
 
-    render(<BlockDrop onReturn={vi.fn()} controllerFactory={factory} />)
+    render(<BlockDrop controllerFactory={factory} />)
     act(() => publish?.({ ...initial, score: 100 }, { clearing: true }))
 
     expect(screen.getByText('Clearing lines')).toBeInTheDocument()

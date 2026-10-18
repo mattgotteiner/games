@@ -73,7 +73,6 @@ export function App({
   const content =
     view === 'block-drop' ? (
       <BlockDrop
-        onReturn={() => navigate('catalog')}
         controllerFactory={blockDropControllerFactory}
       />
     ) : (

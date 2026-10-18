@@ -31,7 +31,6 @@ type BlockDropControllerHandle = Pick<
   Partial<Pick<BlockDropController, 'setDifficulty'>>
 
 export interface BlockDropProps {
-  readonly onReturn: () => void
   readonly controllerFactory?: BlockDropControllerFactory
 }
 
@@ -425,7 +424,6 @@ function ScoringGuide() {
 }
 
 export function BlockDrop({
-  onReturn,
   controllerFactory = createBlockDropController,
 }: BlockDropProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -727,15 +725,6 @@ export function BlockDrop({
   return (
     <main class="block-drop" aria-labelledby="block-drop-heading">
       <header class="game-header">
-        <button
-          class="button-quiet return-button"
-          type="button"
-          aria-label="Return to catalog"
-          onClick={onReturn}
-        >
-          <span class="control-symbol" aria-hidden="true">←</span>
-          <span class="button-caption">Catalog</span>
-        </button>
         <div class="game-title">
           <h1 id="block-drop-heading">Block Drop</h1>
         </div>
@@ -880,7 +869,7 @@ export function BlockDrop({
                       <dd>{bestScore}</dd>
                     </div>
                   </dl>
-                  <div class="overlay-actions">
+                  <div class="overlay-actions game-over-actions">
                     <button
                       class="button-primary"
                       type="button"
@@ -889,14 +878,6 @@ export function BlockDrop({
                       onClick={() => act('restart')}
                     >
                       Play again
-                    </button>
-                    <button
-                      class="button-secondary"
-                      type="button"
-                      aria-label="Back to catalog"
-                      onClick={onReturn}
-                    >
-                      Back to catalog
                     </button>
                   </div>
                 </div>

@@ -113,8 +113,8 @@ half speed, Medium is the default pace, and Hard is 1.5× faster. The user
 reviewed the slider E2E and confirmed the feature works. Scoring is also scaled
 by difficulty, and the selected difficulty and multiplier appear in the HUD
 and persist on the same device. The user confirmed persistence after reload.
-The current full automated check passes 215 unit/component tests, a production
-build, and all 13 Chromium flows.
+The last full automated check, before the active change, passed 215
+unit/component tests, a production build, and all 13 Chromium flows.
 
 The Help dialog keeps beginner instructions, scoring, and controls in one
 pause-menu entry. Browser coverage verifies its content order, dismissal, focus
@@ -162,7 +162,15 @@ A generalized game registry/runtime remains deferred.
 Introduce shared platform abstractions only after another game exposes
 concrete duplication.
 
-There are no additional planned changes.
+The only active change is `remove-block-drop-catalog-buttons`, described below.
+
+## Active OpenSpec Change
+
+`remove-block-drop-catalog-buttons` removes both the game-over `Back to
+catalog` action and the header `Catalog` button. Browser Back remains the way
+to return to the catalog after launch, and the spec plus implementation are
+in the working tree. Existing navigation coverage was updated; integrated
+checks and phone review are still pending.
 
 ## Most Recent OpenSpec Change
 

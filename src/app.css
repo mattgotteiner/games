@@ -292,14 +292,6 @@ button:disabled {
   padding: 0.35rem 0.4rem;
 }
 
-.return-button {
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-  font-size: 0.8rem;
-}
-
 .session-actions {
   display: flex;
   flex: 0 0 auto;
@@ -317,8 +309,7 @@ button:disabled {
   font-size: 0.65rem;
 }
 
-.session-action .control-symbol,
-.return-button .control-symbol {
+.session-action .control-symbol {
   font-size: 1rem;
 }
 
@@ -429,6 +420,15 @@ button:disabled {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.45rem;
+}
+
+.game-over-actions {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.game-over-actions button {
+  width: min(100%, 14rem);
+  justify-self: center;
 }
 
 .overlay-actions button {
@@ -1232,7 +1232,6 @@ button:disabled {
     padding-left: 0.35rem;
   }
 
-  .return-button .button-caption,
   .session-action .button-caption {
     display: none;
   }

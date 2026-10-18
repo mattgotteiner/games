@@ -8,16 +8,18 @@ remains available from the installed offline application.
 
 ## Requirements
 
-### Requirement: Catalog launch and return
-The catalog SHALL present Block Drop as one playable game and SHALL let the
-user return from an active game to the catalog.
+### Requirement: Catalog launch and browser return
+The catalog SHALL present Block Drop as one playable game. Block Drop SHALL
+NOT present an in-game `Catalog` or `Back to catalog` button. When Block Drop
+is launched from the catalog, browser Back SHALL return to the catalog and
+destroy the active session.
 
 #### Scenario: Launch Block Drop
 - **WHEN** the user activates the Block Drop play control
 - **THEN** the catalog is replaced by a new playable Block Drop session
 
-#### Scenario: Return to the catalog
-- **WHEN** the user activates the return control from Block Drop
+#### Scenario: Return to the catalog through browser history
+- **WHEN** the user uses browser Back after launching Block Drop from the catalog
 - **THEN** the active session is destroyed and the catalog presents Block Drop as available to play again
 
 ### Requirement: Deterministic falling-block rules
@@ -109,7 +111,7 @@ descend, and every fully occupied row SHALL be removed after locking.
 - **THEN** every completed row is removed and the rows above move downward
 
 ### Requirement: Line-clear feedback
-Block Drop SHALL visibly acknowledge every completed row before presenting the collapsed playfield. The feedback SHALL identify the exact completed rows, remain brief enough not to interrupt the pace of play, and SHALL NOT permit gravity or gameplay actions to advance the game until the feedback finishes. Restart and return-to-catalog actions SHALL remain available.
+Block Drop SHALL visibly acknowledge every completed row before presenting the collapsed playfield. The feedback SHALL identify the exact completed rows, remain brief enough not to interrupt the pace of play, and SHALL NOT permit gravity or gameplay actions to advance the game until the feedback finishes. Restart actions and browser Back navigation SHALL remain available.
 
 #### Scenario: One or more rows are completed
 - **WHEN** a locking piece completes one or more rows
@@ -440,7 +442,13 @@ of whitespace between Hold and either neighboring control group.
 ### Requirement: Game over and restart
 Block Drop SHALL end the game when a newly spawned piece has no valid position
 or when a piece locks with cells above visible row 0, and SHALL allow the user
-to start a fresh game.
+to start a fresh game. At game over, a card over the playfield SHALL present the
+final score, the best score, an indication when the final score set a new best,
+and a play-again action that receives focus. The game-over card SHALL NOT
+include a `Back to catalog` button, and the game header SHALL NOT expose a
+`Catalog` control. Browser Back SHALL return to the catalog when browser
+history includes the catalog launch. The game-over state SHALL be
+conveyed with readable text rather than Canvas-drawn text.
 
 #### Scenario: Spawn area is obstructed
 - **WHEN** the next piece cannot occupy its initial position
@@ -451,8 +459,13 @@ to start a fresh game.
 - **THEN** the game-over state is shown without changing the visible board
 
 #### Scenario: Restart after game over
-- **WHEN** the user activates restart from the game-over state
+- **WHEN** the user activates `Play again` from the game-over card
 - **THEN** a new game starts with an empty playfield and an active piece
+
+#### Scenario: Game-over card presents its actions
+- **WHEN** the game reaches game over
+- **THEN** the card shows the final score and best score, indicates a new best when applicable, and focuses `Play again`
+- **AND** neither the game-over card nor the game header shows a catalog button
 
 ### Requirement: Keyboard and touch play
 Every gameplay action SHALL be available through visible touch controls and
@@ -504,11 +517,11 @@ control SHALL apply its action exactly once.
 - **THEN** its movement, drop, pause/resume, or restart action is unambiguous without requiring interpretation of an icon alone
 
 ### Requirement: Clear control hierarchy and feedback
-Block Drop SHALL present catalog, navigation, movement, drop, pause, and restart controls with consistent touch-friendly sizing and a visual hierarchy that distinguishes primary gameplay actions from secondary session actions. Gameplay controls SHALL follow the visual and reading order left, right, soft drop, rotate, and hard drop, with left and right adjacent. On portrait phone viewports, left, right, and soft drop SHALL form a cluster at the left edge and rotate and hard drop SHALL form a cluster at the right edge, with each target at least 56 by 56 CSS pixels. Every control SHALL expose visible keyboard focus and appropriate hover, pressed, and disabled feedback without relying on color alone.
+Block Drop SHALL present movement, drop, pause, and restart controls with consistent touch-friendly sizing and a visual hierarchy that distinguishes primary gameplay actions from secondary session actions. Catalog navigation SHALL use browser history rather than an in-game catalog button. Gameplay controls SHALL follow the visual and reading order left, right, soft drop, rotate, and hard drop, with left and right adjacent. On portrait phone viewports, left, right, and soft drop SHALL form a cluster at the left edge and rotate and hard drop SHALL form a cluster at the right edge, with each target at least 56 by 56 CSS pixels. Every control SHALL expose visible keyboard focus and appropriate hover, pressed, and disabled feedback without relying on color alone.
 
 #### Scenario: User scans the gameplay controls
 - **WHEN** the Block Drop play screen is presented
-- **THEN** related movement and drop controls are visually grouped and pause, restart, and catalog actions are distinguishable from moment-to-moment gameplay actions
+- **THEN** related movement and drop controls are visually grouped and pause and restart actions are distinguishable from moment-to-moment gameplay actions
 
 #### Scenario: User scans movement controls
 - **WHEN** the movement control group is presented at any supported viewport
@@ -531,7 +544,7 @@ Block Drop SHALL present catalog, navigation, movement, drop, pause, and restart
 - **THEN** it is visibly and semantically unavailable while its label remains readable
 
 #### Scenario: User operates a touch control
-- **WHEN** the user targets a visible catalog, navigation, or gameplay button on a phone viewport
+- **WHEN** the user targets a visible gameplay or session button on a phone viewport
 - **THEN** the control provides a target of at least 44 by 44 CSS pixels
 
 ### Requirement: Optional haptic feedback
@@ -653,7 +666,7 @@ Leaving Block Drop SHALL stop its simulation and rendering and remove
 game-specific input and resize observation.
 
 #### Scenario: Active game is destroyed
-- **WHEN** the user returns to the catalog or the game component unmounts
+- **WHEN** browser Back returns to the catalog or the game component unmounts
 - **THEN** no game animation frame, timer, keyboard handler, or resize observer remains active
 
 ### Requirement: Offline play after first load

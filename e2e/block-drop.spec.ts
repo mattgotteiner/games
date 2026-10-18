@@ -595,7 +595,8 @@ test('plays Block Drop with touch and keyboard across phone orientations', async
   await expectGameFitsViewport(page)
   await expectMovementOrder(page)
 
-  await page.getByRole('button', { name: /catalog/i }).click()
+  await expect(page.getByRole('button', { name: /catalog/i })).toHaveCount(0)
+  await page.goBack()
   await expect(
     page.getByRole('button', { name: 'Play Block Drop' }),
   ).toBeVisible()
@@ -966,7 +967,10 @@ test('keeps the best score through reload and offline relaunch', async ({
   await expect(card.getByText('New best')).toBeVisible()
   await expect(scores.nth(0)).toHaveText(String(bestScore))
   await expect(scores.nth(1)).toHaveText(String(bestScore))
-  await expect(card.getByRole('button', { name: 'Back to catalog' })).toBeVisible()
+  await expect(
+    card.getByRole('button', { name: 'Back to catalog' }),
+  ).toHaveCount(0)
+  await expect(page.getByRole('button', { name: /catalog/i })).toHaveCount(0)
   await expectGameFitsViewport(page)
 
   await page.keyboard.press('r')
@@ -1023,6 +1027,4 @@ test('keeps the best score through reload and offline relaunch', async ({
   } else {
     await expect(offlineCard.getByText('New best')).toHaveCount(0)
   }
-  await offlineCard.getByRole('button', { name: 'Back to catalog' }).click()
-  await expect(page.getByRole('button', { name: 'Play Block Drop' })).toBeVisible()
 })
