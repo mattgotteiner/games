@@ -63,9 +63,10 @@ completed change retained for history.
 
 ## Planned OpenSpec Changes
 
-Six proposed Block Drop changes, not yet implemented. Apply them in this order,
-one PR each. Later changes modify requirements introduced by earlier ones, so
-archive each before applying the next.
+Six proposed Block Drop changes, applied in this order, one PR each. Later
+changes modify requirements introduced by earlier ones, so archive each
+before applying the next. `compact-block-drop-mobile-layout` has been
+implemented, reviewed E2E, and archived. `add-block-drop-ghost-piece` is next.
 
 1. `compact-block-drop-mobile-layout`: compact header, scoring guide moved
    into a help dialog, playfield-first layout (at least 540 px tall at 390 by

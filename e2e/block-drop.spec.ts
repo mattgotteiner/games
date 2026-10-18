@@ -85,7 +85,6 @@ async function expectGameFitsViewport(page: import('@playwright/test').Page) {
     page.getByLabel(/^Score:/),
     page.getByText(/^(Playing|Paused|Clearing lines|Game over)$/),
     page.getByRole('region', { name: /Next piece:/ }),
-    page.getByRole('region', { name: 'Scoring' }),
     page.locator('.game-controls'),
   ]
 
@@ -104,6 +103,23 @@ async function expectGameFitsViewport(page: import('@playwright/test').Page) {
 
   const canvasBox = await elements[0].boundingBox()
   expect(canvasBox!.width / canvasBox!.height).toBeCloseTo(0.5, 2)
+  const surfaceBox = await page.locator('.board-surface').boundingBox()
+  expect(surfaceBox).not.toBeNull()
+  expect(Math.abs(surfaceBox!.width - canvasBox!.width)).toBeLessThanOrEqual(4)
+  expect(Math.abs(surfaceBox!.height - canvasBox!.height)).toBeLessThanOrEqual(4)
+  expect(await page.locator('.action-controls button').count()).toBe(1)
+  for (const button of await page.getByRole('button').all()) {
+    const box = await button.boundingBox()
+    expect(box).not.toBeNull()
+    expect(box!.width).toBeGreaterThanOrEqual(44)
+    expect(box!.height).toBeGreaterThanOrEqual(44)
+    expect(box!.x + box!.width).toBeLessThanOrEqual(
+      await page.evaluate(() => window.innerWidth),
+    )
+    expect(box!.y + box!.height).toBeLessThanOrEqual(
+      await page.evaluate(() => window.innerHeight),
+    )
+  }
   expect(
     await page.evaluate(
       () => document.documentElement.scrollHeight <= window.innerHeight,
@@ -112,7 +128,11 @@ async function expectGameFitsViewport(page: import('@playwright/test').Page) {
 }
 
 async function expectScoringGuideVisible(page: import('@playwright/test').Page) {
-  const guide = page.getByRole('region', { name: 'Scoring' })
+  const wasPlaying = await page.getByText('Playing', { exact: true }).isVisible()
+  await page.getByRole('button', { name: 'Help' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Scoring and controls' })
+  await expect(dialog).toBeVisible()
+  const guide = dialog.getByRole('region', { name: 'Scoring' })
   await expect(guide).toBeVisible()
   for (const text of [
     'Soft drop',
@@ -128,6 +148,13 @@ async function expectScoringGuideVisible(page: import('@playwright/test').Page) 
     '4: +800',
   ]) {
     await expect(guide.getByText(text, { exact: true })).toBeVisible()
+  }
+  await expect(dialog.getByText('Keyboard controls')).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(dialog).not.toBeVisible()
+  await expect(page.getByRole('button', { name: 'Help' })).toBeFocused()
+  if (wasPlaying) {
+    await page.getByRole('button', { name: 'Resume game' }).click()
   }
 }
 
@@ -151,10 +178,7 @@ async function expectPreviewCentered(page: import('@playwright/test').Page) {
   )
 }
 
-async function expectMovementOrder(
-  page: import('@playwright/test').Page,
-  shortLandscape = false,
-) {
+async function expectMovementOrder(page: import('@playwright/test').Page) {
   const left = await page.getByRole('button', { name: 'Move left' }).boundingBox()
   const right = await page
     .getByRole('button', { name: 'Move right' })
@@ -176,11 +200,7 @@ async function expectMovementOrder(
   expect(left!.x + left!.width).toBeLessThanOrEqual(right!.x)
   expect(right!.x + right!.width).toBeLessThanOrEqual(rotate!.x)
 
-  if (shortLandscape) {
-    expect(softDrop!.y).toBeGreaterThanOrEqual(left!.y + left!.height)
-  } else {
-    expect(rotate!.x + rotate!.width).toBeLessThanOrEqual(softDrop!.x)
-  }
+  expect(rotate!.x + rotate!.width).toBeLessThanOrEqual(softDrop!.x)
 }
 
 test('plays Block Drop with touch and keyboard across phone orientations', async ({
@@ -224,6 +244,8 @@ test('plays Block Drop with touch and keyboard across phone orientations', async
   }
   const portraitBoard = await canvas.boundingBox()
   const portraitHud = await page.locator('.game-hud').boundingBox()
+  expect(portraitHud!.height).toBeLessThanOrEqual(64)
+  expect(portraitBoard!.height).toBeGreaterThanOrEqual(540)
   expect(portraitHud!.y + portraitHud!.height).toBeLessThanOrEqual(
     portraitBoard!.y,
   )
@@ -284,7 +306,7 @@ test('plays Block Drop with touch and keyboard across phone orientations', async
   )
   await expectGameFitsViewport(page)
   await expectPreviewCentered(page)
-  await expectMovementOrder(page, true)
+  await expectMovementOrder(page)
   await expectScoringGuideVisible(page)
   const landscapeBoard = await canvas.boundingBox()
   const landscapeHud = await page.locator('.game-hud').boundingBox()
@@ -298,13 +320,20 @@ test('plays Block Drop with touch and keyboard across phone orientations', async
   )
   await expectGameFitsViewport(page)
   await expectPreviewCentered(page)
-  await expectMovementOrder(page, true)
+  await expectMovementOrder(page)
   await expectScoringGuideVisible(page)
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= window.innerWidth,
     ),
   ).toBe(true)
+
+  await page.setViewportSize({ width: 320, height: 568 })
+  await expectGameFitsViewport(page)
+  await expectMovementOrder(page)
+  await page.setViewportSize({ width: 390, height: 844 })
+  await expectGameFitsViewport(page)
+  await expectMovementOrder(page)
 
   await page.getByRole('button', { name: /catalog/i }).click()
   await expect(
@@ -315,7 +344,7 @@ test('plays Block Drop with touch and keyboard across phone orientations', async
 test('presents a prominent right-side HUD and polished button states', async ({
   page,
 }) => {
-  await page.setViewportSize({ width: 1280, height: 720 })
+  await page.setViewportSize({ width: 1440, height: 900 })
   await page.goto('./')
 
   const play = page.getByRole('button', { name: 'Play Block Drop' })
@@ -396,7 +425,7 @@ test('animates an exact deterministic line clear and gates gameplay', async ({
   await page.keyboard.press('p')
   await expect(page.getByText('Clearing lines')).toBeVisible()
   await expect(canvas).not.toHaveAttribute('data-clearing-rows')
-  await expect(page.getByText('Playing')).toBeVisible()
+  await expect(page.getByText('Paused')).toBeVisible()
   await expect(page.getByLabel('Score: 442')).toBeVisible()
   await expect(
     page.getByRole('region', {

@@ -42,6 +42,8 @@ export interface BlockDropControllerOptions {
 
 export interface BlockDropPresentationState {
   readonly clearing: boolean
+  readonly clearedLines?: number
+  readonly action?: GameAction
 }
 
 export type BlockDropStateListener = (
@@ -111,8 +113,15 @@ export class BlockDropController {
 
   dispatch(action: GameAction): void {
     if (this.destroyed) return
-    if (this.lineClearEffect !== null && action !== 'restart') return
+    if (
+      this.lineClearEffect !== null &&
+      action !== 'restart' &&
+      action !== 'pause'
+    ) {
+      return
+    }
 
+    const previousStatus = this.state.status
     const result = applyActionWithEvents(this.state, action)
     this.state = result.state
     if (action === 'restart') {
@@ -125,7 +134,9 @@ export class BlockDropController {
     if (result.lineClear && !this.reducedMotion()) {
       this.startLineClear(result.lineClear)
     }
-    this.publish()
+    const announcedAction =
+      action === 'restart' && previousStatus === 'paused' ? action : undefined
+    this.publish(result.lineClear, announcedAction)
   }
 
   destroy(): void {
@@ -145,6 +156,12 @@ export class BlockDropController {
     const action = KEY_ACTIONS[event.key]
     if (action === undefined) return
     const target = event.target
+    if (
+      target instanceof Element &&
+      target.closest('dialog[open]') !== null
+    ) {
+      return
+    }
     if (
       action !== 'pause' &&
       action !== 'restart' &&
@@ -173,6 +190,7 @@ export class BlockDropController {
       this.elapsed += Math.min(Math.max(time - this.previousTime, 0), MAX_FRAME_MS)
       let changed = false
       let steps = 0
+      let lineClear: LineClearEvent | undefined
       while (this.elapsed >= GRAVITY_MS && steps < 2) {
         const result = stepGravityWithEvents(this.state)
         this.state = result.state
@@ -180,6 +198,7 @@ export class BlockDropController {
         changed = true
         steps += 1
         if (result.lineClear) {
+          lineClear = result.lineClear
           this.elapsed = 0
           if (!this.reducedMotion()) {
             this.startLineClear(result.lineClear)
@@ -187,7 +206,7 @@ export class BlockDropController {
           break
         }
       }
-      if (changed) this.publish()
+      if (changed) this.publish(lineClear)
     }
     this.previousTime = time
     this.frameId = this.requestFrame(this.tick)
@@ -215,7 +234,7 @@ export class BlockDropController {
     this.draw(cssWidth, cssHeight, ratio)
   }
 
-  private publish(): void {
+  private publish(lineClear?: LineClearEvent, action?: GameAction): void {
     this.draw(
       this.canvas.width / this.pixelRatio,
       this.canvas.height / this.pixelRatio,
@@ -223,6 +242,8 @@ export class BlockDropController {
     )
     this.onStateChange(this.state, {
       clearing: this.lineClearEffect !== null,
+      ...(lineClear ? { clearedLines: lineClear.rows.length } : {}),
+      ...(action ? { action } : {}),
     })
   }
 

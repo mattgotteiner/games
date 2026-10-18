@@ -247,7 +247,7 @@ describe('BlockDropController', () => {
     expect(canvas.dataset.clearingRows).toBe('19')
     expect(onStateChange).toHaveBeenLastCalledWith(
       expect.objectContaining({ score: 100 }),
-      { clearing: true },
+      { clearing: true, clearedLines: 1 },
     )
     expect(vi.mocked(context.fillRect)).toHaveBeenCalledWith(0, 342, 180, 18)
 
@@ -275,7 +275,6 @@ describe('BlockDropController', () => {
       'rotate',
       'soft-drop',
       'hard-drop',
-      'pause',
     ] as const) {
       controller.dispatch(action)
       expect(controller.getState()).toBe(cleared)
@@ -316,6 +315,7 @@ describe('BlockDropController', () => {
     expect(canvas.dataset.clearingRows).toBeUndefined()
     expect(onStateChange).toHaveBeenLastCalledWith(controller.getState(), {
       clearing: false,
+      clearedLines: 1,
     })
     controller.destroy()
   })

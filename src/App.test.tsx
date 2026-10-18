@@ -56,6 +56,16 @@ describe('App', () => {
     expect(window.location.search).toBe('?game=block-drop')
     expect(screen.getByRole('heading', { name: 'Block Drop' })).toBeInTheDocument()
     expect(screen.getByText('Playing')).toBeInTheDocument()
+    const sessionActions = screen.getByRole('group', {
+      name: 'Session actions',
+    })
+    expect(within(sessionActions).getByRole('button', { name: 'Pause game' }))
+      .toBeInTheDocument()
+    expect(within(sessionActions).getByRole('button', { name: 'Help' }))
+      .toBeInTheDocument()
+    expect(within(sessionActions).getByRole('button', { name: 'Restart game' }))
+      .toBeInTheDocument()
+    expect(container.querySelectorAll('.action-controls button')).toHaveLength(1)
     expect(
       Array.from(
         container.querySelectorAll<HTMLButtonElement>('.movement-controls button'),
@@ -65,9 +75,11 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Move left' }))
     fireEvent.click(screen.getByRole('button', { name: 'Move right' }))
     fireEvent.click(screen.getByRole('button', { name: 'Rotate clockwise' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Hard drop' }))
     expect(dispatch).toHaveBeenNthCalledWith(1, 'left')
     expect(dispatch).toHaveBeenNthCalledWith(2, 'right')
     expect(dispatch).toHaveBeenNthCalledWith(3, 'rotate')
+    expect(dispatch).toHaveBeenNthCalledWith(4, 'hard-drop')
 
     fireEvent.click(screen.getByRole('button', { name: /catalog/i }))
     expect(destroy).toHaveBeenCalledOnce()
@@ -105,9 +117,9 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Play Block Drop' }))
 
     expect(screen.getByRole('heading', { name: 'Block Drop' })).toBeInTheDocument()
-    expect(screen.getByRole('status')).toHaveTextContent(
-      'Downloading the latest version',
-    )
+    expect(
+      screen.getByText(/Downloading the latest version of Games/),
+    ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Move left' })).toBeEnabled()
   })
 
@@ -216,6 +228,7 @@ describe('App', () => {
   it('displays score semantically through play, game over, and restart', () => {
     let publish: ((state: ReturnType<typeof createGame>) => void) | undefined
     const playing = { ...createGame(5), score: 7 }
+    const dispatch = vi.fn()
     const factory: BlockDropControllerFactory = (
       _canvas,
       _container,
@@ -223,7 +236,7 @@ describe('App', () => {
     ) => {
       publish = onStateChange
       return {
-        dispatch: vi.fn(),
+        dispatch,
         destroy: vi.fn(),
         getState: () => playing,
       }
@@ -234,7 +247,11 @@ describe('App', () => {
     expect(
       screen.getByRole('complementary', { name: 'Game information' }),
     ).toBeInTheDocument()
-    const scoring = screen.getByRole('region', { name: 'Scoring' })
+    fireEvent.click(screen.getByRole('button', { name: 'Help' }))
+    expect(dispatch).toHaveBeenCalledOnce()
+    expect(dispatch).toHaveBeenCalledWith('pause')
+    const dialog = screen.getByRole('dialog', { name: 'Scoring and controls' })
+    const scoring = within(dialog).getByRole('region', { name: 'Scoring' })
     expect(within(scoring).getByText('Soft drop')).toBeInTheDocument()
     expect(within(scoring).getByText('+1 / row')).toBeInTheDocument()
     expect(within(scoring).getByText('Hard drop')).toBeInTheDocument()
@@ -245,11 +262,29 @@ describe('App', () => {
     for (const value of ['1: +100', '2: +300', '3: +500', '4: +800']) {
       expect(within(scoring).getByText(value)).toBeInTheDocument()
     }
+    expect(within(dialog).getByText('Keyboard controls')).toBeInTheDocument()
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Close help' }))
+    expect(screen.getByRole('button', { name: 'Help' })).toHaveFocus()
+    const announcements = screen.getByRole('status', {
+      name: 'Game announcements',
+    })
+    act(() =>
+      publish?.({ ...playing, score: 8 }, { clearing: false, action: 'soft-drop' }),
+    )
+    expect(announcements).toBeEmptyDOMElement()
+    act(() =>
+      publish?.(
+        { ...playing, score: 307 },
+        { clearing: true, clearedLines: 2 },
+      ),
+    )
+    expect(announcements).toHaveTextContent('Cleared 2 lines. Score 307.')
 
     act(() =>
       publish?.({ ...playing, active: null, status: 'game-over', score: 42 }),
     )
     expect(screen.getByText('Game over')).toBeInTheDocument()
+    expect(announcements).toHaveTextContent('Game over.')
     expect(screen.getByLabelText('Score: 42')).toBeInTheDocument()
 
     act(() => publish?.(createGame(5)))
