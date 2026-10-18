@@ -7,6 +7,7 @@ import {
   getGravityInterval,
   getLandingPiece,
   getPieceCells,
+  setDifficulty as updateDifficulty,
   stepGravityWithEvents,
   type BlockDropState,
   type GameAction,
@@ -62,7 +63,6 @@ interface LineClearEffect {
 
 export class BlockDropController {
   private state: BlockDropState
-  private difficulty: BlockDropDifficulty = 'medium'
   private frameId: number | null = null
   private previousTime: number | null = null
   private elapsed = 0
@@ -116,10 +116,13 @@ export class BlockDropController {
   }
 
   setDifficulty(difficulty: BlockDropDifficulty): void {
-    if (this.destroyed || this.difficulty === difficulty) return
-    this.difficulty = difficulty
+    if (this.destroyed) return
+    const nextState = updateDifficulty(this.state, difficulty)
+    if (nextState === this.state) return
+    this.state = nextState
     this.elapsed = 0
     this.previousTime = null
+    this.publish()
   }
 
   dispatch(action: GameAction): void {
@@ -200,7 +203,7 @@ export class BlockDropController {
     } else if (this.previousTime !== null && this.state.status === 'playing') {
       const gravityInterval = getGravityInterval(
         this.state.level,
-        this.difficulty,
+        this.state.difficulty,
       )
       this.elapsed += Math.min(
         Math.max(time - this.previousTime, 0),
@@ -213,7 +216,7 @@ export class BlockDropController {
       while (steps < 2) {
         const currentInterval = getGravityInterval(
           this.state.level,
-          this.difficulty,
+          this.state.difficulty,
         )
         if (this.elapsed < currentInterval) break
         const result = stepGravityWithEvents(this.state)

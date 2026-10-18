@@ -140,17 +140,17 @@ async function expectScoringGuideVisible(page: import('@playwright/test').Page) 
   await expect(guide).toBeVisible()
   for (const text of [
     'Soft drop',
-    '+1 / row',
+    '+1 / row × difficulty',
     'Hard drop',
-    '+2 / row',
+    '+2 / row × difficulty',
     'Gravity',
     '+0',
     'Lines cleared',
-    '1: +100 × level',
-    '2: +300 × level',
-    '3: +500 × level',
-    '4: +800 × level',
-    'Line-clear points multiply by your level. Level increases every 10 lines and makes pieces fall faster.',
+    '1: +100 × level × difficulty',
+    '2: +300 × level × difficulty',
+    '3: +500 × level × difficulty',
+    '4: +800 × level × difficulty',
+    'Difficulty multiplier: Easy 0.5×, Medium 1×, Hard 1.5×. Line-clear points also multiply by your level. Level increases every 10 lines and makes pieces fall faster.',
   ]) {
     await expect(guide.getByText(text, { exact: true })).toBeVisible()
   }
@@ -692,6 +692,54 @@ test('opens Block Drop directly and follows browser history', async ({ page }) =
   await expect(
     page.getByRole('heading', { level: 1, name: 'Block Drop' }),
   ).toBeVisible()
+})
+
+test('scales drop points by pause difficulty and preserves fractional scores', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('./?game=block-drop')
+
+  await page.getByRole('button', { name: 'Pause game' }).click()
+  const pause = page.getByRole('group', { name: 'Paused' })
+  const difficulty = pause.getByRole('slider', { name: 'Difficulty' })
+  await difficulty.press('Home')
+  await expect(difficulty).toHaveAttribute('aria-valuetext', 'Easy, half speed')
+  await pause.getByRole('button', { name: 'Resume game' }).click()
+
+  await page.keyboard.press('ArrowDown')
+  await expect(page.getByLabel('Score: 0.5')).toBeVisible()
+
+  await page.getByRole('button', { name: 'Pause game' }).click()
+  const pausedAgain = page.getByRole('group', { name: 'Paused' })
+  const difficultyAgain = pausedAgain.getByRole('slider', { name: 'Difficulty' })
+  await difficultyAgain.press('End')
+  await expect(difficultyAgain).toHaveAttribute(
+    'aria-valuetext',
+    'Hard, 1.5× speed',
+  )
+  await expect(page.getByLabel('Score: 0.5')).toBeVisible()
+  await pausedAgain.getByRole('button', { name: 'Resume game' }).click()
+  await page.keyboard.press('ArrowDown')
+  await expect(page.getByLabel('Score: 2')).toBeVisible()
+
+  await page.getByRole('button', { name: 'Pause game' }).click()
+  await page.getByRole('group', { name: 'Paused' })
+    .getByRole('button', { name: 'Restart game' })
+    .click()
+  await expect(page.getByLabel('Score: 0')).toBeVisible()
+
+  await page.getByRole('button', { name: 'Pause game' }).click()
+  await expect(
+    page.getByRole('group', { name: 'Paused' }).getByRole('slider', {
+      name: 'Difficulty',
+    }),
+  ).toHaveAttribute('aria-valuetext', 'Hard, 1.5× speed')
+  await page.getByRole('group', { name: 'Paused' })
+    .getByRole('button', { name: 'Resume game' })
+    .click()
+  await page.keyboard.press('ArrowDown')
+  await expect(page.getByLabel('Score: 1.5')).toBeVisible()
 })
 
 test('keeps the best score through reload and offline relaunch', async ({

@@ -31,6 +31,7 @@ export interface BlockDropState {
   readonly randomState: number
   readonly initialSeed: number
   readonly status: GameStatus
+  readonly difficulty: BlockDropDifficulty
   readonly score: number
   readonly lines: number
   readonly level: number
@@ -258,6 +259,7 @@ export function createGame(seed: number): BlockDropState {
     randomState: first.randomState,
     initialSeed: seed >>> 0,
     status: 'playing',
+    difficulty: 'medium',
     score: 0,
     lines: 0,
     level: 1,
@@ -319,7 +321,8 @@ function lockActive(state: BlockDropState): BlockDropTransition {
   const cleared = clearFullRows(board)
   const clearPoints =
     (BLOCK_DROP_SCORING.lineClears[cleared.completedRows.length] ?? 0) *
-    state.level
+    state.level *
+    BLOCK_DROP_DIFFICULTIES[state.difficulty].speed
   const lines = state.lines + cleared.completedRows.length
   const nextState = spawnNext({
     ...state,
@@ -376,7 +379,9 @@ function hardDrop(state: BlockDropState): BlockDropTransition {
     active: landing,
     score:
       state.score +
-      (landing.y - state.active.y) * BLOCK_DROP_SCORING.hardDropPerRow,
+      (landing.y - state.active.y) *
+        BLOCK_DROP_SCORING.hardDropPerRow *
+        BLOCK_DROP_DIFFICULTIES[state.difficulty].speed,
   })
 }
 
@@ -386,12 +391,23 @@ function softDrop(state: BlockDropState): BlockDropTransition {
     ? lockActive(state)
     : transition({
         ...moved,
-        score: state.score + BLOCK_DROP_SCORING.softDropPerRow,
+        score:
+          state.score +
+          BLOCK_DROP_SCORING.softDropPerRow *
+            BLOCK_DROP_DIFFICULTIES[state.difficulty].speed,
       })
 }
 
 export function restart(state: BlockDropState): BlockDropState {
-  return createGame(state.initialSeed)
+  return { ...createGame(state.initialSeed), difficulty: state.difficulty }
+}
+
+export function setDifficulty(
+  state: BlockDropState,
+  difficulty: BlockDropDifficulty,
+): BlockDropState {
+  if (state.status !== 'paused' || state.difficulty === difficulty) return state
+  return { ...state, difficulty }
 }
 
 export function applyAction(

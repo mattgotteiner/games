@@ -190,6 +190,35 @@ describe('BlockDropController', () => {
     controller.destroy()
   })
 
+  it('changes scoring and gravity difficulty while paused without changing progress', () => {
+    const paused = applyAction(createGame(41), 'pause')
+    const { controller, onStateChange } = createController(paused)
+    const before = controller.getState()
+
+    controller.setDifficulty('hard')
+
+    expect(controller.getState()).toMatchObject({
+      status: 'paused',
+      difficulty: 'hard',
+      score: before.score,
+      lines: before.lines,
+      level: before.level,
+    })
+    expect(controller.getState().board).toBe(before.board)
+    expect(onStateChange).toHaveBeenCalledWith(
+      controller.getState(),
+      expect.objectContaining({ clearing: false }),
+    )
+
+    controller.dispatch('pause')
+    frameCallback(0)
+    frameCallback(466)
+    expect(controller.getState().active).toEqual(before.active)
+    frameCallback(467)
+    expect(controller.getState().active?.y).toBe((before.active?.y ?? 0) + 1)
+    controller.destroy()
+  })
+
   it('restarts while paused and clears gravity timing', () => {
     const initial = createGame(41)
     const { controller } = createController(applyAction(initial, 'soft-drop'))

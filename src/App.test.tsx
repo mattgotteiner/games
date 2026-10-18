@@ -20,6 +20,7 @@ import type { BlockDropStateListener } from './games/block-drop/controller'
 import {
   createGame,
   TETROMINOES,
+  type BlockDropDifficulty,
   type GameAction,
   type Tetromino,
 } from './games/block-drop/rules'
@@ -594,6 +595,43 @@ describe('App', () => {
     expect(dispatch).toHaveBeenNthCalledWith(4, 'restart')
   })
 
+  it('applies the selected pause difficulty and displays half-point score values', () => {
+    let state = createGame(5)
+    let publish: BlockDropStateListener | undefined
+    const setDifficulty = vi.fn((difficulty: BlockDropDifficulty) => {
+      state = { ...state, difficulty }
+      publish?.(state)
+    })
+    const factory: BlockDropControllerFactory = (
+      _canvas,
+      _container,
+      onStateChange,
+    ) => {
+      publish = onStateChange
+      return {
+        dispatch: vi.fn(),
+        destroy: vi.fn(),
+        getState: () => state,
+        setDifficulty,
+      }
+    }
+
+    render(<BlockDrop onReturn={vi.fn()} controllerFactory={factory} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Pause game' }))
+    act(() => {
+      state = { ...state, status: 'paused' }
+      publish?.(state)
+    })
+
+    const slider = screen.getByRole('slider', { name: 'Difficulty' })
+    fireEvent.input(slider, { target: { value: '0' } })
+    expect(setDifficulty).toHaveBeenCalledWith('easy')
+    expect(slider).toHaveAttribute('aria-valuetext', 'Easy, half speed')
+
+    act(() => publish?.({ ...state, score: 0.5 }))
+    expect(screen.getByLabelText('Score: 0.5')).toBeInTheDocument()
+  })
+
   it('keeps an existing best score when a later run scores less', () => {
     window.localStorage.setItem('games.block-drop.best-score', '250')
     const gameOver = {
@@ -620,7 +658,7 @@ describe('App', () => {
     )
   })
 
-  it.each(['', '-1', '1.5', 'not-a-score', '9007199254740992'])(
+  it.each(['', '-1', '1.25', 'not-a-score', '9007199254740992'])(
     'treats malformed stored best score %j as zero',
     (storedScore) => {
       window.localStorage.setItem(
@@ -649,6 +687,56 @@ describe('App', () => {
       )
     },
   )
+
+  it('reads and displays a saved half-point best score', () => {
+    window.localStorage.setItem('games.block-drop.best-score', '1.5')
+    const gameOver = {
+      ...createGame(5),
+      active: null,
+      status: 'game-over' as const,
+    }
+    const factory: BlockDropControllerFactory = () => ({
+      dispatch: vi.fn(),
+      destroy: vi.fn(),
+      getState: () => gameOver,
+    })
+
+    render(<BlockDrop onReturn={vi.fn()} controllerFactory={factory} />)
+
+    const scores = screen
+      .getByRole('group', { name: 'Game over' })
+      .querySelectorAll('.game-over-scores dd')
+    expect(scores[0]).toHaveTextContent('0')
+    expect(scores[1]).toHaveTextContent('1.5')
+    expect(window.localStorage.getItem('games.block-drop.best-score')).toBe(
+      '1.5',
+    )
+  })
+
+  it('saves a half-point final score without rounding it', () => {
+    const gameOver = {
+      ...createGame(5),
+      active: null,
+      status: 'game-over' as const,
+      score: 0.5,
+    }
+    const factory: BlockDropControllerFactory = () => ({
+      dispatch: vi.fn(),
+      destroy: vi.fn(),
+      getState: () => gameOver,
+    })
+
+    render(<BlockDrop onReturn={vi.fn()} controllerFactory={factory} />)
+
+    const scores = screen
+      .getByRole('group', { name: 'Game over' })
+      .querySelectorAll('.game-over-scores dd')
+    expect(scores[0]).toHaveTextContent('0.5')
+    expect(scores[1]).toHaveTextContent('0.5')
+    expect(window.localStorage.getItem('games.block-drop.best-score')).toBe(
+      '0.5',
+    )
+  })
 
   it('remains playable when device storage throws during read and write', () => {
     const previousStorage = Object.getOwnPropertyDescriptor(window, 'localStorage')
@@ -790,23 +878,27 @@ describe('App', () => {
     const dialog = screen.getByRole('dialog', { name: 'Scoring and controls' })
     const scoring = within(dialog).getByRole('region', { name: 'Scoring' })
     expect(within(scoring).getByText('Soft drop')).toBeInTheDocument()
-    expect(within(scoring).getByText('+1 / row')).toBeInTheDocument()
+    expect(
+      within(scoring).getByText('+1 / row × difficulty'),
+    ).toBeInTheDocument()
     expect(within(scoring).getByText('Hard drop')).toBeInTheDocument()
-    expect(within(scoring).getByText('+2 / row')).toBeInTheDocument()
+    expect(
+      within(scoring).getByText('+2 / row × difficulty'),
+    ).toBeInTheDocument()
     expect(within(scoring).getByText('Gravity')).toBeInTheDocument()
     expect(within(scoring).getByText('+0')).toBeInTheDocument()
     expect(within(scoring).getByText('Lines cleared')).toBeInTheDocument()
     for (const value of [
-      '1: +100 × level',
-      '2: +300 × level',
-      '3: +500 × level',
-      '4: +800 × level',
+      '1: +100 × level × difficulty',
+      '2: +300 × level × difficulty',
+      '3: +500 × level × difficulty',
+      '4: +800 × level × difficulty',
     ]) {
       expect(within(scoring).getByText(value)).toBeInTheDocument()
     }
     expect(
       within(scoring).getByText(
-        'Line-clear points multiply by your level. Level increases every 10 lines and makes pieces fall faster.',
+        'Difficulty multiplier: Easy 0.5×, Medium 1×, Hard 1.5×. Line-clear points also multiply by your level. Level increases every 10 lines and makes pieces fall faster.',
       ),
     ).toBeInTheDocument()
     expect(within(dialog).getByText('Keyboard controls')).toBeInTheDocument()

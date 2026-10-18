@@ -17,7 +17,9 @@ import {
   shuffleBag,
   stepGravity,
   stepGravityWithEvents,
+  setDifficulty,
   type ActivePiece,
+  type BlockDropDifficulty,
   type BlockDropState,
   type Board,
   type Cell,
@@ -37,6 +39,7 @@ function stateWith(
   board: Board = createEmptyBoard(),
   bag: ReadonlyArray<Tetromino> = ['T'],
   next: Tetromino = 'T',
+  difficulty: BlockDropDifficulty = 'medium',
 ): BlockDropState {
   return {
     board,
@@ -46,13 +49,18 @@ function stateWith(
     randomState: 123,
     initialSeed: 123,
     status: 'playing',
+    difficulty,
     score: 0,
     lines: 0,
     level: 1,
   }
 }
 
-function lineClearState(clearedLines: number, lines = 0): BlockDropState {
+function lineClearState(
+  clearedLines: number,
+  lines = 0,
+  difficulty: BlockDropDifficulty = 'medium',
+): BlockDropState {
   const board = createEmptyBoard().map((row) => [...row])
   const gaps = new Map<number, ReadonlyArray<number>>()
   let active: ActivePiece
@@ -82,6 +90,7 @@ function lineClearState(clearedLines: number, lines = 0): BlockDropState {
 
   return {
     ...stateWith(active, board),
+    difficulty,
     lines,
     level: Math.floor(lines / 10) + 1,
   }
@@ -133,11 +142,14 @@ describe('level progression', () => {
   })
 
   it('replays line-count and level transitions deterministically', () => {
-    const initial = lineClearState(2, 9)
-    const replay = () => applyActionWithEvents(initial, 'hard-drop').state
+    const paused = applyAction(lineClearState(2, 9), 'pause')
+    const initial = setDifficulty(paused, 'hard')
+    const resumed = applyAction(initial, 'pause')
+    const replay = () => applyActionWithEvents(resumed, 'hard-drop').state
 
     expect(replay()).toEqual(replay())
-    expect(replay()).toMatchObject({ lines: 11, level: 2 })
+    expect(replay()).toMatchObject({ lines: 11, level: 2, difficulty: 'hard' })
+    expect(replay().score).toBe(450)
   })
 
   it.each([
@@ -422,11 +434,66 @@ describe('scoring', () => {
     expect(applyAction(blocked, 'soft-drop').score).toBe(0)
   })
 
+  it.each([
+    ['easy', 0.5],
+    ['medium', 1],
+    ['hard', 1.5],
+  ] as const)(
+    'multiplies soft-drop points by the %s difficulty setting',
+    (difficulty, points) => {
+      const initial = stateWith(
+        { type: 'O', rotation: 0, x: 3, y: 0 },
+        createEmptyBoard(),
+        ['T'],
+        'T',
+        difficulty,
+      )
+
+      expect(applyAction(initial, 'soft-drop').score).toBe(points)
+      expect(stepGravity(initial).score).toBe(0)
+    },
+  )
+
   it('awards two points for each hard-drop row', () => {
     const initial = stateWith({ type: 'O', rotation: 0, x: 3, y: 0 })
 
     expect(applyAction(initial, 'hard-drop').score).toBe(36)
   })
+
+  it.each([
+    ['easy', 18],
+    ['medium', 36],
+    ['hard', 54],
+  ] as const)(
+    'multiplies hard-drop points by the %s difficulty setting',
+    (difficulty, points) => {
+      const initial = stateWith(
+        { type: 'O', rotation: 0, x: 3, y: 0 },
+        createEmptyBoard(),
+        ['T'],
+        'T',
+        difficulty,
+      )
+
+      expect(applyAction(initial, 'hard-drop').score).toBe(points)
+    },
+  )
+
+  it.each([
+    ['easy', 100],
+    ['medium', 200],
+    ['hard', 300],
+  ] as const)(
+    'multiplies line-clear points by level and %s difficulty',
+    (difficulty, points) => {
+      const initial = lineClearState(1, 10, difficulty)
+      const result = applyActionWithEvents(initial, 'hard-drop')
+
+      expect(result.lineClear?.points).toBe(points)
+      expect(result.state.score).toBe(points)
+      expect(result.state.level).toBe(2)
+    },
+  )
 
   it.each([
     [1, 100],
@@ -506,6 +573,56 @@ describe('game lifecycle', () => {
     const paused = applyAction(changed, 'pause')
 
     expect(applyAction(paused, 'restart')).toEqual(initial)
+  })
+
+  it('changes difficulty only while paused without changing current progress', () => {
+    const playing = {
+      ...createGame(77),
+      score: 0.5,
+      lines: 4,
+      level: 1,
+    }
+    const paused = applyAction(playing, 'pause')
+    const changed = setDifficulty(paused, 'hard')
+
+    expect(setDifficulty(playing, 'hard')).toBe(playing)
+    expect(changed).toMatchObject({
+      status: 'paused',
+      difficulty: 'hard',
+      score: 0.5,
+      lines: 4,
+      level: 1,
+    })
+    expect(changed.board).toBe(paused.board)
+  })
+
+  it('applies a paused difficulty change only to score earned afterward', () => {
+    const scored = {
+      ...stateWith(
+        { type: 'O', rotation: 0, x: 3, y: 0 },
+        createEmptyBoard(),
+        ['T'],
+        'T',
+        'easy',
+      ),
+      score: 0.5,
+    }
+    const paused = applyAction(scored, 'pause')
+    const changed = setDifficulty(paused, 'hard')
+    const resumed = applyAction(changed, 'pause')
+
+    expect(changed.score).toBe(0.5)
+    expect(applyAction(resumed, 'soft-drop').score).toBe(2)
+  })
+
+  it('preserves difficulty across restart', () => {
+    const paused = setDifficulty(applyAction(createGame(77), 'pause'), 'hard')
+    const fresh = restart(paused)
+
+    expect(fresh).toMatchObject({ score: 0, lines: 0, level: 1, difficulty: 'hard' })
+    expect(fresh.board.flat()).toEqual(
+      Array<Cell>(BOARD_WIDTH * BOARD_HEIGHT).fill(null),
+    )
   })
 
   it('ends the game when the next piece cannot spawn and ignores gameplay', () => {

@@ -260,9 +260,11 @@ const BEST_SCORE_STORAGE_KEY = 'games.block-drop.best-score'
 function readBestScore(): number {
   try {
     const value = window.localStorage.getItem(BEST_SCORE_STORAGE_KEY)
-    if (value === null || !/^\d+$/.test(value)) return 0
+    if (value === null || !/^\d+(?:\.5)?$/.test(value)) return 0
     const score = Number(value)
-    return Number.isSafeInteger(score) ? score : 0
+    return Number.isSafeInteger(score) || Number.isSafeInteger(score * 2)
+      ? score
+      : 0
   } catch {
     return 0
   }
@@ -347,11 +349,11 @@ function ScoringGuide() {
       <dl class="scoring-rules">
         <div class="scoring-rule">
           <dt>Soft drop</dt>
-          <dd>+{BLOCK_DROP_SCORING.softDropPerRow} / row</dd>
+          <dd>+{BLOCK_DROP_SCORING.softDropPerRow} / row × difficulty</dd>
         </div>
         <div class="scoring-rule">
           <dt>Hard drop</dt>
-          <dd>+{BLOCK_DROP_SCORING.hardDropPerRow} / row</dd>
+          <dd>+{BLOCK_DROP_SCORING.hardDropPerRow} / row × difficulty</dd>
         </div>
         <div class="scoring-rule">
           <dt>Gravity</dt>
@@ -363,7 +365,7 @@ function ScoringGuide() {
             {Object.entries(BLOCK_DROP_SCORING.lineClears).map(
               ([count, points]) => (
                 <span key={count}>
-                  {count}: +{points} × level
+                  {count}: +{points} × level × difficulty
                 </span>
               ),
             )}
@@ -371,8 +373,9 @@ function ScoringGuide() {
         </div>
       </dl>
       <p class="scoring-level-note">
-        Line-clear points multiply by your level. Level increases every 10 lines
-        and makes pieces fall faster. Choose Easy, Medium, or Hard from Pause.
+        Difficulty multiplier: Easy 0.5×, Medium 1×, Hard 1.5×. Line-clear
+        points also multiply by your level. Level increases every 10 lines and
+        makes pieces fall faster.
       </p>
     </section>
   )
@@ -441,6 +444,7 @@ export function BlockDrop({
         isGameActive.current =
           state.status === 'playing' && !(presentation?.clearing ?? false)
         setStatus(state.status)
+        setDifficulty(state.difficulty)
         setScore(state.score)
         setLines(state.lines)
         setLevel(state.level)
@@ -563,6 +567,7 @@ export function BlockDrop({
     const initialState = controller.getState()
     statusRef.current = initialState.status
     setStatus(initialState.status)
+    setDifficulty(initialState.difficulty)
     setScore(initialState.score)
     setLines(initialState.lines)
     setLevel(initialState.level)

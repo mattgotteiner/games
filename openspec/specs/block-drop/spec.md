@@ -84,11 +84,14 @@ Block Drop SHALL visibly acknowledge every completed row before presenting the c
 - **THEN** the game presents the collapsed playfield without animated flashing or sweeping motion
 
 ### Requirement: Deterministic score
-Block Drop SHALL start each new game at zero points, add one point for every row
-successfully advanced by soft drop, add two points for every row advanced by
-hard drop, and add 100, 300, 500, or 800 points multiplied by the level before
-the clear when a lock clears one, two, three, or four rows together
-respectively. Automatic descent SHALL NOT award drop points.
+Block Drop SHALL start each new game at zero points. The selected difficulty's
+speed multiplier SHALL scale every manual score award: soft drop SHALL award
+one base point per row, hard drop SHALL award two base points per row, and line
+clears SHALL award 100, 300, 500, or 800 base points for one, two, three, or
+four rows respectively, multiplied by the level before the clear. Automatic
+descent SHALL NOT award drop points. Score totals and saved best scores SHALL
+preserve half-point increments without rounding, and existing integer best
+scores SHALL remain valid.
 
 #### Scenario: New game starts
 - **WHEN** a new Block Drop game starts
@@ -96,11 +99,11 @@ respectively. Automatic descent SHALL NOT award drop points.
 
 #### Scenario: Player soft drops
 - **WHEN** soft drop successfully advances the active piece by one row
-- **THEN** the score increases by one point
+- **THEN** the score increases by one base point multiplied by the selected difficulty speed
 
 #### Scenario: Player hard drops
 - **WHEN** hard drop advances the active piece by one or more rows before locking
-- **THEN** the score increases by two points for each row advanced
+- **THEN** the score increases by two base points for each row advanced, multiplied by the selected difficulty speed
 
 #### Scenario: Automatic descent advances
 - **WHEN** gravity advances the active piece
@@ -108,7 +111,7 @@ respectively. Automatic descent SHALL NOT award drop points.
 
 #### Scenario: Rows clear together
 - **WHEN** a lock clears one, two, three, or four rows simultaneously
-- **THEN** the score additionally increases by 100, 300, 500, or 800 points respectively, multiplied by the level before the clear
+- **THEN** the score additionally increases by 100, 300, 500, or 800 base points respectively, multiplied by the level before the clear and the selected difficulty speed
 
 #### Scenario: Clear reaches a new level
 - **WHEN** a lock clears lines that move the game from one level to the next
@@ -122,18 +125,22 @@ respectively. Automatic descent SHALL NOT award drop points.
 - **WHEN** the user starts a fresh game
 - **THEN** the score resets to zero
 
+#### Scenario: Fractional score is saved
+- **WHEN** a final score contains a half point
+- **THEN** the displayed score and saved best score retain the half point without rounding
+
 ### Requirement: Visible scoring explanation
 Block Drop SHALL make a scoring guide available on demand from a labelled help
 control that is always visible in the game header. The guide SHALL open in a
-modal dialog that states that each successful soft-drop row earns 1 point, each
-hard-drop row earns 2 points, automatic gravity earns no points, and clearing
-one, two, three, or four lines at once earns 100, 300, 500, or 800 points
-respectively multiplied by the current level, and SHALL explain that the level
-rises every ten lines and increases the falling speed. The guide SHALL also
-list the keyboard controls. The displayed values SHALL remain consistent with
-the deterministic score calculation. Opening the guide during active play SHALL
-pause the game, and closing the guide SHALL leave the game paused and return
-focus to the help control.
+modal dialog that states the base values for soft drops and hard drops, that
+automatic gravity earns no points, and that line clears use the level before
+the clear. The guide SHALL explain the Easy 0.5×, Medium 1×, and Hard 1.5×
+difficulty score multipliers, the combined line-clear formula, and that the
+level rises every ten lines and increases the falling speed. The guide SHALL
+also list the keyboard controls. The displayed values SHALL remain consistent
+with the deterministic score calculation. Opening the guide during active play
+SHALL pause the game, and closing the guide SHALL leave the game paused and
+return focus to the help control.
 
 #### Scenario: Player inspects the score
 - **WHEN** the user activates the help control
@@ -148,8 +155,8 @@ focus to the help control.
 - **THEN** the game remains in its paused or game-over state and focus returns to the help control
 
 #### Scenario: Player presses soft drop
-- **WHEN** a successful soft drop increases the score by one point and the user opens the scoring guide
-- **THEN** the guide explains that soft drop earns one point per row
+- **WHEN** a successful soft drop increases the score and the user opens the scoring guide
+- **THEN** the guide explains the base soft-drop points and the selected difficulty multiplier
 
 #### Scenario: Automatic gravity advances
 - **WHEN** gravity moves a piece downward without changing the score and the user opens the scoring guide
@@ -200,10 +207,10 @@ Block Drop SHALL start at Medium difficulty and SHALL provide an accessible
 three-position difficulty slider in the pause menu. Easy SHALL make automatic
 descent half as fast as the selected level curve, Medium SHALL use the level
 curve unchanged, and Hard SHALL make it 1.5 times as fast, subject to the
-80-millisecond minimum interval. Changing difficulty SHALL affect gravity
-only. It SHALL NOT change line progression, score, or the level-based line
-clear multiplier. A selection SHALL apply when play resumes and SHALL remain
-selected after restarting within the same session.
+80-millisecond minimum interval. The same 0.5×, 1×, or 1.5× setting SHALL
+scale future manual score awards. Changing difficulty SHALL NOT change the
+current score, line progression, or level. A selection SHALL remain selected
+after restarting within the same session.
 
 #### Scenario: Difficulty slider is inspected
 - **WHEN** the user opens the pause menu
@@ -221,9 +228,9 @@ selected after restarting within the same session.
 - **WHEN** the user changes difficulty in the pause menu
 - **THEN** the board, active piece, next piece, score, lines, and level stay unchanged until play resumes
 
-#### Scenario: Difficulty does not alter level scoring
-- **WHEN** a line clear is scored at any difficulty
-- **THEN** its points use the same level multiplier as at Medium difficulty
+#### Scenario: Difficulty changes future scoring
+- **WHEN** the user changes difficulty while paused and then earns points
+- **THEN** only future soft-drop, hard-drop, and line-clear awards use the newly selected speed multiplier
 
 #### Scenario: Restart after choosing difficulty
 - **WHEN** the user restarts during the same game session after changing difficulty
