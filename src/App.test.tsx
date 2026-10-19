@@ -24,6 +24,7 @@ import {
   type GameAction,
   type Tetromino,
 } from './games/block-drop/rules'
+import { IMPLEMENTED_BLOCK_DROP_THEME_ORDER } from './games/block-drop/theme-renderers'
 
 function dispatchPointer(
   target: HTMLElement,
@@ -730,6 +731,177 @@ describe('App', () => {
     expectHudDifficulty('Medium', '1×')
   })
 
+  it('restores the saved theme and applies a selection without changing paused game state', () => {
+    window.localStorage.setItem('games.block-drop.theme', 'tron')
+    let state = createGame(5)
+    let publish: BlockDropStateListener | undefined
+    let initialTheme: string | undefined
+    const setTheme = vi.fn()
+    const dispatch = vi.fn((action: GameAction) => {
+      if (action !== 'pause') return
+      state = { ...state, status: 'paused' }
+      publish?.(state)
+    })
+    const factory: BlockDropControllerFactory = (
+      _canvas,
+      _container,
+      onStateChange,
+      options,
+    ) => {
+      publish = onStateChange
+      initialTheme = options?.theme
+      return {
+        dispatch,
+        destroy: vi.fn(),
+        getState: () => state,
+        setTheme,
+      }
+    }
+
+    render(<BlockDrop controllerFactory={factory} />)
+
+    expect(initialTheme).toBe('tron')
+    expect(document.querySelector('.block-drop')).toHaveAttribute(
+      'data-theme',
+      'tron',
+    )
+    expect(document.documentElement).toHaveAttribute(
+      'data-block-drop-theme',
+      'tron',
+    )
+    expect(document.querySelector('meta[name="theme-color"]')).toHaveAttribute(
+      'content',
+      '#020409',
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Pause game' }))
+    const pause = screen.getByRole('group', { name: 'Paused' })
+    const themeGroup = within(pause).getByRole('group', { name: /^Theme/ })
+    const radios = within(themeGroup).getAllByRole('radio')
+    expect(radios.map((radio) => (radio as HTMLInputElement).value)).toEqual(
+      IMPLEMENTED_BLOCK_DROP_THEME_ORDER,
+    )
+    expect(within(themeGroup).getByRole('radio', { name: 'Tron' })).toBeChecked()
+    expect(themeGroup.querySelector('output')).toHaveTextContent(
+      'Selected: Tron',
+    )
+    expect(themeGroup.querySelector('[data-selected="true"]')).toHaveTextContent(
+      'Selected',
+    )
+    expect(themeGroup.previousElementSibling).toBe(
+      pause.querySelector('.overlay-actions'),
+    )
+
+    const stateBefore = {
+      score: screen.getByLabelText(/^Score:/).textContent,
+      progress: document.querySelector('.game-progress')?.textContent,
+      status: document.querySelector('.game-status')?.textContent,
+    }
+    fireEvent.click(
+      themeGroup.querySelector('label[data-theme-option="classic"]')!,
+    )
+
+    expect(setTheme).toHaveBeenCalledWith('classic')
+    expect(window.localStorage.getItem('games.block-drop.theme')).toBe('classic')
+    expect(themeGroup.querySelector('output')).toHaveTextContent(
+      'Selected: Classic',
+    )
+    expect(document.querySelector('.block-drop')).toHaveAttribute(
+      'data-theme',
+      'classic',
+    )
+    expect(document.documentElement).toHaveAttribute(
+      'data-block-drop-theme',
+      'classic',
+    )
+    expect(document.querySelector('meta[name="theme-color"]')).toHaveAttribute(
+      'content',
+      '#162033',
+    )
+    expect({
+      score: screen.getByLabelText(/^Score:/).textContent,
+      progress: document.querySelector('.game-progress')?.textContent,
+      status: document.querySelector('.game-status')?.textContent,
+    }).toEqual(stateBefore)
+  })
+
+  it.each(['not-a-theme', 'chocolate'])(
+    'falls back to Classic for invalid or not-yet-implemented theme %s',
+    (value) => {
+      window.localStorage.setItem('games.block-drop.theme', value)
+      let initialTheme: string | undefined
+      const factory: BlockDropControllerFactory = (
+        _canvas,
+        _container,
+        _onStateChange,
+        options,
+      ) => {
+        initialTheme = options?.theme
+        return {
+          dispatch: vi.fn(),
+          destroy: vi.fn(),
+          getState: () => createGame(5),
+        }
+      }
+
+      render(<BlockDrop controllerFactory={factory} />)
+
+      expect(initialTheme).toBe('classic')
+      expect(document.querySelector('.block-drop')).toHaveAttribute(
+        'data-theme',
+        'classic',
+      )
+      expect(document.querySelector('meta[name="theme-color"]')).toHaveAttribute(
+        'content',
+        '#162033',
+      )
+    },
+  )
+
+  it('restores previous document theme attributes and browser chrome on unmount', () => {
+    const root = document.documentElement
+    const previousTheme = root.getAttribute('data-block-drop-theme')
+    const previousPage = root.style.getPropertyValue('--bd-page')
+    const previousPagePriority = root.style.getPropertyPriority('--bd-page')
+    const existingMeta = document.querySelector<HTMLMetaElement>(
+      'meta[name="theme-color"]',
+    )
+    const meta = existingMeta ?? document.createElement('meta')
+    const previousMetaContent = meta.getAttribute('content')
+    if (existingMeta === null) {
+      meta.name = 'theme-color'
+      document.head.append(meta)
+    }
+    root.dataset.blockDropTheme = 'prior-theme'
+    root.style.setProperty('--bd-page', '#010203', 'important')
+    meta.content = '#aabbcc'
+    pendingRestorations.push(() => {
+      if (previousTheme === null) root.removeAttribute('data-block-drop-theme')
+      else root.setAttribute('data-block-drop-theme', previousTheme)
+      if (previousPage === '') root.style.removeProperty('--bd-page')
+      else root.style.setProperty('--bd-page', previousPage, previousPagePriority)
+      if (existingMeta === null) meta.remove()
+      else if (previousMetaContent === null) meta.removeAttribute('content')
+      else meta.content = previousMetaContent
+    })
+
+    const factory: BlockDropControllerFactory = () => ({
+      dispatch: vi.fn(),
+      destroy: vi.fn(),
+      getState: () => createGame(5),
+    })
+    const { unmount } = render(<BlockDrop controllerFactory={factory} />)
+    expect(root).toHaveAttribute('data-block-drop-theme', 'classic')
+    expect(root.style.getPropertyValue('--bd-page')).toBe('#07111f')
+    expect(meta.content).toBe('#162033')
+
+    unmount()
+    expect(root).toHaveAttribute('data-block-drop-theme', 'prior-theme')
+    expect(root.style.getPropertyValue('--bd-page')).toBe('#010203')
+    expect(root.style.getPropertyPriority('--bd-page')).toBe('important')
+    expect(meta.content).toBe('#aabbcc')
+  })
+
   it('keeps an existing best score when a later run scores less', () => {
     window.localStorage.setItem('games.block-drop.best-score', '250')
     const gameOver = {
@@ -847,27 +1019,47 @@ describe('App', () => {
     pendingRestorations.push(() => {
       if (previousStorage) {
         Object.defineProperty(window, 'localStorage', previousStorage)
-      }
+      } else Reflect.deleteProperty(window, 'localStorage')
     })
 
     let publish: BlockDropStateListener | undefined
     const playing = createGame(5)
+    let initialTheme: string | undefined
+    const setTheme = vi.fn()
+    const dispatch = vi.fn((action: GameAction) => {
+      if (action !== 'pause') return
+      publish?.({ ...playing, status: 'paused' })
+    })
     const factory: BlockDropControllerFactory = (
       _canvas,
       _container,
       onStateChange,
+      options,
     ) => {
       publish = onStateChange
+      initialTheme = options?.theme
       return {
-        dispatch: vi.fn(),
+        dispatch,
         destroy: vi.fn(),
         getState: () => playing,
+        setTheme,
       }
     }
 
     render(<BlockDrop controllerFactory={factory} />)
+    expect(initialTheme).toBe('classic')
     expect(screen.getByText('Playing')).toBeInTheDocument()
     expectHudDifficulty('Medium', '1×')
+    fireEvent.click(screen.getByRole('button', { name: 'Pause game' }))
+    const pause = screen.getByRole('group', { name: 'Paused' })
+    fireEvent.click(pause.querySelector('label[data-theme-option="tron"]')!)
+    expect(setTheme).toHaveBeenCalledWith('tron')
+    expect(document.querySelector('.block-drop')).toHaveAttribute(
+      'data-theme',
+      'tron',
+    )
+    expect(screen.getByRole('group', { name: 'Paused' })).toBeInTheDocument()
+
     act(() =>
       publish?.({ ...playing, active: null, status: 'game-over', score: 14 }),
     )
@@ -1046,9 +1238,12 @@ describe('App', () => {
         { clearing: true, clearedLines: 2, clearPoints: 300 },
       ),
     )
-    expect(announcements).toHaveTextContent(
-      'Cleared 2 lines. +300 points. Score 307. Level 2.',
+    expect(announcements.textContent).toBe(
+      'Cleared 2 lines. +300 points. Score 307. 10 lines cleared!',
     )
+    expect(
+      document.querySelector('.level-milestone-popup')?.textContent,
+    ).toBe('10 lines cleared!')
     const callouts = [
       { clearedLines: 1, clearPoints: 100, name: 'Single' },
       { clearedLines: 2, clearPoints: 300, name: 'Double' },
@@ -1075,7 +1270,16 @@ describe('App', () => {
     act(() => {
       vi.advanceTimersByTime(780)
     })
-    expect(screen.queryByText('+300 · Double')).not.toBeInTheDocument()
+    expect(screen.getByText('+800 · Quad')).toBeInTheDocument()
+    act(() => {
+      vi.advanceTimersByTime(780)
+    })
+    expect(screen.queryByText('+800 · Quad')).not.toBeInTheDocument()
+    expect(document.querySelector('.level-milestone-popup')).toBeInTheDocument()
+    act(() => {
+      vi.advanceTimersByTime(240)
+    })
+    expect(document.querySelector('.level-milestone-popup')).not.toBeInTheDocument()
 
     act(() =>
       publish?.({ ...playing, active: null, status: 'game-over', score: 42 }),
@@ -1087,6 +1291,79 @@ describe('App', () => {
     act(() => publish?.(createGame(5)))
     expect(screen.getByText('Playing')).toBeInTheDocument()
     expect(screen.getByLabelText('Score: 0')).toBeInTheDocument()
+  })
+
+  it('shows themed notices at each ten-line milestone and clears them on restart', () => {
+    vi.useFakeTimers()
+    window.localStorage.setItem('games.block-drop.theme', 'tron')
+    const initial = createGame(5)
+    let publish: BlockDropStateListener | undefined
+    const dispatch = vi.fn()
+    const factory: BlockDropControllerFactory = (
+      _canvas,
+      _container,
+      onStateChange,
+    ) => {
+      publish = onStateChange
+      return {
+        dispatch,
+        destroy: vi.fn(),
+        getState: () => initial,
+      }
+    }
+    const { unmount } = render(<BlockDrop controllerFactory={factory} />)
+    const popup = () => document.querySelector('.level-milestone-popup')
+    const announceLines = (lines: number, level: number) => {
+      const state = { ...initial, lines, level, score: lines * 100 }
+      act(() =>
+        publish?.(state, {
+          clearing: true,
+          clearedLines: 1,
+          clearPoints: 100,
+        }),
+      )
+      act(() => publish?.(state, { clearing: false }))
+    }
+
+    announceLines(9, 1)
+    expect(popup()).toBeNull()
+
+    announceLines(10, 2)
+    expect(document.querySelector('.block-drop')).toHaveAttribute(
+      'data-theme',
+      'tron',
+    )
+    expect(popup()?.textContent).toBe('10 lines cleared!')
+    expect(
+      screen.getByRole('status', { name: 'Game announcements' }).textContent,
+    ).toBe('Cleared 1 line. +100 points. Score 1000. 10 lines cleared!')
+    fireEvent.click(screen.getByRole('button', { name: 'Move left' }))
+    expect(dispatch).toHaveBeenCalledWith('left')
+    act(() => {
+      vi.advanceTimersByTime(500)
+    })
+    act(() => {
+      vi.advanceTimersByTime(1800)
+    })
+    expect(popup()).toBeNull()
+
+    announceLines(11, 2)
+    expect(popup()).toBeNull()
+
+    announceLines(20, 3)
+    expect(popup()?.textContent).toBe('20 lines cleared!')
+    expect(
+      screen.getByRole('status', { name: 'Game announcements' }).textContent,
+    ).toBe('Cleared 1 line. +100 points. Score 2000. 20 lines cleared!')
+
+    announceLines(30, 4)
+    expect(popup()?.textContent).toBe('30 lines cleared!')
+    expect(
+      screen.getByRole('status', { name: 'Game announcements' }).textContent,
+    ).toBe('Cleared 1 line. +100 points. Score 3000. 30 lines cleared!')
+    act(() => publish?.(createGame(5), { clearing: false, action: 'restart' }))
+    expect(popup()).toBeNull()
+    unmount()
   })
 
   it('centers every tetromino in a normalized six-cell preview frame', () => {

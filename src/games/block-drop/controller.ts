@@ -12,11 +12,20 @@ import {
   type BlockDropState,
   type GameAction,
   type LineClearEvent,
-  type Tetromino,
 } from './rules'
-import { TETROMINO_COLORS } from './piece-metadata'
-
-const LINE_CLEAR_MS = 180
+import {
+  BLOCK_DROP_THEMES,
+  type BlockDropThemeId,
+} from './themes'
+import { hash } from './theme-renderers/shared'
+import {
+  classicRenderer,
+  isBlockDropThemeImplemented,
+  THEME_RENDERERS,
+  type BoardGeometry,
+  type CellDraw,
+  type ThemeRenderer,
+} from './theme-renderers'
 
 export const KEY_ACTIONS: Readonly<Record<string, GameAction>> = {
   ArrowLeft: 'left',
@@ -35,6 +44,7 @@ export const KEY_ACTIONS: Readonly<Record<string, GameAction>> = {
 export interface BlockDropControllerOptions {
   readonly seed?: number
   readonly difficulty?: BlockDropDifficulty
+  readonly theme?: BlockDropThemeId
   readonly initialState?: BlockDropState
   readonly requestFrame?: typeof requestAnimationFrame
   readonly cancelFrame?: typeof cancelAnimationFrame
@@ -60,6 +70,7 @@ export type BlockDropStateListener = (
 
 interface LineClearEffect {
   readonly event: LineClearEvent
+  readonly durationMs: number
   startedAt: number | null
   progress: number
 }
@@ -72,6 +83,8 @@ export class BlockDropController {
   private destroyed = false
   private pixelRatio = 1
   private lineClearEffect: LineClearEffect | null = null
+  private theme = BLOCK_DROP_THEMES.classic
+  private renderer: ThemeRenderer = classicRenderer
   private readonly context: CanvasRenderingContext2D
   private readonly requestFrame: typeof requestAnimationFrame
   private readonly cancelFrame: typeof cancelAnimationFrame
@@ -91,6 +104,12 @@ export class BlockDropController {
     }
 
     this.context = context
+    const themeId =
+      options.theme && isBlockDropThemeImplemented(options.theme)
+        ? options.theme
+        : 'classic'
+    this.theme = BLOCK_DROP_THEMES[themeId]
+    this.renderer = THEME_RENDERERS[themeId] ?? classicRenderer
     this.state =
       options.initialState ??
       createGame(options.seed ?? (Date.now() >>> 0), options.difficulty)
@@ -129,12 +148,19 @@ export class BlockDropController {
     this.publish()
   }
 
+  setTheme(themeId: BlockDropThemeId): void {
+    if (this.destroyed || !isBlockDropThemeImplemented(themeId)) return
+    if (this.theme.id === themeId) return
+    this.theme = BLOCK_DROP_THEMES[themeId]
+    this.renderer = THEME_RENDERERS[themeId] ?? classicRenderer
+    this.redraw()
+  }
+
   dispatch(action: GameAction): void {
     if (this.destroyed) return
     if (
       this.lineClearEffect !== null &&
-      action !== 'restart' &&
-      action !== 'pause'
+      action !== 'restart'
     ) {
       return
     }
@@ -271,6 +297,14 @@ export class BlockDropController {
     this.draw(cssWidth, cssHeight, ratio)
   }
 
+  private redraw(): void {
+    this.draw(
+      this.canvas.width / this.pixelRatio,
+      this.canvas.height / this.pixelRatio,
+      this.pixelRatio,
+    )
+  }
+
   private publish(
     lineClear?: LineClearEvent,
     action?: GameAction,
@@ -301,32 +335,49 @@ export class BlockDropController {
     const offsetX = (width - boardWidth) / 2
     const offsetY = (height - boardHeight) / 2
     const context = this.context
+    const geometry: BoardGeometry = {
+      cell,
+      offsetX,
+      offsetY,
+      width: boardWidth,
+      height: boardHeight,
+      ratio,
+    }
+    const cellDraw: {
+      cell: number
+      offsetX: number
+      offsetY: number
+      width: number
+      height: number
+      ratio: number
+      x: number
+      y: number
+      type: CellDraw['type']
+      seed: number
+    } = {
+      ...geometry,
+      x: 0,
+      y: 0,
+      type: 'I',
+      seed: 0,
+    }
 
     context.setTransform(ratio, 0, 0, ratio, 0, 0)
     context.clearRect(0, 0, width, height)
-    context.fillStyle = '#07111f'
-    context.fillRect(offsetX, offsetY, boardWidth, boardHeight)
-
-    context.strokeStyle = 'rgb(148 163 184 / 18%)'
-    context.lineWidth = 1
-    context.beginPath()
-    for (let x = 0; x <= BOARD_WIDTH; x += 1) {
-      context.moveTo(offsetX + x * cell, offsetY)
-      context.lineTo(offsetX + x * cell, offsetY + boardHeight)
-    }
-    for (let y = 0; y <= BOARD_HEIGHT; y += 1) {
-      context.moveTo(offsetX, offsetY + y * cell)
-      context.lineTo(offsetX + boardWidth, offsetY + y * cell)
-    }
-    context.stroke()
+    this.renderer.drawBackground(context, this.theme, geometry)
 
     const board = this.lineClearEffect?.event.board ?? this.state.board
+    const clearingRows = new Set(this.lineClearEffect?.event.rows ?? [])
     for (let y = 0; y < BOARD_HEIGHT; y += 1) {
+      if (clearingRows.has(y)) continue
       for (let x = 0; x < BOARD_WIDTH; x += 1) {
-        const locked = board[y][x]
-        if (locked !== null) {
-          this.drawCell(x, y, locked, cell, offsetX, offsetY, ratio)
-        }
+        const type = board[y][x]
+        if (type === null) continue
+        cellDraw.x = x
+        cellDraw.y = y
+        cellDraw.type = type
+        cellDraw.seed = hash(x, y)
+        this.renderer.drawCell(context, this.theme, cellDraw)
       }
     }
 
@@ -337,144 +388,57 @@ export class BlockDropController {
     ) {
       const landing = getLandingPiece(this.state)
       if (landing !== null && landing.y !== this.state.active.y) {
-        for (const { x, y } of getPieceCells(landing)) {
-          this.drawGhostCell(
-            x,
-            y,
-            landing.type,
-            cell,
-            offsetX,
-            offsetY,
-            ratio,
-          )
+        const landingCells = getPieceCells(landing)
+        for (let index = 0; index < landingCells.length; index += 1) {
+          const point = landingCells[index]
+          cellDraw.x = point.x
+          cellDraw.y = point.y
+          cellDraw.type = landing.type
+          cellDraw.seed = hash(index, landing.type.charCodeAt(0))
+          this.renderer.drawGhostCell(context, this.theme, cellDraw)
         }
       }
-      for (const { x, y } of getPieceCells(this.state.active)) {
-        this.drawCell(
-          x,
-          y,
-          this.state.active.type,
-          cell,
-          offsetX,
-          offsetY,
-          ratio,
-        )
+      const active = this.state.active
+      if (active !== null) {
+        const activeCells = getPieceCells(active)
+        for (let index = 0; index < activeCells.length; index += 1) {
+          const point = activeCells[index]
+          cellDraw.x = point.x
+          cellDraw.y = point.y
+          cellDraw.type = active.type
+          cellDraw.seed = hash(index, active.type.charCodeAt(0))
+          this.renderer.drawCell(context, this.theme, cellDraw)
+        }
       }
     }
 
     if (this.lineClearEffect !== null) {
-      const intensity = 0.3 + Math.sin(this.lineClearEffect.progress * Math.PI) * 0.7
-      context.fillStyle = `rgb(248 250 252 / ${intensity})`
-      for (const row of this.lineClearEffect.event.rows) {
-        context.fillRect(offsetX, offsetY + row * cell, boardWidth, cell)
-      }
+      context.save()
+      context.beginPath()
+      context.rect(offsetX, offsetY, boardWidth, boardHeight)
+      context.clip()
+      this.renderer.drawLineClear(context, this.theme, {
+        ...geometry,
+        rows: this.lineClearEffect.event.rows,
+        board: this.lineClearEffect.event.board,
+        progress: this.lineClearEffect.progress,
+      })
+      context.restore()
     }
 
     if (this.state.status === 'paused') {
-      context.fillStyle = 'rgb(7 17 31 / 84%)'
+      context.fillStyle = this.theme.board.pausedVeil
       context.fillRect(offsetX, offsetY, boardWidth, boardHeight)
     } else if (this.state.status === 'game-over') {
-      context.fillStyle = 'rgb(7 17 31 / 76%)'
+      context.fillStyle = this.theme.board.gameOverVeil
       context.fillRect(offsetX, offsetY, boardWidth, boardHeight)
     }
-  }
-
-  private drawCell(
-    x: number,
-    y: number,
-    type: Tetromino,
-    size: number,
-    offsetX: number,
-    offsetY: number,
-    ratio: number,
-  ): void {
-    const align = (value: number) => Math.round(value * ratio) / ratio
-    const left = align(offsetX + x * size)
-    const top = align(offsetY + y * size)
-    const right = align(offsetX + (x + 1) * size)
-    const bottom = align(offsetY + (y + 1) * size)
-    const edge = Math.max(1 / ratio, Math.round(size * 0.08 * ratio) / ratio)
-    const innerLeft = align(left + edge)
-    const innerTop = align(top + edge)
-    const innerRight = align(right - edge)
-    const innerBottom = align(bottom - edge)
-
-    this.context.fillStyle = TETROMINO_COLORS[type]
-    this.context.fillRect(
-      innerLeft,
-      innerTop,
-      innerRight - innerLeft,
-      innerBottom - innerTop,
-    )
-    this.context.fillStyle = 'rgb(255 255 255 / 28%)'
-    this.context.fillRect(
-      innerLeft,
-      innerTop,
-      innerRight - innerLeft,
-      edge,
-    )
-    this.context.fillRect(
-      innerLeft,
-      innerTop,
-      edge,
-      innerBottom - innerTop,
-    )
-    this.context.fillStyle = 'rgb(0 0 0 / 22%)'
-    this.context.fillRect(
-      innerLeft,
-      innerBottom - edge,
-      innerRight - innerLeft,
-      edge,
-    )
-    this.context.fillRect(
-      innerRight - edge,
-      innerTop,
-      edge,
-      innerBottom - innerTop,
-    )
-  }
-
-  private drawGhostCell(
-    x: number,
-    y: number,
-    type: Tetromino,
-    size: number,
-    offsetX: number,
-    offsetY: number,
-    ratio: number,
-  ): void {
-    const align = (value: number) => Math.round(value * ratio) / ratio
-    const left = align(offsetX + x * size)
-    const top = align(offsetY + y * size)
-    const right = align(offsetX + (x + 1) * size)
-    const bottom = align(offsetY + (y + 1) * size)
-    const inset = Math.max(2 / ratio, Math.round(size * 0.12 * ratio) / ratio)
-    const innerLeft = align(left + inset)
-    const innerTop = align(top + inset)
-    const innerRight = align(right - inset)
-    const innerBottom = align(bottom - inset)
-    const color = TETROMINO_COLORS[type]
-
-    this.context.fillStyle = `${color}14`
-    this.context.fillRect(
-      innerLeft,
-      innerTop,
-      innerRight - innerLeft,
-      innerBottom - innerTop,
-    )
-    this.context.strokeStyle = `${color}73`
-    this.context.lineWidth = 2
-    this.context.strokeRect(
-      innerLeft + 1 / ratio,
-      innerTop + 1 / ratio,
-      innerRight - innerLeft - 2 / ratio,
-      innerBottom - innerTop - 2 / ratio,
-    )
   }
 
   private startLineClear(event: LineClearEvent): void {
     this.lineClearEffect = {
       event,
+      durationMs: this.theme.clearMs,
       startedAt: null,
       progress: 0,
     }
@@ -485,7 +449,7 @@ export class BlockDropController {
     const effect = this.lineClearEffect
     if (effect === null) return
     effect.startedAt ??= time
-    effect.progress = Math.min(1, (time - effect.startedAt) / LINE_CLEAR_MS)
+    effect.progress = Math.min(1, (time - effect.startedAt) / effect.durationMs)
     if (effect.progress >= 1) {
       this.cancelLineClear()
       this.elapsed = 0
@@ -493,11 +457,7 @@ export class BlockDropController {
       this.publish()
       return
     }
-    this.draw(
-      this.canvas.width / this.pixelRatio,
-      this.canvas.height / this.pixelRatio,
-      this.pixelRatio,
-    )
+    this.redraw()
   }
 
   private cancelLineClear(): void {

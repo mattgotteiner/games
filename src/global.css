@@ -18,11 +18,19 @@ html {
   background: #07111f;
 }
 
+html[data-block-drop-theme] {
+  background: var(--bd-page);
+}
+
 body {
   min-width: 320px;
   min-height: 100dvh;
   margin: 0;
   overflow-x: hidden;
+}
+
+html[data-block-drop-theme] body {
+  background: var(--bd-page);
 }
 
 button,

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'preact/hooks'
+import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks'
 import type { JSX } from 'preact'
 import {
   BlockDropController,
@@ -15,7 +15,17 @@ import {
   type GameStatus,
   type Tetromino,
 } from './rules'
-import { TETROMINO_COLORS } from './piece-metadata'
+import {
+  BLOCK_DROP_THEME_ORDER,
+  BLOCK_DROP_THEMES,
+  isBlockDropThemeId,
+  type BlockDropTheme,
+  type BlockDropThemeId,
+} from './themes'
+import {
+  IMPLEMENTED_BLOCK_DROP_THEME_ORDER,
+  isBlockDropThemeImplemented,
+} from './theme-renderers'
 
 export type BlockDropControllerFactory = (
   canvas: HTMLCanvasElement,
@@ -28,7 +38,7 @@ type BlockDropControllerHandle = Pick<
   BlockDropController,
   'dispatch' | 'destroy' | 'getState'
 > &
-  Partial<Pick<BlockDropController, 'setDifficulty'>>
+  Partial<Pick<BlockDropController, 'setDifficulty' | 'setTheme'>>
 
 export interface BlockDropProps {
   readonly controllerFactory?: BlockDropControllerFactory
@@ -38,7 +48,7 @@ type BlockDropControllerInstance = Pick<
   BlockDropController,
   'dispatch' | 'destroy' | 'getState'
 > &
-  Partial<Pick<BlockDropController, 'setDifficulty'>>
+  Partial<Pick<BlockDropController, 'setDifficulty' | 'setTheme'>>
 
 const createBlockDropController: BlockDropControllerFactory = (...args) =>
   new BlockDropController(...args)
@@ -53,12 +63,18 @@ const movementControls: ReadonlyArray<
 
 const LINE_CLEAR_NAMES = ['', 'Single', 'Double', 'Triple', 'Quad'] as const
 const LEVEL_HIGHLIGHT_MS = 380
-const LINE_CLEAR_CALLOUT_MS = 780
+const LINE_CLEAR_CALLOUT_MS = 1560
+const LEVEL_MILESTONE_NOTICE_MS = 1800
 
 interface LineClearCallout {
   readonly id: number
   readonly points: number
   readonly clearedLines: number
+}
+
+interface LevelMilestoneNotice {
+  readonly id: number
+  readonly lines: number
 }
 
 interface GameplayControlProps {
@@ -259,6 +275,11 @@ function vibrateForGameEvent(
 
 const BEST_SCORE_STORAGE_KEY = 'games.block-drop.best-score'
 const DIFFICULTY_STORAGE_KEY = 'games.block-drop.difficulty'
+const THEME_STORAGE_KEY = 'games.block-drop.theme'
+
+const availableThemeOrder = BLOCK_DROP_THEME_ORDER.filter((themeId) =>
+  IMPLEMENTED_BLOCK_DROP_THEME_ORDER.includes(themeId),
+)
 
 function readBestScore(): number {
   try {
@@ -301,6 +322,45 @@ function writeDifficulty(difficulty: BlockDropDifficulty): void {
   }
 }
 
+function readTheme(): BlockDropThemeId {
+  try {
+    const value = window.localStorage.getItem(THEME_STORAGE_KEY)
+    return isBlockDropThemeId(value) && isBlockDropThemeImplemented(value)
+      ? value
+      : 'classic'
+  } catch {
+    return 'classic'
+  }
+}
+
+function writeTheme(themeId: BlockDropThemeId): void {
+  try {
+    window.localStorage.setItem(THEME_STORAGE_KEY, themeId)
+  } catch {
+    // Theme persistence is optional; the current game stays playable.
+  }
+}
+
+function getThemeStyle(theme: BlockDropTheme): JSX.CSSProperties {
+  return Object.fromEntries(
+    Object.entries(theme.tokens).map(([name, value]) => [`--bd-${name}`, value]),
+  ) as JSX.CSSProperties
+}
+
+function getThemeSwatchStyle(theme: BlockDropTheme): JSX.CSSProperties {
+  return {
+    '--swatch-board': theme.board.background,
+    '--swatch-ring': theme.tokens['swatch-ring'],
+    '--swatch-i': theme.pieces.I,
+    '--swatch-o': theme.pieces.O,
+    '--swatch-t': theme.pieces.T,
+    '--swatch-z': theme.pieces.Z,
+    '--swatch-highlight': theme.tokens['cell-highlight'],
+    '--swatch-shadow': theme.tokens['cell-shadow'],
+    '--swatch-font': theme.tokens['font-display'],
+  } as JSX.CSSProperties
+}
+
 const PREVIEW_FRAME_SIZE = 6
 
 function getPreviewShape(type: Tetromino) {
@@ -320,9 +380,11 @@ function getPreviewShape(type: Tetromino) {
 function PiecePreview({
   label,
   type,
+  theme,
 }: {
   readonly label: 'Hold' | 'Next'
   readonly type: Tetromino | null
+  readonly theme: BlockDropTheme
 }) {
   const shape = type === null ? null : getPreviewShape(type)
   const accessibleLabel =
@@ -366,10 +428,10 @@ function PiecePreview({
                 class="next-piece-cell is-filled"
                 key={`${x}-${y}`}
                 style={{
-                  backgroundColor: TETROMINO_COLORS[type],
+                  '--piece': theme.pieces[type],
                   gridColumn: x + 1,
                   gridRow: y + 1,
-                }}
+                } as JSX.CSSProperties}
               />
             ))}
           </span>
@@ -442,6 +504,8 @@ export function BlockDrop({
   const levelHighlightTimer = useRef<number | null>(null)
   const lineClearCalloutTimer = useRef<number | null>(null)
   const lineClearCalloutSequence = useRef(0)
+  const levelMilestoneNoticeTimer = useRef<number | null>(null)
+  const levelMilestoneNoticeSequence = useRef(0)
   const statusRef = useRef<GameStatus>('playing')
   const controllerRef = useRef<BlockDropControllerInstance | null>(null)
   const [bestScore, setBestScore] = useState(readBestScore)
@@ -451,6 +515,7 @@ export function BlockDrop({
     useState<BlockDropControllerInstance | null>(null)
   const [status, setStatus] = useState<GameStatus>('playing')
   const [difficulty, setDifficulty] = useState<BlockDropDifficulty>(readDifficulty)
+  const [themeId, setThemeId] = useState<BlockDropThemeId>(readTheme)
   const [postOverlayGestureLock, setPostOverlayGestureLock] = useState(false)
   const [score, setScore] = useState(0)
   const [lines, setLines] = useState(0)
@@ -458,11 +523,15 @@ export function BlockDrop({
   const [levelHighlight, setLevelHighlight] = useState(false)
   const [lineClearCallout, setLineClearCallout] =
     useState<LineClearCallout | null>(null)
+  const [levelMilestoneNotice, setLevelMilestoneNotice] =
+    useState<LevelMilestoneNotice | null>(null)
   const [next, setNext] = useState<Tetromino>('I')
   const [heldPiece, setHeldPiece] = useState<Tetromino | null>(null)
   const [holdUsed, setHoldUsed] = useState(false)
   const [clearing, setClearing] = useState(false)
   const [announcement, setAnnouncement] = useState('')
+  const theme = BLOCK_DROP_THEMES[themeId]
+  const themeStyle = getThemeStyle(theme)
 
   const recordFinalScore = (finalScore: number) => {
     if (finalScore > bestScoreRef.current) {
@@ -506,6 +575,20 @@ export function BlockDrop({
             setLevelHighlight(false)
             levelHighlightTimer.current = null
           }, LEVEL_HIGHLIGHT_MS)
+          const milestoneLines = Math.floor(state.lines / 10) * 10
+          if (milestoneLines > 0) {
+            setLevelMilestoneNotice({
+              id: ++levelMilestoneNoticeSequence.current,
+              lines: milestoneLines,
+            })
+            if (levelMilestoneNoticeTimer.current !== null) {
+              window.clearTimeout(levelMilestoneNoticeTimer.current)
+            }
+            levelMilestoneNoticeTimer.current = window.setTimeout(() => {
+              setLevelMilestoneNotice(null)
+              levelMilestoneNoticeTimer.current = null
+            }, LEVEL_MILESTONE_NOTICE_MS)
+          }
         } else if (state.level < previousLevel) {
           setLevelHighlight(false)
           if (levelHighlightTimer.current !== null) {
@@ -551,6 +634,7 @@ export function BlockDrop({
           setNewBest(false)
           setLevelHighlight(false)
           setLineClearCallout(null)
+          setLevelMilestoneNotice(null)
           if (levelHighlightTimer.current !== null) {
             window.clearTimeout(levelHighlightTimer.current)
             levelHighlightTimer.current = null
@@ -558,6 +642,10 @@ export function BlockDrop({
           if (lineClearCalloutTimer.current !== null) {
             window.clearTimeout(lineClearCalloutTimer.current)
             lineClearCalloutTimer.current = null
+          }
+          if (levelMilestoneNoticeTimer.current !== null) {
+            window.clearTimeout(levelMilestoneNoticeTimer.current)
+            levelMilestoneNoticeTimer.current = null
           }
           boardSurfaceRef.current?.focus()
         } else if (
@@ -583,7 +671,8 @@ export function BlockDrop({
             `Cleared ${count} ${count === 1 ? 'line' : 'lines'}.` +
             `${pointsMessage} Score ${state.score}.`
           if (state.level > previousLevel) {
-            message += ` Level ${state.level}.`
+            const milestoneLines = Math.floor(state.lines / 10) * 10
+            message += ` ${milestoneLines} lines cleared!`
           }
           if (state.status === 'game-over') message += ' Game over.'
         } else if (
@@ -606,7 +695,7 @@ export function BlockDrop({
         if (message) setAnnouncement(message)
         lastAnnouncedStatus.current = state.status
       },
-      { difficulty },
+      { difficulty, theme: themeId },
     )
     controllerRef.current = controller
     setController(controller)
@@ -638,10 +727,54 @@ export function BlockDrop({
         window.clearTimeout(lineClearCalloutTimer.current)
         lineClearCalloutTimer.current = null
       }
+      if (levelMilestoneNoticeTimer.current !== null) {
+        window.clearTimeout(levelMilestoneNoticeTimer.current)
+        levelMilestoneNoticeTimer.current = null
+      }
       controllerRef.current = null
       controller.destroy()
     }
   }, [controllerFactory])
+
+  useLayoutEffect(() => {
+    const root = document.documentElement
+    const previousTheme = root.getAttribute('data-block-drop-theme')
+    const previousPage = root.style.getPropertyValue('--bd-page')
+    const previousPagePriority = root.style.getPropertyPriority('--bd-page')
+    const existingMeta = document.querySelector<HTMLMetaElement>(
+      'meta[name="theme-color"]',
+    )
+    const meta = existingMeta ?? document.createElement('meta')
+    const previousMetaContent = meta.getAttribute('content')
+
+    if (existingMeta === null) {
+      meta.name = 'theme-color'
+      document.head.append(meta)
+    }
+    root.dataset.blockDropTheme = theme.id
+    root.style.setProperty('--bd-page', theme.tokens.page)
+    meta.content = theme.metaThemeColor
+
+    return () => {
+      if (previousTheme === null) {
+        root.removeAttribute('data-block-drop-theme')
+      } else {
+        root.setAttribute('data-block-drop-theme', previousTheme)
+      }
+      if (previousPage) {
+        root.style.setProperty('--bd-page', previousPage, previousPagePriority)
+      } else {
+        root.style.removeProperty('--bd-page')
+      }
+      if (existingMeta === null) {
+        meta.remove()
+      } else if (previousMetaContent === null) {
+        meta.removeAttribute('content')
+      } else {
+        meta.content = previousMetaContent
+      }
+    }
+  }, [theme])
 
   useEffect(() => {
     const handleVisibilityChange = () => {
@@ -682,6 +815,11 @@ export function BlockDrop({
   }, [status])
 
   const act = (action: GameAction) => controller?.dispatch(action)
+  const chooseTheme = (selectedTheme: BlockDropThemeId) => {
+    setThemeId(selectedTheme)
+    writeTheme(selectedTheme)
+    controllerRef.current?.setTheme?.(selectedTheme)
+  }
   const paused = status === 'paused'
   const controlsInactive = paused || status === 'game-over'
   const controlsGestureLocked =
@@ -723,7 +861,12 @@ export function BlockDrop({
   const returnFocusToHelp = () => helpButtonRef.current?.focus()
 
   return (
-    <main class="block-drop" aria-labelledby="block-drop-heading">
+    <main
+      class="block-drop"
+      data-theme={themeId}
+      style={themeStyle}
+      aria-labelledby="block-drop-heading"
+    >
       <header class="game-header">
         <div class="game-title">
           <h1 id="block-drop-heading">Block Drop</h1>
@@ -770,6 +913,15 @@ export function BlockDrop({
               >
                 +{lineClearCallout.points} ·{' '}
                 {LINE_CLEAR_NAMES[lineClearCallout.clearedLines]}
+              </div>
+            )}
+            {levelMilestoneNotice && (
+              <div
+                class="level-milestone-popup"
+                aria-hidden="true"
+                key={levelMilestoneNotice.id}
+              >
+                {levelMilestoneNotice.lines} lines cleared!
               </div>
             )}
             {paused && (
@@ -846,6 +998,50 @@ export function BlockDrop({
                       Help
                     </button>
                   </div>
+                  <fieldset class="pause-theme">
+                    <legend>
+                      <span>Theme</span>
+                      <output aria-live="polite">Selected: {theme.label}</output>
+                    </legend>
+                    <div class="theme-options">
+                      {availableThemeOrder.map((optionId) => {
+                        const option = BLOCK_DROP_THEMES[optionId]
+                        const isSelected = themeId === option.id
+                        return (
+                          <label
+                            class="theme-option"
+                            data-theme-option={option.id}
+                            data-selected={isSelected ? 'true' : undefined}
+                            style={getThemeSwatchStyle(option)}
+                            key={option.id}
+                          >
+                            <input
+                              class="visually-hidden"
+                              type="radio"
+                              name="block-drop-theme"
+                              value={option.id}
+                              checked={isSelected}
+                              onChange={() => chooseTheme(option.id)}
+                            />
+                            <span class="theme-swatch" aria-hidden="true">
+                              <i />
+                              <i />
+                              <i />
+                              <i />
+                            </span>
+                            <span class="theme-option-label">
+                              {option.label}
+                            </span>
+                            {isSelected && (
+                              <span class="theme-selected-badge" aria-hidden="true">
+                                Selected
+                              </span>
+                            )}
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </fieldset>
                 </div>
               </div>
             )}
@@ -931,8 +1127,8 @@ export function BlockDrop({
               role="group"
               aria-label="Piece previews"
             >
-              <PiecePreview label="Hold" type={heldPiece} />
-              <PiecePreview label="Next" type={next} />
+              <PiecePreview label="Hold" type={heldPiece} theme={theme} />
+              <PiecePreview label="Next" type={next} theme={theme} />
             </div>
           </aside>
         </div>

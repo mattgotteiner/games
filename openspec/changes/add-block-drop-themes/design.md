@@ -67,7 +67,7 @@ export interface BlockDropTheme {
     readonly pausedVeil: string     // replaces 'rgb(7 17 31 / 84%)'
     readonly gameOverVeil: string   // replaces 'rgb(7 17 31 / 76%)'
   }
-  readonly clearMs: number          // 180..450
+  readonly clearMs: number          // 360..840 (twice the original timings)
   readonly metaThemeColor: string
   readonly tokens: Readonly<Record<BlockDropToken, string>>  // see §3
 }
@@ -194,7 +194,9 @@ html[data-block-drop-theme] body { background: var(--bd-page); }
 in `app.css` under `.block-drop[data-theme="…"]`. Examples are the Tron glow
 box shadows, Sketchbook hand-drawn border radii, and the Stained Glass arched
 pause card. Keep this decoration small: shapes and effects only, never
-colors. Shadow colors are tokens too, such as `--bd-glow`.
+colors. Shadow colors are tokens too, such as `--bd-glow`. The board surface
+has no decorative frame, shadow, or focus outline in any theme; focus styling
+stays on interactive controls.
 
 **Classic regression guard.** After tokenization, Classic must look the same
 as before. Capture Playwright screenshots of Classic before starting
@@ -204,13 +206,14 @@ temporary snapshot tests or keep them if the project wants them.
 
 ### 4. Pause-menu picker
 
-Put the picker in the pause card after the Difficulty fieldset and before the
-actions:
+Put the picker at the bottom of the pause card, after the Resume, Restart, and
+Help actions. Separate it from the actions with a divider so the theme choice
+reads as its own section:
 
 ```html
 <fieldset class="pause-theme">
   <legend><span>Theme</span><output>{label}</output></legend>
-  <div class="theme-options">            <!-- 3 columns -->
+  <div class="theme-options">            <!-- one stacked column -->
     <label class="theme-option" data-theme-option="tron">
       <input type="radio" name="block-drop-theme" value="tron" class="visually-hidden" />
       <span class="theme-swatch" aria-hidden="true">  <!-- 2x2 mini cells -->
@@ -233,8 +236,9 @@ actions:
   preview-cell decoration rule keyed on `[data-theme-option="…"]`.
 - The checked option gets a 2 px `--bd-accent` ring and bold label. Use
   `:has(input:focus-visible)` to show the focus ring on the label.
-- Each tile is at least 44 px tall. Use three columns at every width. At
-  390x844, the whole pause card must fit without scrolling. It already
+- Each tile is at least 44 px tall. Use one column at every width. Show the
+  selected theme both in the legend and with a clearly distinct selected row.
+  At 390x844, the whole pause card must fit without scrolling. It already
   scrolls internally if needed on short landscape screens.
 - Because the change applies live, the HUD, header, controls, page
   background, and pause card restyle immediately. The playfield is behind the
@@ -269,18 +273,17 @@ state.
 
 | Theme | `clearMs` |
 |---|---|
-| Classic | 180 (unchanged) |
-| Tron | 320 |
-| Chocolate | 420 |
-| Nature | 400 |
-| Sketchbook | 380 |
-| Stained Glass | 360 |
+| Classic | 360 (twice the original 180 ms) |
+| Tron | 640 |
+| Chocolate | 840 |
+| Nature | 800 |
+| Sketchbook | 760 |
+| Stained Glass | 720 |
 
-Gameplay is frozen during the clear, so slower themes add up to about 240 ms
-per clear. That is acceptable for a cosmetic choice, and the spec caps the
-duration at 450 ms. Do not scale gravity or scoring to compensate. The
-line-clear callout keeps its current 780 ms CSS animation. It already outlasts
-every clear.
+Gameplay is frozen during the clear. These timings make each theme's clear
+last twice as long as before, with a maximum of 840 ms. Do not scale gravity
+or scoring to compensate. The line-clear callout lasts 1560 ms so it remains
+visible through the longest clear.
 
 The callout element gets the theme's font, color, and shadow from tokens.
 Optional per-theme callout decoration is described in `art-direction.md`.
@@ -290,6 +293,23 @@ Optional per-theme callout decoration is described in `art-direction.md`.
 The current behavior stays the same. When `reducedMotion()` is true,
 `startLineClear` is never called, so no theme effect runs. The callout already
 appears without movement.
+
+### 9. Line milestone popup
+
+The rules state already increments `level` at each 10-line boundary. When the
+component observes a level increase, show a temporary notice whose only text
+is the milestone count, such as “10 lines cleared!”. Keep it in the board frame
+near the top so it reads as a game event without moving the playfield. Place it
+separately from the centered line-clear callout. Style it with the active
+theme's accent, card background and border, display font, and panel radius. The
+notice is decorative (`aria-hidden`); add the same milestone text to the
+existing game-announcement live region.
+
+Keep the notice visible for 1800 ms. A later milestone replaces an earlier
+notice and restarts its timer. Restart and unmount clear its timer and state.
+With reduced motion, keep the notice visible for the same duration but remove
+its entrance and exit animation. The popup does not pause input, change score,
+or alter the line-clear effect.
 
 ## Risks / Trade-offs
 

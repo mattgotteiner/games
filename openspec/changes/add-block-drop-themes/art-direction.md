@@ -18,9 +18,12 @@ ported almost directly into `theme-renderers/*.ts`.
    motion in the theme. Everything else stays calm.
 4. **Procedural only.** Canvas paths, gradients, and CSS. No images, sprites,
    or web fonts. Everything must keep working offline.
-5. **Deterministic texture.** Every speck, hatch, streak, drip, leaf, and
+5. **Keep the playfield unframed.** Themes must not add a decorative border,
+   outline, or shadow around the board. Focus indicators remain on controls
+   and theme options.
+6. **Deterministic texture.** Every speck, hatch, streak, drip, leaf, and
    shard comes from `hash(x, y, salt)`, so nothing flickers between frames.
-6. **Display fonts are an accent.** Use them for the game title, the score
+7. **Display fonts are an accent.** Use them for the game title, the score
    number, the pause or game-over heading, and the line-clear callout. Use the
    UI font for everything else.
 
@@ -28,12 +31,12 @@ ported almost directly into `theme-renderers/*.ts`.
 
 | Theme | One-line concept | Shape language | Clear effect | `clearMs` |
 |---|---|---|---|---|
-| Classic | The original midnight board | Square, bevelled | White flash | 180 |
-| Tron | Light lines on an endless grid | Sharp, hollow, glowing | Light-cycle beam derezzes rows into sliding scanlines | 320 |
-| Chocolate | A box of little bars | Rounded, embossed, glossy | Bars soften, slump, and melt into dripping puddles | 420 |
-| Nature | River stones and falling leaves | Soft pebbles, organic | Stones turn into leaves that sway and drift down | 400 |
-| Sketchbook *(new)* | Colored pencil on graph paper | Wobbly ink outline, hatched | A pink eraser scrubs the row away, leaving crumbs | 380 |
-| Stained Glass *(new)* | Jewel light through leaded panes | Lead lines, faceted glass | Panes crack, then shatter into falling shards | 360 |
+| Classic | The original midnight board | Square, bevelled | White flash | 360 |
+| Tron | Light lines on an endless grid | Sharp, hollow, glowing | Light-cycle beam derezzes rows into sliding scanlines | 640 |
+| Chocolate | A box of little bars | Rounded, embossed, glossy | Bars soften, slump, and melt into dripping puddles | 840 |
+| Nature | River stones and falling leaves | Soft pebbles, organic | Stones turn into leaves that sway and drift down | 800 |
+| Sketchbook *(new)* | Colored pencil on graph paper | Wobbly ink outline, hatched | A pink eraser scrubs the row away, leaving crumbs | 760 |
+| Stained Glass *(new)* | Jewel light through leaded panes | Lead lines, faceted glass | Panes crack, then shatter into falling shards | 720 |
 
 ### Why these two new themes
 
@@ -76,8 +79,7 @@ Drop.
 | `control-bg` / `control-border` / `control-text` | Gameplay control buttons |
 | `focus` | `:focus-visible` outline |
 | `press` | `button:active` inset overlay |
-| `board-ring` | `.board-surface` 2 px frame ring |
-| `board-shadow` | `.board-surface` outer shadow |
+| `swatch-ring` | Theme picker swatch border |
 | `board-backdrop` | `.board-surface` background, visible at the canvas edges |
 | `scrim` | `.game-overlay` background over the board |
 | `preview-empty` | Empty Hold and Next grid cells |
@@ -118,8 +120,7 @@ same in every theme.
 | control-text | `#e0f2fe` | `#8ff3ff` | `#f3dcc0` | `#f1eadb` | `#2b2a28` | `#efe4c8` |
 | focus | `#fbbf24` | `#ff2bd6` | `#ffd98a` | `#f2c14e` | `#1f6fd1` | `#7fd8ff` |
 | press | `rgb(7 17 31 / 18%)` | `rgb(0 229 255 / 14%)` | `rgb(0 0 0 / 22%)` | `rgb(0 0 0 / 18%)` | `rgb(43 42 40 / 10%)` | `rgb(0 0 0 / 22%)` |
-| board-ring | `#3a5b83` | `#00e5ff` | `#b8913f` | `#6b7d5a` | `#8a8172` | `#d4af37` |
-| board-shadow | `0 1rem 3rem rgb(0 0 0 / 35%)` | `0 0 1.5rem rgb(0 229 255 / 35%)` | `0 1rem 3rem rgb(0 0 0 / 45%)` | `0 1rem 3rem rgb(0 0 0 / 30%)` | `3px 4px 0 rgb(43 42 40 / 22%)` | `0 0 2.5rem rgb(212 175 55 / 18%)` |
+| swatch-ring | `#3a5b83` | `#00e5ff` | `#b8913f` | `#6b7d5a` | `#8a8172` | `#d4af37` |
 | board-backdrop | `radial-gradient(circle at 50% 45%, #132641, #091525 70%)` | `#03060c` | `#2e0f14` | `#1e2419` | `#fbf8f0` | `#121212` |
 | scrim | `rgb(7 17 31 / 24%)` | `rgb(2 4 9 / 35%)` | `rgb(27 15 10 / 30%)` | `rgb(26 31 23 / 28%)` | `rgb(239 233 220 / 35%)` | `rgb(13 15 28 / 30%)` |
 | preview-empty | `rgb(148 163 184 / 10%)` | `rgb(0 229 255 / 6%)` | `rgb(201 162 74 / 10%)` | `rgb(232 220 192 / 6%)` | `rgb(127 166 207 / 18%)` | `rgb(255 255 255 / 5%)` |
@@ -194,7 +195,7 @@ and cool. Keywords: *light cycle, wireframe, synth, scanline*.
   The result reads as a hollow neon tile.
 - *Ghost:* a dashed outline (`[size·0.2, size·0.12]`) in the piece color at
   55% alpha, `lineWidth 1.5`, with no fill.
-- *Clear "Derez" (320 ms):*
+- *Clear "Derez" (640 ms):*
   - From 0 to 40%, a white beam 3 px wide and 1.3 rows tall sweeps from left
     to right across each cleared row. A cyan trail fades out over 3 cells
     behind it. Cells behind the beam turn into white wireframe scanlines.
@@ -241,7 +242,7 @@ squares*.
 - *Ghost:* a dotted gold outline (`rgb(227 184 102 / 60%)`, round caps, dash
   `[1.5, size·0.12]`) on a rounded rectangle. It looks like an empty slot in
   the paper tray.
-- *Clear "Melt" (420 ms):*
+- *Clear "Melt" (840 ms):*
   - **Soften, 0 to 35%:** the corner radius grows from 14% to 44%, the
     emboss fades to 0, and the gloss brightens to 28%. The bars lose their
     shape.
@@ -290,7 +291,7 @@ that drift away. It is the calmest theme: slow, soft, and rounded. Keywords:
   positions for a stone grain.
 - *Ghost:* a dashed rounded outline in the piece color at 50% alpha, with
   dash `[size·0.14, size·0.1]`.
-- *Clear "Leaf fall" (400 ms):*
+- *Clear "Leaf fall" (800 ms):*
   - From 0 to 100%, a soft moss wash `rgb(168 198 134 / 22%)` covers the
     row and fades as `1 − p`.
   - **Transform, 0 to 30%:** each pebble cross-fades into a leaf of the same
@@ -338,7 +339,7 @@ pencil hatching, graphite, pink eraser, notebook*.
   shimmer while it moves.
 - *Ghost:* a dashed graphite outline at 45% alpha, `lineWidth 1.2`, with no
   hatch. It looks like a light construction line.
-- *Clear "Eraser" (380 ms):*
+- *Clear "Eraser" (760 ms):*
   - A classic pink-and-blue eraser scrubs each cleared row from left to
     right. Its x position is `ease(p/0.8)·(W + 1.2)·size − 0.6·size`. The
     body is pink `#f4a6b4` and the sleeve is blue `#3d6fb6`. It has a
@@ -359,8 +360,7 @@ pencil hatching, graphite, pink eraser, notebook*.
 - Panels, cards, and buttons use a hand-drawn border:
   `border-width: 2px; border-radius: 255px 12px 225px 12px / 12px 225px 12px 255px;`.
   Do not change the radius tokens. This is decoration.
-- The primary button is solid graphite ink with paper-colored text. The
-  board gets a paper-shadow offset (`board-shadow`).
+- The primary button is solid graphite ink with paper-colored text.
 - Treat this as a light theme. Disabled controls must still read as
   disabled: dashed border plus reduced opacity, as today. Check this
   carefully.
@@ -391,7 +391,7 @@ jewel tones, gold leaf, light through glass*.
   5. Draw a 1 px inner highlight at `rgb(255 255 255 / 12%)`.
 - *Ghost:* fill with the piece color at 12% alpha, plus a `#5a5a5a` lead
   outline. It looks like a pane waiting for glass.
-- *Clear "Shatter" (360 ms):*
+- *Clear "Shatter" (720 ms):*
   - **Crack, 0 to 30%:** light floods the panes: the gradient lightens by up
     to 40%. Three white crack lines (`rgb(255 255 255 / 85%)`, 1.2 px) grow
     from a hashed point near each cell's center toward three hashed edge
@@ -410,9 +410,7 @@ jewel tones, gold leaf, light through glass*.
 - The **pause and game-over cards have a gothic arch top**:
   `border-radius: 48% 48% 0.6rem 0.6rem / 2.5rem 2.5rem 0.6rem 0.6rem; padding-top: 1.75rem;`.
   Center the heading.
-- The board ring is gold. `board-shadow` adds a warm halo, as if the window
-  were lit from behind. In the header, add a subtle warm radial glow behind
-  the title.
+- In the header, add a subtle warm radial glow behind the title.
 - Preview cells:
   `background: linear-gradient(135deg, color-mix(in srgb, var(--piece), white 32%), var(--piece) 50%, color-mix(in srgb, var(--piece), black 28%)); box-shadow: inset 0 0 0 2px #161616;`.
 
@@ -424,13 +422,13 @@ Each option shows a 2×2 mini board drawn in **its own** theme. This tells
 players more than a label does.
 
 - Swatch: a 2.25rem square with that theme's `board.background` and
-  `board-ring`. Inside are 4 cells in a 2×2 grid, colored I, O, T, and Z from
+  `swatch-ring`. Inside are 4 cells in a 2×2 grid, colored I, O, T, and Z from
   that theme's palette, with the theme's preview-cell CSS decoration.
 - Label: the theme name in that theme's `font-display`, at 0.75rem.
 - Selected option: 2 px ring in the active `--bd-accent`, bold label, and a
   small ✓ glyph (`aria-hidden`).
-- Order: Classic, Tron, Chocolate, Nature, Sketchbook, Stained Glass. Use 3
-  columns and 2 rows.
+- Order: Classic, Tron, Chocolate, Nature, Sketchbook, Stained Glass. Use one
+  stacked column.
 
 ## Review checklist (phone, 390×844, for each theme)
 
@@ -439,7 +437,10 @@ players more than a label does.
 - [ ] The landing preview cannot be mistaken for a locked piece.
 - [ ] The clear effect is readable, stays inside the board, does not stutter,
       and feels like the theme's own effect.
+- [ ] On phone, there is visible spacing between the HUD and playfield.
+- [ ] A 10-line milestone popup is readable, uses the active theme, and does
+      not cover the centered line-clear callout.
 - [ ] The HUD, controls, pause card, picker, game-over card, Help dialog,
-      callout, and page background all look like one world.
+      callouts, and page background all look like one world.
 - [ ] Focus rings are visible. Disabled controls read as disabled.
 - [ ] Classic is pixel-identical to the pre-change screenshots.

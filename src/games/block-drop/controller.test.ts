@@ -11,16 +11,28 @@ import {
   createGame,
   type BlockDropState,
 } from './rules'
+import {
+  IMPLEMENTED_BLOCK_DROP_THEME_ORDER,
+  THEME_RENDERERS,
+} from './theme-renderers'
 
 function canvasContext(): CanvasRenderingContext2D {
   return {
     beginPath: vi.fn(),
     clearRect: vi.fn(),
+    clip: vi.fn(),
+    createLinearGradient: vi.fn(() => ({
+      addColorStop: vi.fn(),
+    })) as unknown as CanvasRenderingContext2D['createLinearGradient'],
     fillRect: vi.fn(),
     fillText: vi.fn(),
     lineTo: vi.fn(),
     moveTo: vi.fn(),
+    rect: vi.fn(),
+    restore: vi.fn(),
+    save: vi.fn(),
     setTransform: vi.fn(),
+    setLineDash: vi.fn(),
     stroke: vi.fn(),
     strokeRect: vi.fn(),
   } as unknown as CanvasRenderingContext2D
@@ -170,6 +182,21 @@ describe('BlockDropController', () => {
     expect(controller.getState().active?.y).toBe(startY)
     frameCallback(595)
     expect(controller.getState().active?.y).toBe((startY ?? 0) + 1)
+    controller.destroy()
+  })
+
+  it('changes the renderer while paused without changing the rules state', () => {
+    const { controller } = createController()
+    controller.dispatch('pause')
+    const pausedState = controller.getState()
+    vi.mocked(context.fillRect).mockClear()
+
+    controller.setTheme('tron')
+
+    expect(controller.getState()).toBe(pausedState)
+    expect(context.fillStyle).toBe('rgb(2 4 9 / 86%)')
+    expect(context.createLinearGradient).toHaveBeenCalled()
+    expect(context.fillRect).toHaveBeenCalled()
     controller.destroy()
   })
 
@@ -452,7 +479,9 @@ describe('BlockDropController', () => {
     frameCallback(1_000)
     frameCallback(1_090)
     expect(canvas.dataset.clearingRows).toBe('19')
-    frameCallback(1_180)
+    frameCallback(1_359)
+    expect(canvas.dataset.clearingRows).toBe('19')
+    frameCallback(1_360)
 
     expect(canvas.dataset.clearingRows).toBeUndefined()
     expect(onStateChange).toHaveBeenLastCalledWith(
@@ -461,6 +490,51 @@ describe('BlockDropController', () => {
     )
     controller.destroy()
   })
+
+  it('uses the active theme line-clear duration', () => {
+    const { controller } = createController(lineClearState(), { theme: 'tron' })
+    controller.dispatch('hard-drop')
+
+    frameCallback(1_000)
+    frameCallback(1_639)
+    expect(canvas.dataset.clearingRows).toBe('19')
+    frameCallback(1_640)
+    expect(canvas.dataset.clearingRows).toBeUndefined()
+
+    controller.destroy()
+  })
+
+  it.each(IMPLEMENTED_BLOCK_DROP_THEME_ORDER)(
+    '%s skips clearing rows and clips the clear to the board',
+    (theme) => {
+      const renderer = THEME_RENDERERS[theme]!
+      const drawnRows: number[] = []
+      const drawCell = vi
+        .spyOn(renderer, 'drawCell')
+        .mockImplementation((_context, _theme, cell) => {
+          drawnRows.push(cell.y)
+        })
+      const drawLineClear = vi
+        .spyOn(renderer, 'drawLineClear')
+        .mockImplementation(() => undefined)
+      const { controller } = createController(lineClearState(), { theme })
+      drawCell.mockClear()
+      drawnRows.length = 0
+      vi.mocked(context.clip).mockClear()
+
+      try {
+        controller.dispatch('hard-drop')
+
+        expect(context.clip).toHaveBeenCalledOnce()
+        expect(drawCell).toHaveBeenCalled()
+        expect(drawnRows.every((row) => row !== 19)).toBe(true)
+      } finally {
+        controller.destroy()
+        drawCell.mockRestore()
+        drawLineClear.mockRestore()
+      }
+    },
+  )
 
   it('gates gameplay during a clear and resumes with fresh gravity timing', () => {
     const { controller } = createController(lineClearState())
@@ -473,16 +547,17 @@ describe('BlockDropController', () => {
       'rotate',
       'soft-drop',
       'hard-drop',
+      'pause',
     ] as const) {
       controller.dispatch(action)
       expect(controller.getState()).toBe(cleared)
     }
 
     frameCallback(0)
-    frameCallback(180)
-    frameCallback(879)
+    frameCallback(360)
+    frameCallback(1_059)
     expect(controller.getState().active).toEqual(cleared.active)
-    frameCallback(880)
+    frameCallback(1_060)
     expect(controller.getState().active?.y).toBe((cleared.active?.y ?? 0) + 1)
     controller.destroy()
   })
@@ -503,23 +578,27 @@ describe('BlockDropController', () => {
     controller.destroy()
   })
 
-  it('skips animated feedback when reduced motion is preferred', () => {
-    const { controller, onStateChange } = createController(lineClearState(), {
-      reducedMotion: () => true,
-    })
+  it.each(IMPLEMENTED_BLOCK_DROP_THEME_ORDER)(
+    'skips %s line-clear feedback when reduced motion is preferred',
+    (theme) => {
+      const { controller, onStateChange } = createController(lineClearState(), {
+        theme,
+        reducedMotion: () => true,
+      })
 
-    controller.dispatch('hard-drop')
+      controller.dispatch('hard-drop')
 
-    expect(controller.getState().score).toBe(100)
-    expect(canvas.dataset.clearingRows).toBeUndefined()
-    expect(onStateChange).toHaveBeenLastCalledWith(controller.getState(), {
-      clearing: false,
-      clearedLines: 1,
-      clearPoints: 100,
-      locked: true,
-    })
-    controller.destroy()
-  })
+      expect(controller.getState().score).toBe(100)
+      expect(canvas.dataset.clearingRows).toBeUndefined()
+      expect(onStateChange).toHaveBeenLastCalledWith(controller.getState(), {
+        clearing: false,
+        clearedLines: 1,
+        clearPoints: 100,
+        locked: true,
+      })
+      controller.destroy()
+    },
+  )
 
   it('cleans up active clear feedback during teardown', () => {
     const { controller } = createController(lineClearState())

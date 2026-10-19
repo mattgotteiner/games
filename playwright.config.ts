@@ -1,5 +1,9 @@
 import { defineConfig, devices } from '@playwright/test'
 
+const baseURL =
+  process.env.PLAYWRIGHT_BASE_URL ?? 'http://127.0.0.1:4173/games/'
+const phoneRun = process.env.PLAYWRIGHT_PHONE === '1'
+
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: false,
@@ -8,18 +12,20 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   reporter: process.env.CI ? 'github' : 'list',
   use: {
-    baseURL: 'http://127.0.0.1:4173/games/',
+    ...(phoneRun ? devices['Pixel 7'] : devices['Desktop Chrome']),
+    baseURL,
     trace: 'on-first-retry',
   },
   projects: [
     {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      name: phoneRun ? 'phone-chromium' : 'chromium',
     },
   ],
-  webServer: {
-    command: 'npm run preview -- --host 127.0.0.1 --port 4173 --strictPort',
-    url: 'http://127.0.0.1:4173/games/',
-    reuseExistingServer: !process.env.CI,
-  },
+  webServer: process.env.PLAYWRIGHT_BASE_URL
+    ? undefined
+    : {
+        command: 'npm run preview -- --host 127.0.0.1 --port 4173 --strictPort',
+        url: 'http://127.0.0.1:4173/games/',
+        reuseExistingServer: !process.env.CI,
+      },
 })

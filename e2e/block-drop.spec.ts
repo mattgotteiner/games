@@ -126,6 +126,17 @@ async function expectGameFitsViewport(page: import('@playwright/test').Page) {
   expect(surfaceBox).not.toBeNull()
   expect(Math.abs(surfaceBox!.width - canvasBox!.width)).toBeLessThanOrEqual(4)
   expect(Math.abs(surfaceBox!.height - canvasBox!.height)).toBeLessThanOrEqual(4)
+  const isStackedPhoneLayout = await page.evaluate(
+    () =>
+      window.innerWidth > 352 &&
+      window.innerWidth <= 672 &&
+      window.innerHeight > window.innerWidth,
+  )
+  if (isStackedPhoneLayout) {
+    const hudBox = await page.locator('.game-hud').boundingBox()
+    expect(hudBox).not.toBeNull()
+    expect(surfaceBox!.y - (hudBox!.y + hudBox!.height)).toBeGreaterThanOrEqual(16)
+  }
   expect(await page.locator('.action-controls button').count()).toBe(2)
   expect(await page.locator('.hold-controls button').count()).toBe(1)
   for (const button of await page.getByRole('button').all()) {
@@ -145,6 +156,18 @@ async function expectGameFitsViewport(page: import('@playwright/test').Page) {
       () => document.documentElement.scrollHeight <= window.innerHeight,
     ),
   ).toBe(true)
+}
+
+async function expectBoardHasNoFrame(page: import('@playwright/test').Page) {
+  const frameStyles = await page.locator('.board-surface').evaluate((element) => {
+    const styles = getComputedStyle(element)
+    return {
+      boxShadow: styles.boxShadow,
+      outlineStyle: styles.outlineStyle,
+    }
+  })
+  expect(frameStyles.boxShadow).toBe('none')
+  expect(frameStyles.outlineStyle).toBe('none')
 }
 
 async function expectScoringGuideVisible(page: import('@playwright/test').Page) {
@@ -497,7 +520,7 @@ test('plays Block Drop with touch and keyboard across phone orientations', async
   const keyboardHelpVisible = await page.locator('.key-help').isVisible()
   expect(portraitHud!.height).toBeLessThanOrEqual(64)
   expect(portraitBoard!.height).toBeGreaterThanOrEqual(
-    keyboardHelpVisible ? 520 : 540,
+    keyboardHelpVisible ? 504 : 524,
   )
   expect(portraitHud!.y + portraitHud!.height).toBeLessThanOrEqual(
     portraitBoard!.y,
@@ -801,20 +824,26 @@ test('animates an exact deterministic line clear and gates gameplay', async ({
   }, lineClearKeys)
 
   expect(await canvas.getAttribute('data-clearing-rows')).toBe('14')
+  await expect(page.locator('.level-milestone-popup')).toHaveCount(0)
   await expect(page.getByText('Clearing lines', { exact: true })).toBeVisible()
-  await expect(page.locator('.line-clear-callout')).toHaveText('+100 · Single')
-  await expect(page.locator('.game-progress')).toContainText('1')
   await expect(page.getByRole('button', { name: 'Move left' })).toBeDisabled()
   await expect(page.getByRole('button', { name: 'Pause game' })).toBeDisabled()
   await expect(
     page.getByRole('button', { name: 'Restart game' }),
   ).toHaveCount(0)
-
   await page.keyboard.press('ArrowLeft')
   await page.keyboard.press('p')
   await expect(page.getByText('Clearing lines', { exact: true })).toBeVisible()
+  await expect(canvas).toHaveAttribute('data-clearing-rows', '14')
+  await page.waitForTimeout(220)
+  await expect(canvas).toHaveAttribute('data-clearing-rows', '14')
+  await page.screenshot({
+    path: 'test-results/block-drop-themes/phone-classic-clearing.png',
+  })
+  await expect(page.locator('.line-clear-callout')).toHaveText('+100 · Single')
+  await expect(page.locator('.game-progress')).toContainText('1')
   await expect(canvas).not.toHaveAttribute('data-clearing-rows')
-  await expect(page.locator('.game-status')).toHaveText('Paused')
+  await expect(page.locator('.game-status')).toHaveText('Playing')
   await expect(page.getByLabel('Score: 442')).toBeVisible()
   await expect(
     page.getByRole('region', {
@@ -946,6 +975,182 @@ test('shows the selected difficulty and restores it after reload', async ({
       () => document.documentElement.scrollWidth <= window.innerWidth,
     ),
   ).toBe(true)
+})
+
+test('selects a theme while paused and restores it after reload and Back', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('./')
+  await page.evaluate(() => {
+    window.localStorage.setItem('games.block-drop.theme', 'not-a-theme')
+  })
+  await page.getByRole('button', { name: 'Play Block Drop' }).click()
+
+  const game = page.locator('.block-drop')
+  await expect(game).toHaveAttribute('data-theme', 'classic')
+  await expectBoardHasNoFrame(page)
+  await expectGameFitsViewport(page)
+  await page.getByRole('button', { name: 'Pause game' }).click()
+  const pause = page.getByRole('group', { name: 'Paused' })
+  const themeGroup = pause.getByRole('group', { name: /^Theme/ })
+  await expect(themeGroup.locator('output')).toHaveText('Selected: Classic')
+  expect(
+    await themeGroup.evaluate((element) =>
+      element.previousElementSibling?.classList.contains('overlay-actions'),
+    ),
+  ).toBe(true)
+  expect(
+    await themeGroup.locator('.theme-options').evaluate((element) =>
+      getComputedStyle(element).gridTemplateColumns.split(' ').length,
+    ),
+  ).toBe(1)
+  await expect(themeGroup.getByRole('radio')).toHaveCount(2)
+  await expect(themeGroup.getByRole('radio', { name: 'Classic' })).toBeChecked()
+  await expect(themeGroup.getByRole('radio', { name: 'Tron' })).not.toBeChecked()
+  await expect(
+    themeGroup.locator('[data-selected="true"] .theme-selected-badge'),
+  ).toHaveText('Selected')
+  await page.screenshot({
+    path: 'test-results/block-drop-themes/phone-classic-paused.png',
+  })
+
+  await pause.getByRole('button', { name: 'Restart game' }).click()
+  await expect(page.locator('.game-status')).toHaveText('Playing')
+  await expect(game).toHaveAttribute('data-theme', 'classic')
+  await expect(page.locator('.board-surface')).toBeFocused()
+  await expectBoardHasNoFrame(page)
+  await page.screenshot({
+    path: 'test-results/block-drop-themes/phone-classic-playing.png',
+  })
+  await page.getByRole('button', { name: 'Pause game' }).click()
+
+  const initialState = {
+    score: await page.locator('.game-score-value').textContent(),
+    progress: await page.locator('.game-progress').textContent(),
+    status: await page.locator('.game-status').textContent(),
+  }
+  await pause.locator('label[data-theme-option="tron"]').click()
+  await expect(game).toHaveAttribute('data-theme', 'tron')
+  await expect(
+    themeGroup.getByRole('radio', { name: 'Tron' }),
+  ).toBeChecked()
+  await expect(themeGroup.locator('output')).toHaveText('Selected: Tron')
+  await expect(
+    themeGroup.locator('[data-selected="true"] .theme-option-label'),
+  ).toHaveText('Tron')
+  await page.screenshot({
+    path: 'test-results/block-drop-themes/phone-tron-paused.png',
+  })
+  await expect(page.locator('.game-status')).toHaveText(initialState.status!)
+  await expect(page.locator('.game-score-value')).toHaveText(initialState.score!)
+  await expect(page.locator('.game-progress')).toHaveText(initialState.progress!)
+  await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute(
+    'content',
+    '#020409',
+  )
+  expect(
+    await page.evaluate(() => getComputedStyle(document.body).backgroundColor),
+  ).toBe('rgb(2, 4, 9)')
+  const cardMetrics = await pause
+    .locator('.game-overlay-card')
+    .evaluate((element) => ({
+      clientHeight: element.clientHeight,
+      scrollHeight: element.scrollHeight,
+    }))
+  expect(cardMetrics.scrollHeight).toBeLessThanOrEqual(cardMetrics.clientHeight)
+
+  await pause.getByRole('button', { name: 'Restart game' }).click()
+  await expect(page.locator('.game-status')).toHaveText('Playing')
+  await expect(game).toHaveAttribute('data-theme', 'tron')
+  await expect(page.locator('.board-surface')).toBeFocused()
+  await expectBoardHasNoFrame(page)
+  await page.screenshot({
+    path: 'test-results/block-drop-themes/phone-tron-playing.png',
+  })
+  expect(await page.evaluate(() => localStorage.getItem('games.block-drop.theme')))
+    .toBe('tron')
+
+  await page.getByRole('button', { name: 'Pause game' }).click()
+  await page.setViewportSize({ width: 568, height: 320 })
+  const shortPause = page.getByRole('group', { name: 'Paused' })
+  const shortCardMetrics = await shortPause
+    .locator('.game-overlay-card')
+    .evaluate((element) => ({
+      clientHeight: element.clientHeight,
+      overflowY: getComputedStyle(element).overflowY,
+      scrollHeight: element.scrollHeight,
+    }))
+  expect(shortCardMetrics.scrollHeight).toBeGreaterThan(
+    shortCardMetrics.clientHeight,
+  )
+  expect(shortCardMetrics.overflowY).toBe('auto')
+  await shortPause.getByRole('button', { name: 'Help' }).scrollIntoViewIfNeeded()
+
+  await pause.getByRole('button', { name: 'Resume game' }).click()
+  await page.reload()
+  await expect(game).toHaveAttribute('data-theme', 'tron')
+  await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute(
+    'content',
+    '#020409',
+  )
+
+  await page.goBack()
+  await expect(page.getByRole('button', { name: 'Play Block Drop' })).toBeVisible()
+  await expect(page.locator('html')).not.toHaveAttribute(
+    'data-block-drop-theme',
+  )
+  await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute(
+    'content',
+    '#162033',
+  )
+})
+
+test('styles a level-milestone popup with the active theme and reduced motion', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('./')
+  await page.getByRole('button', { name: 'Play Block Drop' }).click()
+
+  await page.locator('.board-frame').evaluate((frame) => {
+    const popup = document.createElement('div')
+    popup.className = 'level-milestone-popup'
+    popup.setAttribute('aria-hidden', 'true')
+    popup.textContent = '10 lines cleared!'
+    frame.append(popup)
+  })
+
+  const popup = page.locator('.level-milestone-popup')
+  await expect(popup).toHaveText('10 lines cleared!')
+  await page.waitForTimeout(250)
+  const popupStyle = await popup.evaluate((element) => {
+    const style = getComputedStyle(element)
+    return {
+      animationName: style.animationName,
+      backgroundImage: style.backgroundImage,
+      borderColor: style.borderColor,
+    }
+  })
+  expect(popupStyle.animationName).toBe('level-milestone-popup')
+  expect(popupStyle.backgroundImage).not.toBe('none')
+  expect(popupStyle.borderColor).toBe('rgb(82, 116, 156)')
+  await page.locator('.board-frame').screenshot({
+    path: 'test-results/block-drop-themes/phone-classic-milestone-popup.png',
+  })
+
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await expect
+    .poll(() => popup.evaluate((element) => getComputedStyle(element).animationName))
+    .toBe('none')
+  const popupBox = await popup.boundingBox()
+  const boardBox = await page.locator('.board-frame').boundingBox()
+  expect(popupBox).not.toBeNull()
+  expect(boardBox).not.toBeNull()
+  expect(popupBox!.x).toBeGreaterThanOrEqual(boardBox!.x)
+  expect(popupBox!.x + popupBox!.width).toBeLessThanOrEqual(
+    boardBox!.x + boardBox!.width,
+  )
 })
 
 test('keeps the best score through reload and offline relaunch', async ({
