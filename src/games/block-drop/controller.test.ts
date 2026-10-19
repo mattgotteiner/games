@@ -11,6 +11,7 @@ import {
   createGame,
   type BlockDropState,
 } from './rules'
+import { BLOCK_DROP_THEMES } from './themes'
 import {
   IMPLEMENTED_BLOCK_DROP_THEME_ORDER,
   THEME_RENDERERS,
@@ -29,6 +30,7 @@ function canvasContext(): CanvasRenderingContext2D {
     createRadialGradient: vi.fn(() => ({
       addColorStop: vi.fn(),
     })) as unknown as CanvasRenderingContext2D['createRadialGradient'],
+    ellipse: vi.fn(),
     fillRect: vi.fn(),
     fill: vi.fn(),
     fillText: vi.fn(),
@@ -36,6 +38,7 @@ function canvasContext(): CanvasRenderingContext2D {
     moveTo: vi.fn(),
     quadraticCurveTo: vi.fn(),
     rect: vi.fn(),
+    rotate: vi.fn(),
     restore: vi.fn(),
     roundRect: vi.fn(),
     save: vi.fn(),
@@ -43,6 +46,7 @@ function canvasContext(): CanvasRenderingContext2D {
     setLineDash: vi.fn(),
     stroke: vi.fn(),
     strokeRect: vi.fn(),
+    translate: vi.fn(),
   } as unknown as CanvasRenderingContext2D
 }
 
@@ -499,18 +503,22 @@ describe('BlockDropController', () => {
     controller.destroy()
   })
 
-  it('uses the active theme line-clear duration', () => {
-    const { controller } = createController(lineClearState(), { theme: 'tron' })
-    controller.dispatch('hard-drop')
+  it.each(IMPLEMENTED_BLOCK_DROP_THEME_ORDER)(
+    'uses the %s line-clear duration',
+    (theme) => {
+      const { controller } = createController(lineClearState(), { theme })
+      const duration = BLOCK_DROP_THEMES[theme].clearMs
+      controller.dispatch('hard-drop')
 
-    frameCallback(1_000)
-    frameCallback(1_639)
-    expect(canvas.dataset.clearingRows).toBe('19')
-    frameCallback(1_640)
-    expect(canvas.dataset.clearingRows).toBeUndefined()
+      frameCallback(1_000)
+      frameCallback(1_000 + duration - 1)
+      expect(canvas.dataset.clearingRows).toBe('19')
+      frameCallback(1_000 + duration)
+      expect(canvas.dataset.clearingRows).toBeUndefined()
 
-    controller.destroy()
-  })
+      controller.destroy()
+    },
+  )
 
   it.each(IMPLEMENTED_BLOCK_DROP_THEME_ORDER)(
     '%s skips clearing rows and clips the clear to the board',
