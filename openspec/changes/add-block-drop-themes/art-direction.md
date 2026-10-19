@@ -441,15 +441,15 @@ players more than a label does.
 
 ## Review checklist (phone, 390×844, for each theme)
 
-- [ ] All seven pieces can be told apart at a glance, including the dark,
+- [x] All seven pieces can be told apart at a glance, including the dark,
       milk, and white chocolates.
-- [ ] The landing preview cannot be mistaken for a locked piece.
-- [ ] The clear effect is readable, stays inside the board, does not stutter,
+- [x] The landing preview cannot be mistaken for a locked piece.
+- [x] The clear effect is readable, stays inside the board, does not stutter,
       and feels like the theme's own effect.
-- [ ] On phone, there is visible spacing between the HUD and playfield.
-- [ ] A 10-line milestone popup is readable, uses the active theme, and does
+- [x] On phone, there is visible spacing between the HUD and playfield.
+- [x] A 10-line milestone popup is readable, uses the active theme, and does
       not cover the centered line-clear callout.
-- [ ] The HUD, controls, pause card, picker, game-over card, Help dialog,
+- [x] The HUD, controls, pause card, picker, game-over card, Help dialog,
       callouts, and page background all look like one world.
-- [ ] Focus rings are visible. Disabled controls read as disabled.
-- [ ] Classic is pixel-identical to the pre-change screenshots.
+- [x] Focus rings are visible. Disabled controls read as disabled.
+- [x] Classic is pixel-identical to the pre-change screenshots.
