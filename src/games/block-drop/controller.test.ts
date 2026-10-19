@@ -534,8 +534,14 @@ describe('BlockDropController', () => {
         controller.dispatch('hard-drop')
 
         expect(context.clip).toHaveBeenCalledOnce()
+        expect(context.rect).toHaveBeenCalledOnce()
+        expect(context.rect).toHaveBeenCalledWith(0, 0, 180, 360)
         expect(drawCell).toHaveBeenCalled()
         expect(drawnRows.every((row) => row !== 19)).toBe(true)
+        expect(drawLineClear).toHaveBeenCalledOnce()
+        expect(vi.mocked(context.clip).mock.invocationCallOrder[0]).toBeLessThan(
+          drawLineClear.mock.invocationCallOrder[0],
+        )
       } finally {
         controller.destroy()
         drawCell.mockRestore()

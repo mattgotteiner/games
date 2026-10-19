@@ -59,7 +59,7 @@ For each theme, implement:
   - contrast is at least 4.5 for `text`, `text-muted`, and `label` on `panel`; `primary-text` on `primary-bg`; `secondary-text` on `secondary-bg`; and `control-text` on `control-bg`
   - contrast is at least 3 for `focus` on `page` and `control-border` on `page`
   - Classic values equal the pre-change literals, except for the square-corner values and the contrast correction documented in `art-direction.md`
-- [ ] 6.2 Renderer tests using a recording mock 2D context:
+- [x] 6.2 Renderer tests using a recording mock 2D context:
   - each renderer draws the same call sequence twice for the same input, so drawing is deterministic
   - no renderer calls `Math.random`
   - line-clear drawing at `progress` 0, 0.5, and 1 does not throw
