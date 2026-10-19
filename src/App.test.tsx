@@ -825,6 +825,73 @@ describe('App', () => {
     }).toEqual(stateBefore)
   })
 
+  it('keeps a newly selected theme when the paused game restarts', () => {
+    const initial = createGame(5)
+    let state = initial
+    let publish: BlockDropStateListener | undefined
+    let initialTheme: string | undefined
+    const dispatch = vi.fn()
+    const setTheme = vi.fn()
+    const factory: BlockDropControllerFactory = (
+      _canvas,
+      _container,
+      onStateChange,
+      options,
+    ) => {
+      publish = onStateChange
+      initialTheme = options?.theme
+      return {
+        dispatch,
+        destroy: vi.fn(),
+        getState: () => state,
+        setTheme,
+      }
+    }
+
+    render(<BlockDrop controllerFactory={factory} />)
+    expect(initialTheme).toBe('classic')
+    fireEvent.click(screen.getByRole('button', { name: 'Pause game' }))
+    act(() => {
+      state = { ...state, status: 'paused' }
+      publish?.(state)
+    })
+
+    const pause = screen.getByRole('group', { name: 'Paused' })
+    fireEvent.click(pause.querySelector('label[data-theme-option="tron"]')!)
+    expect(setTheme).toHaveBeenCalledWith('tron')
+    expect(window.localStorage.getItem('games.block-drop.theme')).toBe('tron')
+    expect(document.querySelector('.block-drop')).toHaveAttribute(
+      'data-theme',
+      'tron',
+    )
+
+    fireEvent.click(within(pause).getByRole('button', { name: 'Restart game' }))
+    expect(dispatch).toHaveBeenCalledWith('restart')
+    act(() => {
+      state = initial
+      publish?.(state, { clearing: false, action: 'restart' })
+    })
+
+    expect(screen.getByText('Playing')).toBeInTheDocument()
+    expect(document.querySelector('.block-drop')).toHaveAttribute(
+      'data-theme',
+      'tron',
+    )
+    expect(window.localStorage.getItem('games.block-drop.theme')).toBe('tron')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Pause game' }))
+    act(() => {
+      state = { ...state, status: 'paused' }
+      publish?.(state)
+    })
+    const restartedThemeGroup = within(
+      screen.getByRole('group', { name: 'Paused' }),
+    ).getByRole('group', { name: /^Theme/ })
+    expect(
+      within(restartedThemeGroup).getByRole('radio', { name: 'Tron' }),
+    ).toBeChecked()
+  })
+
   it('falls back to Classic for an invalid saved theme', () => {
     const value = 'not-a-theme'
     window.localStorage.setItem('games.block-drop.theme', value)

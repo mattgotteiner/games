@@ -64,7 +64,7 @@ For each theme, implement:
   - no renderer calls `Math.random`
   - line-clear drawing at `progress` 0, 0.5, and 1 does not throw
   - the controller skips cleared rows and clips the clear to the board rectangle
-- [ ] 6.3 Component tests:
+- [x] 6.3 Component tests:
   - the Theme radio group lists the six themes in order with the saved one checked
   - selecting a theme updates `data-theme`, calls `setTheme`, and writes storage without changing game state or paused status
   - invalid or unavailable storage falls back to Classic
