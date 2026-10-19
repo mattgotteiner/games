@@ -24,7 +24,7 @@ and keep `npm run check` green before starting the next one.
 - [x] 3.2 In `BlockDrop.tsx`, apply `theme.tokens` as inline `--bd-*` properties and `data-theme` on `<main class="block-drop">`.
 - [x] 3.3 Add the document effect: set `html[data-block-drop-theme]` and `--bd-page`, swap the meta `theme-color`, and restore all of them on unmount. Add the two `global.css` rules.
 - [x] 3.4 Change Hold and Next preview cells to use `--piece` instead of an inline `backgroundColor`.
-- [ ] 3.5 Compare Classic with the baseline again. It must be identical.
+- [x] 3.5 Compare Classic with the baseline again. It must be identical.
 - [x] 3.6 Set all six themes' panel, control, score, cell, preview, swatch, and popup corners to square, including gameplay control buttons.
 - [x] 3.7 Improve the visibility of the Hold and Next piece previews across all themes, especially at phone size.
 
