@@ -301,7 +301,7 @@ component observes a level increase, show a temporary notice whose only text
 is the milestone count, such as “10 lines cleared!”. Keep it in the board frame
 near the top so it reads as a game event without moving the playfield. Place it
 separately from the centered line-clear callout. Style it with the active
-theme's accent, card background and border, display font, and panel radius. The
+theme's accent, card background and border, display font, and square corners. The
 notice is decorative (`aria-hidden`); add the same milestone text to the
 existing game-announcement live region.
 
@@ -312,7 +312,7 @@ its entrance and exit animation. The popup does not pause input, change score,
 or alter the line-clear effect.
 
 For the phone presentation, double the compact card's font size, padding,
-border thickness, and theme panel radius. Use a responsive font size from
+and border thickness. Keep square corners. Use a responsive font size from
 1.44 rem to 1.9 rem and padding of 1.1 rem by 1.7 rem. Keep its existing
 maximum width inside the board frame so the message can wrap on narrower
 screens.

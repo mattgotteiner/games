@@ -33,8 +33,8 @@ ported almost directly into `theme-renderers/*.ts`.
 |---|---|---|---|---|
 | Classic | The original midnight board | Square, bevelled | White flash | 360 |
 | Tron | Light lines on an endless grid | Sharp, hollow, glowing | Light-cycle beam derezzes rows into sliding scanlines | 640 |
-| Chocolate | A box of little bars | Rounded, embossed, glossy | Bars soften, slump, and melt into dripping puddles | 840 |
-| Nature | River stones and falling leaves | Soft pebbles, organic | Stones turn into leaves that sway and drift down | 800 |
+| Chocolate | A box of little bars | Square, embossed, glossy | Stacked bars merge into one dripping melt | 840 |
+| Nature | Mossy stone tiles and falling leaves | Square tiles, organic texture | Stones turn into leaves that sway and drift down | 800 |
 | Sketchbook *(new)* | Colored pencil on graph paper | Wobbly ink outline, hatched | A pink eraser scrubs the row away, leaving crumbs | 760 |
 | Stained Glass *(new)* | Jewel light through leaded panes | Lead lines, faceted glass | Panes crack, then shatter into falling shards | 720 |
 
@@ -84,11 +84,14 @@ Drop.
 | `scrim` | `.game-overlay` background over the board |
 | `preview-empty` | Empty Hold and Next grid cells |
 | `callout-text` / `callout-shadow` | Line-clear callout color and `text-shadow` |
-| `radius-panel` / `radius-control` | Corner radii |
+| `radius-panel` / `radius-control` / `radius-score` | Corner radii; all are `0` in every theme |
 | `font-ui` / `font-display` | Font stacks |
 
-Status-dot colors (green, amber, rose, and white) are semantic. Keep them the
-same in every theme.
+All radius tokens are `0` for every theme. Keep static board cells, previews,
+swatches, panels, cards, dialogs, milestone popups, buttons, and gameplay
+controls square. Only transient clear-effect artwork may use curved outlines
+when its visual effect calls for them. Status-dot colors (green, amber, rose,
+and white) are semantic. Keep them the same in every theme.
 
 `CLASSIC_STACK` = `Inter, ui-rounded, "SF Pro Rounded", system-ui,
 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif` (the current
@@ -126,8 +129,9 @@ same in every theme.
 | preview-empty | `rgb(148 163 184 / 10%)` | `rgb(0 229 255 / 6%)` | `rgb(201 162 74 / 10%)` | `rgb(232 220 192 / 6%)` | `rgb(127 166 207 / 18%)` | `rgb(255 255 255 / 5%)` |
 | callout-text | `#f8fafc` | `#e6fbff` | `#fbf1e3` | `#f1eadb` | `#2b2a28` | `#f4ecd8` |
 | callout-shadow | `0 2px 1rem rgb(0 0 0 / 75%)` | `0 0 0.5rem #00e5ff, 0 0 1.25rem rgb(0 229 255 / 70%)` | `0 2px 0 #5a301c, 0 0.4rem 1rem rgb(0 0 0 / 60%)` | `0 2px 1rem rgb(0 0 0 / 60%)` | `0 0 0.35rem #fbf8f0, 0 0 0.2rem #fbf8f0` | `0 2px 0 #000, 0 0 1rem rgb(212 175 55 / 55%)` |
-| radius-panel | `1rem` | `0.25rem` | `0.9rem` | `1.4rem` | `0.35rem` | `0.6rem` |
-| radius-control | `0.8rem` | `0.15rem` | `999px` | `1.1rem` | `0.35rem` | `0.5rem` |
+| radius-panel | `0` | `0` | `0` | `0` | `0` | `0` |
+| radius-control | `0` | `0` | `0` | `0` | `0` | `0` |
+| radius-score | `0` | `0` | `0` | `0` | `0` | `0` |
 | font-ui | CLASSIC_STACK | `ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace` | CLASSIC_STACK | `ui-rounded, "SF Pro Rounded", ` + CLASSIC_STACK | CLASSIC_STACK | CLASSIC_STACK |
 | font-display | CLASSIC_STACK | same as font-ui | `"Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif` | same as font-ui | `"Segoe Print", "Bradley Hand", "Chalkboard SE", "Marker Felt", "Comic Sans MS", cursive` | `"Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif` |
 | **metaThemeColor** | `#162033` (unchanged) | `#020409` | `#1b0f0a` | `#1a1f17` | `#efe9dc` | `#0d0f1c` |
@@ -221,40 +225,43 @@ and cool. Keywords: *light cycle, wireframe, synth, scanline*.
 ## Chocolate
 
 **Concept:** A luxury chocolate box. A burgundy velvet liner holds little
-bars of different varieties, framed in gold foil. The look is warm, indulgent,
-and a little playful. Keywords: *praline box, gold foil, ganache, embossed
-squares*.
+square bars of different varieties, framed in gold foil. The look is warm,
+indulgent, and a little playful. Keywords: *praline box, gold foil, ganache,
+embossed squares*.
 
 **Canvas**
 
 - *Background:* burgundy liner `#2e0f14` with a faint gold grid. No
   gradient.
 - *Cell (one segment of a bar):*
-  1. Draw a rounded rectangle with a 5% inset and a corner radius of 14% of
-     the size, filled with the piece color.
+  1. Draw a square-cornered rectangle with a 5% inset, filled with the piece
+     color.
   2. Draw an embossed inner square at a 24% inset. Use a light stroke
      `rgb(255 240 220 / 26%)` on the top and left edges and a dark stroke
      `rgb(0 0 0 / 32%)` on the bottom and right edges, with
      `lineWidth = size·0.07`.
-  3. Add a small gloss pill at the top left (`rgb(255 255 255 / 10%)`, from
-     14% to 48% of the width, 8% of the height).
+  3. Add a small square-cornered gloss strip at the top left
+     (`rgb(255 255 255 / 10%)`, from 14% to 48% of the width, 8% of the height).
   The four cells of a tetromino read as a little segmented bar.
-- *Ghost:* a dotted gold outline (`rgb(227 184 102 / 60%)`, round caps, dash
-  `[1.5, size·0.12]`) on a rounded rectangle. It looks like an empty slot in
-  the paper tray.
+- *Ghost:* a dotted gold outline (`rgb(227 184 102 / 60%)`, square caps, dash
+  `[1.5, size·0.12]`) on a square-cornered rectangle. It looks like an empty
+  slot in the paper tray.
 - *Clear "Melt" (840 ms):*
-  - **Soften, 0 to 35%:** the corner radius grows from 14% to 44%, the
-    emboss fades to 0, and the gloss brightens to 28%. The bars lose their
-    shape.
-  - **Slump, 25 to 100%** (`m = ease((p − 0.25)/0.75)`): the row becomes one
-    continuous molten band. Its top edge sinks by `m·0.5·size` and ripples
-    with a gentle sine wave (`sin(x/size·1.7 + row)·0.1·size·m`). Each cell
-    keeps its own color, so the band looks like a marbled multi-flavor
-    puddle.
-  - **Drips:** each cell gets up to 2 drips (skip a drip when
+  - **Soften, 0 to 35%:** the square emboss fades to 0 and the gloss brightens
+    to 28%. The bars lose their rigid detail without rounding their corners.
+  - **Stacked slump, 25 to 100%** (`m = ease((p − 0.25)/0.75)`): each
+    contiguous set of cleared rows becomes one vertically stacked molten
+    mass. The mass has one shared top edge that sinks by `m·0.5·size` and
+    ripples across the full board width with a gentle sine wave
+    (`sin(x/size·1.7 + topRow)·0.1·size·m`). Keep each cleared row's cell
+    colors as adjacent horizontal bands inside this single silhouette so
+    multi-row clears look like one tall marbled melt, not separate row strips.
+  - **Drips:** draw drips only from the shared lower edge of each stacked
+    mass. Each cell-column may get up to 2 drips (skip a drip when
     `hash < 0.35`). A drip is 22% of the size wide, with length
-    `(0.6 + hash·1.4)·size·m` and a round blob at the end. Drips run down over
-    the rows below. That is expected, and the board clip contains them.
+    `(0.6 + hash·1.4)·size·m` and a liquid end. Drips run down over the rows
+    below, contained by the board clip. Non-adjacent cleared row groups stay
+    visually separate.
   - **Gloss line:** a cream stroke `rgb(255 240 220 / 28%)` follows the
     rippled top edge.
   - **Fade, 70 to 100%:** global alpha goes from 1 to 0.
@@ -263,38 +270,39 @@ squares*.
 
 - Use the serif display font for headings, the score, and the callout. Set
   the callout in italic.
-- Use pill-shaped buttons (`radius-control: 999px`). Primary buttons are
-  gold foil. Add a subtle diagonal sheen to the primary button:
+- Use square-cornered buttons. Primary buttons are gold foil. Add a subtle
+  diagonal sheen to the primary button:
   `background: linear-gradient(135deg, #f0cd85, #e3b866 45%, #c99a45)`.
 - Cards have a 1 px gold border plus an inner keyline:
   `box-shadow: inset 0 0 0 3px #2b1911, inset 0 0 0 4px rgb(227 184 102 / 35%)`.
   This looks like a chocolate box lid.
-- Preview cells: `border-radius: 18%`, with
+- Preview cells are square with
   `box-shadow: inset 2px 2px 0 rgb(255 240 220 / 25%), inset -2px -2px 0 rgb(0 0 0 / 30%)`.
 
 ## Nature
 
-**Concept:** You are sitting by a stream at dusk. The pieces are smooth
-river stones, the board is mossy earth, and the cleared rows become leaves
-that drift away. It is the calmest theme: slow, soft, and rounded. Keywords:
-*pebbles, moss, dusk, falling leaves, breathing room*.
+**Concept:** You are sitting by a stream at dusk. The pieces are square stone
+tiles with mossy color and grain, the board is earth, and cleared rows become
+leaves that drift away. It is the calmest theme: slow, soft, and organic in
+texture while keeping square corners. Keywords: *stone tiles, moss, dusk,
+falling leaves, breathing room*.
 
 **Canvas**
 
 - *Background:* a vertical gradient from `#1b2117` at the top to `#2a3122`
   at the bottom, with a very faint warm grid.
-- *Cell (pebble):* a rounded rectangle with a 6% inset and a radius of 38%
-  of the size. Fill it with a radial gradient whose light source sits at
+- *Cell (stone tile):* a square-cornered rectangle with a 6% inset. Fill it
+  with a radial gradient whose light source sits at
   (35%, 30%): a lighter tint (`mix(color, white, 0.28)`), then the base color
   at 55%, then a darker shade (`mix(color, black, 0.2)`) at the edge. Add two
   tiny darker speckles (`rgb(0 0 0 / 14%)`, radius 3.5% of the size) at hashed
   positions for a stone grain.
-- *Ghost:* a dashed rounded outline in the piece color at 50% alpha, with
+- *Ghost:* a dashed square outline in the piece color at 50% alpha, with
   dash `[size·0.14, size·0.1]`.
 - *Clear "Leaf fall" (800 ms):*
   - From 0 to 100%, a soft moss wash `rgb(168 198 134 / 22%)` covers the
     row and fades as `1 − p`.
-  - **Transform, 0 to 30%:** each pebble cross-fades into a leaf of the same
+  - **Transform, 0 to 30%:** each stone tile cross-fades into a leaf of the same
     color. The leaf is a pointed ellipse made from two quadratic curves, with
     a thin `rgb(0 0 0 / 22%)` midrib. Its starting angle is
     `(hash − 0.5)·0.6` radians.
@@ -306,13 +314,12 @@ that drift away. It is the calmest theme: slow, soft, and rounded. Keywords:
 
 **UI and CSS decoration**
 
-- Use the `ui-rounded` stack for everything. Give it generous radii: panels
-  `1.4rem`, buttons `1.1rem`.
+- Use the `ui-rounded` stack for everything. Keep panels and buttons
+  square-cornered.
 - Use soft, low shadows and no glows. Keep borders at 1 px in moss tones.
 - The callout fades in and out, which is calm. The existing animation is
   fine. If the callout uses scale in other themes, do not scale it here.
-- Preview cells: `border-radius: 40%`, with
-  `background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--piece), white 28%), var(--piece) 55%, color-mix(in srgb, var(--piece), black 20%))`.
+- Preview cells are square, with `background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--piece), white 28%), var(--piece) 55%, color-mix(in srgb, var(--piece), black 20%))`.
 
 ## Sketchbook (new)
 
@@ -357,9 +364,8 @@ pencil hatching, graphite, pink eraser, notebook*.
 
 - Use the handwriting display font for the title, headings, score, and
   callout. Rotate the callout `-3deg`.
-- Panels, cards, and buttons use a hand-drawn border:
-  `border-width: 2px; border-radius: 255px 12px 225px 12px / 12px 225px 12px 255px;`.
-  Do not change the radius tokens. This is decoration.
+- Panels, cards, and buttons use a hand-drawn square-cornered border with
+  `border-width: 2px` and slight line wobble. Keep corners square.
 - The primary button is solid graphite ink with paper-colored text.
 - Treat this as a light theme. Disabled controls must still read as
   disabled: dashed border plus reduced opacity, as today. Check this
@@ -407,9 +413,7 @@ jewel tones, gold leaf, light through glass*.
 
 - Use the serif display font for headings, the score, and the callout. The
   callout is gold-shadowed parchment text.
-- The **pause and game-over cards have a gothic arch top**:
-  `border-radius: 48% 48% 0.6rem 0.6rem / 2.5rem 2.5rem 0.6rem 0.6rem; padding-top: 1.75rem;`.
-  Center the heading.
+- Keep the pause and game-over cards square-cornered. Center the heading.
 - In the header, add a subtle warm radial glow behind the title.
 - Preview cells:
   `background: linear-gradient(135deg, color-mix(in srgb, var(--piece), white 32%), var(--piece) 50%, color-mix(in srgb, var(--piece), black 28%)); box-shadow: inset 0 0 0 2px #161616;`.

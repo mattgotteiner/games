@@ -79,6 +79,55 @@ const lineClearKeys = [
   'Space',
 ] as const
 
+// Seed 42: these deterministic placements end with a two-row clear.
+const chocolateStackedClearSteps = [
+  { keys: ['ArrowRight', 'Space'], rows: [] },
+  { keys: ['ArrowRight', 'ArrowRight', 'ArrowRight', 'Space'], rows: [] },
+  { keys: ['ArrowLeft', 'ArrowLeft', 'ArrowLeft', 'Space'], rows: [] },
+  { keys: ['ArrowLeft', 'ArrowUp', 'ArrowUp', 'Space'], rows: [] },
+  {
+    keys: [
+      'ArrowRight',
+      'ArrowRight',
+      'ArrowRight',
+      'ArrowRight',
+      'ArrowUp',
+      'ArrowUp',
+      'ArrowUp',
+      'ArrowRight',
+      'Space',
+    ],
+    rows: [18],
+  },
+  { keys: ['ArrowLeft', 'ArrowLeft', 'Space'], rows: [] },
+  {
+    keys: [
+      'ArrowLeft',
+      'ArrowLeft',
+      'ArrowLeft',
+      'ArrowUp',
+      'ArrowLeft',
+      'Space',
+    ],
+    rows: [],
+  },
+  {
+    keys: [
+      'ArrowLeft',
+      'ArrowLeft',
+      'ArrowLeft',
+      'ArrowUp',
+      'ArrowUp',
+      'Space',
+    ],
+    rows: [],
+  },
+  {
+    keys: ['ArrowRight', 'ArrowRight', 'ArrowUp', 'ArrowUp', 'Space'],
+    rows: [18, 19],
+  },
+] as const
+
 async function expectHudDifficulty(
   page: import('@playwright/test').Page,
   label: string,
@@ -156,6 +205,39 @@ async function expectGameFitsViewport(page: import('@playwright/test').Page) {
       () => document.documentElement.scrollHeight <= window.innerHeight,
     ),
   ).toBe(true)
+}
+
+async function expectSquareThemeCorners(
+  page: import('@playwright/test').Page,
+) {
+  const roundedElements = await page.locator('.block-drop').evaluate(
+    (root, selectors) =>
+      selectors.flatMap((selector) =>
+        Array.from(root.querySelectorAll(selector)).flatMap((element) => {
+          const radius = Number.parseFloat(
+            getComputedStyle(element).borderTopLeftRadius,
+          )
+          return radius > 0 ? [{ selector, radius }] : []
+        }),
+      ),
+    [
+      '.board-surface',
+      '.board-surface canvas',
+      '.game-hud',
+      '.game-overlay-card',
+      '.help-dialog',
+      '.button-control',
+      '.theme-option',
+      '.theme-swatch',
+      '.theme-swatch i',
+      '.theme-selected-badge',
+      '.next-piece-cell',
+      '.game-over-scores > div',
+      '.new-best-indicator',
+      '.level-milestone-popup',
+    ],
+  )
+  expect(roundedElements).toEqual([])
 }
 
 async function expectBoardHasNoFrame(page: import('@playwright/test').Page) {
@@ -862,6 +944,62 @@ test('animates an exact deterministic line clear and gates gameplay', async ({
   ).toBe(settled)
 })
 
+test('shows the Chocolate stacked melt effect during a phone double-line clear', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.addInitScript(() => {
+    Date.now = () => 42
+  })
+  await page.goto('./')
+  await page.evaluate(() => {
+    window.localStorage.setItem('games.block-drop.theme', 'chocolate')
+  })
+  await page.getByRole('button', { name: 'Play Block Drop' }).click()
+
+  const game = page.locator('.block-drop')
+  const canvas = page.getByRole('img', { name: 'Block Drop board' })
+  await expect(game).toHaveAttribute('data-theme', 'chocolate')
+  for (const step of chocolateStackedClearSteps) {
+    await page.evaluate((keys) => {
+      for (const key of keys) {
+        window.dispatchEvent(
+          new KeyboardEvent('keydown', {
+            key: key === 'Space' ? ' ' : key,
+            bubbles: true,
+            cancelable: true,
+          }),
+        )
+      }
+    }, step.keys)
+
+    if (step.rows.length === 1) {
+      await expect(canvas).toHaveAttribute(
+        'data-clearing-rows',
+        step.rows.join(','),
+      )
+      await expect(canvas).not.toHaveAttribute(
+        'data-clearing-rows',
+        step.rows.join(','),
+      )
+    } else if (step.rows.length > 1) {
+      await expect(canvas).toHaveAttribute(
+        'data-clearing-rows',
+        step.rows.join(','),
+      )
+      await expect(page.locator('.line-clear-callout')).toHaveText(
+        '+300 · Double',
+      )
+      await page.waitForTimeout(560)
+      await expect(canvas).toHaveAttribute('data-clearing-rows', '18,19')
+    }
+  }
+  await page.screenshot({
+    path: 'test-results/block-drop-themes/phone-chocolate-melting.png',
+  })
+  await expect(canvas).not.toHaveAttribute('data-clearing-rows')
+})
+
 test('opens Block Drop directly and follows browser history', async ({ page }) => {
   await page.goto('./?theme=dark#catalog')
   await page.getByRole('button', { name: 'Play Block Drop' }).click()
@@ -990,6 +1128,7 @@ test('selects a theme while paused and restores it after reload and Back', async
   const game = page.locator('.block-drop')
   await expect(game).toHaveAttribute('data-theme', 'classic')
   await expectBoardHasNoFrame(page)
+  await expectSquareThemeCorners(page)
   await expectGameFitsViewport(page)
   await page.getByRole('button', { name: 'Pause game' }).click()
   const pause = page.getByRole('group', { name: 'Paused' })
@@ -1005,15 +1144,24 @@ test('selects a theme while paused and restores it after reload and Back', async
       getComputedStyle(element).gridTemplateColumns.split(' ').length,
     ),
   ).toBe(1)
-  await expect(themeGroup.getByRole('radio')).toHaveCount(2)
+  await expect(themeGroup.getByRole('radio')).toHaveCount(3)
   await expect(themeGroup.getByRole('radio', { name: 'Classic' })).toBeChecked()
-  await expect(themeGroup.getByRole('radio', { name: 'Tron' })).not.toBeChecked()
+  await expect(
+    themeGroup.getByRole('radio', { name: 'Chocolate' }),
+  ).not.toBeChecked()
   await expect(
     themeGroup.locator('[data-selected="true"] .theme-selected-badge'),
   ).toHaveText('Selected')
+  await expectSquareThemeCorners(page)
   await page.screenshot({
     path: 'test-results/block-drop-themes/phone-classic-paused.png',
   })
+
+  await pause.locator('label[data-theme-option="tron"]').click()
+  await expect(game).toHaveAttribute('data-theme', 'tron')
+  await expectSquareThemeCorners(page)
+  await pause.locator('label[data-theme-option="classic"]').click()
+  await expect(game).toHaveAttribute('data-theme', 'classic')
 
   await pause.getByRole('button', { name: 'Restart game' }).click()
   await expect(page.locator('.game-status')).toHaveText('Playing')
@@ -1030,28 +1178,29 @@ test('selects a theme while paused and restores it after reload and Back', async
     progress: await page.locator('.game-progress').textContent(),
     status: await page.locator('.game-status').textContent(),
   }
-  await pause.locator('label[data-theme-option="tron"]').click()
-  await expect(game).toHaveAttribute('data-theme', 'tron')
+  await pause.locator('label[data-theme-option="chocolate"]').click()
+  await expect(game).toHaveAttribute('data-theme', 'chocolate')
   await expect(
-    themeGroup.getByRole('radio', { name: 'Tron' }),
+    themeGroup.getByRole('radio', { name: 'Chocolate' }),
   ).toBeChecked()
-  await expect(themeGroup.locator('output')).toHaveText('Selected: Tron')
+  await expect(themeGroup.locator('output')).toHaveText('Selected: Chocolate')
   await expect(
     themeGroup.locator('[data-selected="true"] .theme-option-label'),
-  ).toHaveText('Tron')
+  ).toHaveText('Chocolate')
+  await expectSquareThemeCorners(page)
   await page.screenshot({
-    path: 'test-results/block-drop-themes/phone-tron-paused.png',
+    path: 'test-results/block-drop-themes/phone-chocolate-paused.png',
   })
   await expect(page.locator('.game-status')).toHaveText(initialState.status!)
   await expect(page.locator('.game-score-value')).toHaveText(initialState.score!)
   await expect(page.locator('.game-progress')).toHaveText(initialState.progress!)
   await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute(
     'content',
-    '#020409',
+    '#1b0f0a',
   )
   expect(
     await page.evaluate(() => getComputedStyle(document.body).backgroundColor),
-  ).toBe('rgb(2, 4, 9)')
+  ).toBe('rgb(27, 15, 10)')
   const cardMetrics = await pause
     .locator('.game-overlay-card')
     .evaluate((element) => ({
@@ -1062,14 +1211,14 @@ test('selects a theme while paused and restores it after reload and Back', async
 
   await pause.getByRole('button', { name: 'Restart game' }).click()
   await expect(page.locator('.game-status')).toHaveText('Playing')
-  await expect(game).toHaveAttribute('data-theme', 'tron')
+  await expect(game).toHaveAttribute('data-theme', 'chocolate')
   await expect(page.locator('.board-surface')).toBeFocused()
   await expectBoardHasNoFrame(page)
   await page.screenshot({
-    path: 'test-results/block-drop-themes/phone-tron-playing.png',
+    path: 'test-results/block-drop-themes/phone-chocolate-playing.png',
   })
   expect(await page.evaluate(() => localStorage.getItem('games.block-drop.theme')))
-    .toBe('tron')
+    .toBe('chocolate')
 
   await page.getByRole('button', { name: 'Pause game' }).click()
   await page.setViewportSize({ width: 568, height: 320 })
@@ -1089,10 +1238,10 @@ test('selects a theme while paused and restores it after reload and Back', async
 
   await pause.getByRole('button', { name: 'Resume game' }).click()
   await page.reload()
-  await expect(game).toHaveAttribute('data-theme', 'tron')
+  await expect(game).toHaveAttribute('data-theme', 'chocolate')
   await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute(
     'content',
-    '#020409',
+    '#1b0f0a',
   )
 
   await page.goBack()
@@ -1111,6 +1260,9 @@ test('styles a level-milestone popup with the active theme and reduced motion', 
 }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('./')
+  await page.evaluate(() => {
+    window.localStorage.setItem('games.block-drop.theme', 'chocolate')
+  })
   await page.getByRole('button', { name: 'Play Block Drop' }).click()
 
   await page.locator('.board-frame').evaluate((frame) => {
@@ -1139,14 +1291,15 @@ test('styles a level-milestone popup with the active theme and reduced motion', 
   })
   expect(popupStyle.animationName).toBe('level-milestone-popup')
   expect(popupStyle.backgroundImage).not.toBe('none')
-  expect(popupStyle.borderColor).toBe('rgb(82, 116, 156)')
+  expect(popupStyle.borderColor).toBe('rgb(184, 145, 63)')
   expect(popupStyle.borderWidth).toBe(2)
   expect(popupStyle.fontSize).toBeCloseTo(390 * 0.064)
   expect(popupStyle.paddingTop).toBeCloseTo(16 * 1.1)
   expect(popupStyle.paddingRight).toBeCloseTo(16 * 1.7)
-  expect(popupStyle.borderRadius).toBeCloseTo(32)
+  expect(popupStyle.borderRadius).toBe(0)
+  await expectSquareThemeCorners(page)
   await page.locator('.board-frame').screenshot({
-    path: 'test-results/block-drop-themes/phone-classic-milestone-popup.png',
+    path: 'test-results/block-drop-themes/phone-chocolate-milestone-popup.png',
   })
 
   await page.emulateMedia({ reducedMotion: 'reduce' })

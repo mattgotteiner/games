@@ -41,6 +41,15 @@ describe('Block Drop themes', () => {
     }
   })
 
+  it('uses square-corner tokens across every theme', () => {
+    for (const id of BLOCK_DROP_THEME_ORDER) {
+      const { tokens } = BLOCK_DROP_THEMES[id]
+      expect(tokens['radius-panel'], `${id} panels`).toBe('0')
+      expect(tokens['radius-control'], `${id} controls`).toBe('0')
+      expect(tokens['radius-score'], `${id} scores`).toBe('0')
+    }
+  })
+
   it('preserves Classic piece, board, and browser-chrome literals', () => {
     const classic = BLOCK_DROP_THEMES.classic
     expect(classic.pieces).toEqual({

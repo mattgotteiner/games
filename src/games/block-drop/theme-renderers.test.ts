@@ -87,6 +87,52 @@ function lineClear(progress: number): LineClearDraw {
 }
 
 describe('Block Drop theme renderers', () => {
+  it('keeps Chocolate cells and ghosts square-cornered', () => {
+    const { calls, context } = recordingContext()
+    const renderer = THEME_RENDERERS.chocolate!
+    renderer.drawCell(context, BLOCK_DROP_THEMES.chocolate, cell)
+    renderer.drawGhostCell(context, BLOCK_DROP_THEMES.chocolate, {
+      ...cell,
+      x: 5,
+      y: 17,
+      type: 'I',
+    })
+
+    const callNames = calls.map(([name]) => name)
+    expect(callNames).not.toContain('roundRect')
+    expect(callNames).not.toContain('arc')
+    expect(callNames).toContain('fillRect')
+    expect(callNames).toContain('strokeRect')
+  })
+
+  it('melts adjacent Chocolate clear rows as one stacked mass', () => {
+    const { calls, context } = recordingContext()
+    const rows = [BOARD_HEIGHT - 2, BOARD_HEIGHT - 1]
+    const stackedBoard = createEmptyBoard().map((boardRow, y) =>
+      rows.includes(y)
+        ? boardRow.map(
+            (_value, x) =>
+              ['I', 'J', 'L', 'O', 'S', 'T', 'Z'][x % 7] as Exclude<
+                typeof boardRow[number],
+                null
+              >,
+          )
+        : boardRow,
+    )
+
+    THEME_RENDERERS.chocolate!.drawLineClear(
+      context,
+      BLOCK_DROP_THEMES.chocolate,
+      {
+        ...lineClear(0.5),
+        rows,
+        board: stackedBoard,
+      },
+    )
+
+    expect(calls.filter(([name]) => name === 'stroke')).toHaveLength(1)
+  })
+
   it.each(IMPLEMENTED_BLOCK_DROP_THEME_ORDER)(
     '%s draws deterministically without random values and supports clear endpoints',
     (themeId) => {

@@ -18,18 +18,22 @@ import {
 
 function canvasContext(): CanvasRenderingContext2D {
   return {
+    arc: vi.fn(),
     beginPath: vi.fn(),
     clearRect: vi.fn(),
+    closePath: vi.fn(),
     clip: vi.fn(),
     createLinearGradient: vi.fn(() => ({
       addColorStop: vi.fn(),
     })) as unknown as CanvasRenderingContext2D['createLinearGradient'],
     fillRect: vi.fn(),
+    fill: vi.fn(),
     fillText: vi.fn(),
     lineTo: vi.fn(),
     moveTo: vi.fn(),
     rect: vi.fn(),
     restore: vi.fn(),
+    roundRect: vi.fn(),
     save: vi.fn(),
     setTransform: vi.fn(),
     setLineDash: vi.fn(),

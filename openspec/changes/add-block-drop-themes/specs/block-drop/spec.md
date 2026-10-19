@@ -3,6 +3,11 @@
 ### Requirement: Visual themes
 Block Drop SHALL offer six cosmetic themes: Classic, Tron, Chocolate, Nature, Sketchbook, and Stained Glass. Classic SHALL be the default and SHALL match the presentation before this change. A theme SHALL restyle the playfield, piece previews, line-clear feedback and callout, HUD, header, overlays, controls, Help dialog, page background, and browser theme color. The board surface SHALL have no decorative frame, outline, or shadow in any theme. Focus indicators SHALL remain on interactive controls and theme options. A theme SHALL NOT change the rules, scoring, gravity, input, controls, accessible names, or announcements.
 
+All static theme surfaces and pieces SHALL use square corners, including board
+cells, piece previews, theme swatches, panels, cards, dialogs, milestone popups,
+buttons, and gameplay controls. Transient line-clear effects MAY use curved
+shapes when needed to depict their theme's effect.
+
 #### Scenario: First launch
 - **WHEN** Block Drop opens and no valid theme preference is saved
 - **THEN** the Classic theme is shown and looks the same as before themes existed
@@ -10,6 +15,10 @@ Block Drop SHALL offer six cosmetic themes: Classic, Tron, Chocolate, Nature, Sk
 #### Scenario: Theme is applied
 - **WHEN** a theme is active
 - **THEN** the playfield, piece previews, HUD, overlays, controls, Help dialog, page background, and browser theme color all use that theme's art direction
+
+#### Scenario: Theme corners stay square
+- **WHEN** any theme is active
+- **THEN** static themed cells, previews, surfaces, dialogs, and controls have square corners
 
 #### Scenario: Playfield spacing on a phone
 - **WHEN** the game is shown in a phone portrait layout
@@ -92,6 +101,10 @@ Block Drop SHALL visibly acknowledge every completed row before presenting the c
 #### Scenario: Themed clear treatments
 - **WHEN** rows are cleared in each theme
 - **THEN** Classic flashes the rows, Tron derezzes them behind a light beam, Chocolate melts the bars into dripping puddles, Nature turns the cells into leaves that drift down, Sketchbook erases them with a pencil eraser, and Stained Glass cracks and shatters them
+
+#### Scenario: Chocolate clears multiple rows
+- **WHEN** two or more adjacent rows clear in Chocolate
+- **THEN** their cells melt as one stacked mass with a shared rippled top edge and shared drips below, while preserving the colors in vertically stacked bands
 
 #### Scenario: Gameplay input arrives during clear feedback
 - **WHEN** movement, rotation, soft-drop, hard-drop, or pause input arrives while line-clear feedback is active
