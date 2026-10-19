@@ -119,7 +119,7 @@ and white) are semantic. Keep them the same in every theme.
 | secondary-border | `#3e5c82` | `#1a6c80` | `#7a5032` | `#55684a` | `#7a7163` | `#4a4f7a` |
 | secondary-text | `#eff6ff` | `#c8f6ff` | `#fbf1e3` | `#f1eadb` | `#2b2a28` | `#f4ecd8` |
 | control-bg | `#162942` | `#04101a` | `#3a2216` | `#2c3628` | `#fffdf7` | `#1b1f36` |
-| control-border | `#355373` | `#0b5d70` | `#6b4429` | `#4a5a40` | `#7a7163` | `#3b3f63` |
+| control-border | `#4a6c8f` | `#0b5d70` | `#6b4429` | `#4a5a40` | `#7a7163` | `#3b3f63` |
 | control-text | `#e0f2fe` | `#8ff3ff` | `#f3dcc0` | `#f1eadb` | `#2b2a28` | `#efe4c8` |
 | focus | `#fbbf24` | `#ff2bd6` | `#ffd98a` | `#f2c14e` | `#1f6fd1` | `#7fd8ff` |
 | press | `rgb(7 17 31 / 18%)` | `rgb(0 229 255 / 14%)` | `rgb(0 0 0 / 22%)` | `rgb(0 0 0 / 18%)` | `rgb(43 42 40 / 10%)` | `rgb(0 0 0 / 22%)` |
@@ -160,8 +160,9 @@ Piece colors (`theme.pieces`):
 
 All contrast pairs in these tables were checked: text and labels against
 their surfaces are at least 4.5:1, and focus rings and button borders against
-their surfaces are at least 3:1. The unit test in `tasks.md` 4.1 keeps them
-that way.
+their surfaces are at least 3:1. Classic's control border is `#4a6c8f`, raised
+from the pre-theme `#355373` to meet the 3:1 page contrast requirement. The
+unit test in `tasks.md` 6.1 keeps these values that way.
 
 ---
 

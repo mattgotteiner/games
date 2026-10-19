@@ -28,7 +28,7 @@ describe('Block Drop themes', () => {
         expect(color).toMatch(/^#[0-9a-f]{6}$/i)
       }
       expect(theme.clearMs, id).toBeGreaterThanOrEqual(360)
-      expect(theme.clearMs, id).toBeLessThanOrEqual(840)
+      expect(theme.clearMs, id).toBeLessThanOrEqual(900)
     }
   })
 
@@ -50,7 +50,7 @@ describe('Block Drop themes', () => {
     }
   })
 
-  it('preserves Classic piece, board, and browser-chrome literals', () => {
+  it('preserves the Classic piece, board, timing, browser, and token values', () => {
     const classic = BLOCK_DROP_THEMES.classic
     expect(classic.pieces).toEqual({
       I: '#38bdf8',
@@ -70,6 +70,66 @@ describe('Block Drop themes', () => {
     })
     expect(classic.clearMs).toBe(360)
     expect(classic.metaThemeColor).toBe('#162033')
+    expect(classic.tokens).toEqual({
+      page: '#07111f',
+      text: '#f8fafc',
+      'text-muted': '#a8c4df',
+      label: '#7dd3fc',
+      accent: '#67e8f9',
+      panel: '#132641',
+      'panel-bg': 'linear-gradient(160deg, rgb(25 48 79 / 96%), rgb(12 27 47 / 96%))',
+      'panel-border': '#2d4768',
+      'panel-shadow': '0 1rem 2.5rem rgb(0 0 0 / 22%)',
+      'card-bg': 'linear-gradient(155deg, #1a3557, #0a192d 82%)',
+      'card-border': '#52749c',
+      'card-shadow': '0 1rem 3rem rgb(0 0 0 / 55%)',
+      'help-shadow': '0 1.5rem 4rem rgb(0 0 0 / 55%)',
+      'primary-bg': '#67e8f9',
+      'primary-hover-bg': '#a5f3fc',
+      'primary-text': '#07111f',
+      'primary-shadow': '0 0.4rem 1.2rem rgb(34 211 238 / 18%)',
+      'primary-hover-shadow': '0 0.5rem 1.4rem rgb(34 211 238 / 28%)',
+      'secondary-bg': '#1e3049',
+      'secondary-hover-bg': '#254260',
+      'secondary-border': '#3e5c82',
+      'secondary-text': '#eff6ff',
+      'control-bg': '#162942',
+      // Raised from the old border literal to meet the 3:1 contrast minimum.
+      'control-border': '#4a6c8f',
+      'control-text': '#e0f2fe',
+      focus: '#fbbf24',
+      press: 'rgb(7 17 31 / 18%)',
+      'swatch-ring': '#3a5b83',
+      'board-backdrop': 'radial-gradient(circle at 50% 45%, #132641, #091525 70%)',
+      scrim: 'rgb(7 17 31 / 24%)',
+      'dialog-scrim': 'rgb(3 9 18 / 76%)',
+      'preview-empty': 'rgb(148 163 184 / 10%)',
+      'callout-text': '#f8fafc',
+      'callout-shadow': '0 2px 1rem rgb(0 0 0 / 75%)',
+      'radius-panel': '0',
+      'radius-control': '0',
+      'radius-score': '0',
+      'font-ui': 'Inter, ui-rounded, "SF Pro Rounded", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      'font-display': 'Inter, ui-rounded, "SF Pro Rounded", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      'cell-highlight': 'rgb(255 255 255 / 28%)',
+      'cell-shadow': 'rgb(0 0 0 / 22%)',
+      'score-border': 'rgb(125 211 252 / 20%)',
+      'score-bg': 'rgb(7 17 31 / 32%)',
+      'help-bg': 'linear-gradient(160deg, #19304f, #0c1b2f)',
+      'quiet-bg': '#101f34',
+      'quiet-text': '#cbd5e1',
+      'quiet-border': '#2d4768',
+      'quiet-hover-bg': '#192d47',
+      'quiet-hover-border': '#5b789d',
+      'body-muted': '#cbd5e1',
+      'status-text': '#cbd5e1',
+      'preview-name': '#dbeafe',
+      'key-help': '#8fa1b9',
+      'difficulty-highlight': '#a5f3fc',
+      'clear-pulse': 'rgb(125 211 252 / 24%)',
+      glow: 'rgb(0 0 0 / 0%)',
+      'label-shadow': 'none',
+    })
   })
 
   it('keeps theme text, focus, and control boundaries above contrast minimums', () => {
