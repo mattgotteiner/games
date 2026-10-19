@@ -23,9 +23,17 @@ export default defineConfig({
   ],
   webServer: process.env.PLAYWRIGHT_BASE_URL
     ? undefined
-    : {
-        command: 'npm run preview -- --host 127.0.0.1 --port 4173 --strictPort',
-        url: 'http://127.0.0.1:4173/games/',
-        reuseExistingServer: !process.env.CI,
-      },
+    : [
+        {
+          command:
+            'npm run preview -- --host 127.0.0.1 --port 4173 --strictPort',
+          url: 'http://127.0.0.1:4173/games/',
+          reuseExistingServer: !process.env.CI,
+        },
+        {
+          command: 'npm run dev -- --host 127.0.0.1 --port 5174 --strictPort',
+          url: 'http://127.0.0.1:5174/games/',
+          reuseExistingServer: !process.env.CI,
+        },
+      ],
 })
