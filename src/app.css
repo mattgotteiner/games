@@ -802,6 +802,77 @@ button:disabled {
   animation: line-clear-callout-nature 1560ms ease-out both;
 }
 
+.theme-option[data-theme-option='sketchbook'] .theme-swatch i {
+  border: 1px solid #3a3a3a;
+  background: repeating-linear-gradient(
+    45deg,
+    var(--swatch-color) 0 2px,
+    transparent 2px 5px
+  );
+  box-shadow: none;
+}
+
+.block-drop[data-theme='sketchbook'] .game-header h1,
+.block-drop[data-theme='sketchbook'] .game-score-value,
+.block-drop[data-theme='sketchbook'] .hud-label,
+.block-drop[data-theme='sketchbook'] .game-overlay-card h2,
+.block-drop[data-theme='sketchbook'] .help-dialog h2,
+.block-drop[data-theme='sketchbook'] .line-clear-callout {
+  font-family: var(--bd-font-display);
+}
+
+.block-drop[data-theme='sketchbook'] .hud-label,
+.block-drop[data-theme='sketchbook'] .pause-difficulty legend,
+.block-drop[data-theme='sketchbook'] .pause-theme legend {
+  color: var(--bd-label);
+}
+
+.block-drop[data-theme='sketchbook'] .game-hud,
+.block-drop[data-theme='sketchbook'] .game-overlay-card,
+.block-drop[data-theme='sketchbook'] .help-dialog,
+.block-drop[data-theme='sketchbook'] .game-over-scores > div,
+.block-drop[data-theme='sketchbook'] .level-milestone-popup {
+  border-width: 2px;
+  border-color: #3a3a3a;
+  box-shadow:
+    2px 3px 0 rgb(58 58 58 / 18%),
+    -1px -1px 0 rgb(58 58 58 / 8%);
+}
+
+.block-drop[data-theme='sketchbook'] button {
+  border-width: 2px;
+  border-color: #3a3a3a;
+  box-shadow: 1px 2px 0 rgb(58 58 58 / 16%);
+}
+
+.block-drop[data-theme='sketchbook'] button:active:not(:disabled) {
+  box-shadow: inset 0 0 0 999px var(--bd-press);
+}
+
+.block-drop[data-theme='sketchbook'] .theme-option {
+  border-width: 2px;
+  box-shadow: 1px 2px 0 rgb(58 58 58 / 12%);
+}
+
+.block-drop[data-theme='sketchbook'] .theme-option:has(input:checked) {
+  border-color: var(--bd-accent);
+  box-shadow: 0 0 0 1px var(--bd-accent);
+}
+
+.block-drop[data-theme='sketchbook'] .next-piece-cell.is-filled {
+  border: 2px solid #3a3a3a;
+  background: repeating-linear-gradient(
+    45deg,
+    var(--piece) 0 2px,
+    transparent 2px 5px
+  ) !important;
+  box-shadow: none;
+}
+
+.block-drop[data-theme='sketchbook'] .line-clear-callout {
+  rotate: -3deg;
+}
+
 .game-over-scores {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1380,16 +1451,27 @@ button:disabled {
 
 @media (max-width: 42rem) {
   .game-overlay-card {
-    padding: 0.75rem;
+    gap: 0.25rem;
+    padding: 0.4rem;
   }
 
   .pause-theme {
-    gap: 0.35rem;
-    padding-top: 0.5rem;
+    gap: 0.2rem;
+    padding-top: 0.35rem;
   }
 
   .theme-options {
-    gap: 0.25rem;
+    gap: 0.15rem;
+  }
+
+  .theme-option {
+    min-height: 2.75rem;
+    padding: 0.2rem 0.45rem;
+  }
+
+  .theme-swatch {
+    width: 1.85rem;
+    height: 1.85rem;
   }
 
   .game-stage {

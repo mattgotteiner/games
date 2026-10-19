@@ -89,6 +89,23 @@ function lineClear(progress: number): LineClearDraw {
   }
 }
 
+function doubleLineClear(progress: number): LineClearDraw {
+  const rows = [BOARD_HEIGHT - 2, BOARD_HEIGHT - 1]
+  const stackedBoard = createEmptyBoard().map((boardRow, y) =>
+    rows.includes(y)
+      ? boardRow.map(
+          (_value, x) =>
+            ['I', 'J', 'L', 'O', 'S', 'T', 'Z'][x % 7] as Exclude<
+              typeof boardRow[number],
+              null
+            >,
+        )
+      : boardRow,
+  )
+
+  return { ...geometry, rows, board: stackedBoard, progress }
+}
+
 describe('Block Drop theme renderers', () => {
   it('keeps Chocolate cells and ghosts square-cornered', () => {
     const { calls, context } = recordingContext()
@@ -165,6 +182,71 @@ describe('Block Drop theme renderers', () => {
     expect(calls.filter(([name]) => name === 'quadraticCurveTo')).toHaveLength(
       BOARD_WIDTH * 2,
     )
+  })
+
+  it('hatches Sketchbook cells and draws a dashed square ghost', () => {
+    const { calls, context } = recordingContext()
+    const renderer = THEME_RENDERERS.sketchbook!
+    renderer.drawCell(context, BLOCK_DROP_THEMES.sketchbook, cell)
+    renderer.drawGhostCell(context, BLOCK_DROP_THEMES.sketchbook, {
+      ...cell,
+      x: 5,
+      y: 17,
+      type: 'I',
+    })
+
+    const callNames = calls.map(([name]) => name)
+    expect(callNames).not.toContain('roundRect')
+    expect(callNames).not.toContain('arc')
+    expect(callNames).toContain('clip')
+    expect(callNames).toContain('strokeRect')
+    expect(calls.filter(([name]) => name === 'setLineDash')).toHaveLength(1)
+    expect(
+      calls.some(
+        ([name, property, value]) =>
+          name === 'set' && property === 'strokeStyle' && value === '#3a3a3a',
+      ),
+    ).toBe(true)
+  })
+
+  it('scrubs stacked Sketchbook rows with one square eraser and crumbs', () => {
+    const { calls, context } = recordingContext()
+    THEME_RENDERERS.sketchbook!.drawLineClear(
+      context,
+      BLOCK_DROP_THEMES.sketchbook,
+      doubleLineClear(0.5),
+    )
+
+    expect(calls.filter(([name]) => name === 'ellipse')).toHaveLength(
+      BOARD_WIDTH * 2 * 3,
+    )
+    expect(calls.filter(([name]) => name === 'strokeRect')).toHaveLength(1)
+    expect(calls.filter(([name]) => name === 'rotate')).toHaveLength(1)
+    expect(calls.filter(([name]) => name === 'translate')).toHaveLength(1)
+    expect(calls.map(([name]) => name)).not.toContain('roundRect')
+  })
+
+  it('moves the single Sketchbook eraser rightward and between clear rows', () => {
+    const renderer = THEME_RENDERERS.sketchbook!
+    const upperSweep = recordingContext()
+    const lowerSweep = recordingContext()
+    renderer.drawLineClear(
+      upperSweep.context,
+      BLOCK_DROP_THEMES.sketchbook,
+      doubleLineClear(0.15),
+    )
+    renderer.drawLineClear(
+      lowerSweep.context,
+      BLOCK_DROP_THEMES.sketchbook,
+      doubleLineClear(0.4),
+    )
+
+    const upperEraser = upperSweep.calls.find(([name]) => name === 'translate')
+    const lowerEraser = lowerSweep.calls.find(([name]) => name === 'translate')
+    expect(upperEraser).toHaveLength(3)
+    expect(lowerEraser).toHaveLength(3)
+    expect(lowerEraser![1]).toBeGreaterThan(upperEraser![1] as number)
+    expect(lowerEraser![2]).toBeGreaterThan(upperEraser![2] as number)
   })
 
   it.each(IMPLEMENTED_BLOCK_DROP_THEME_ORDER)(

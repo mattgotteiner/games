@@ -263,22 +263,36 @@ const CLEAR = {
   },
   sketchbook(ctx, rows, board, p, s, t) {
     const ex = ease(clamp01(p / 0.8)) * (W + 1.2) * s - s * 0.6
-    rows.forEach((r, ri) => {
-      for (let x = 0; x < W; x++) {
-        const c = t.pieces[board[r][x]], erased = clamp01((ex - x * s) / (s * 1.5))
-        if (erased < 1) CELL.sketchbook(ctx, x * s, r * s, s, c, t, x, r, erased > 0 ? 1 - erased : 1)
-        if (erased > 0) {
-          ctx.fillStyle = `rgb(80 80 80 / ${0.12 * (1 - p)})`; ctx.fillRect(x * s, r * s + s * 0.3, s, s * 0.4)
-          for (let k = 0; k < 3; k++) {
-            const f = clamp01(erased * 1.4 - hash(x, r, k) * 0.4)
-            ctx.fillStyle = `rgb(150 110 115 / ${0.7 * (1 - f)})`
-            ctx.beginPath(); ctx.ellipse(x * s + s * hash(x, r, k + 2), r * s + s * 0.8 + f * s * 0.9, s * 0.06, s * 0.04, hash(x, r, k + 4) * 3, 0, Math.PI * 2); ctx.fill()
+    const groups = []
+    for (const row of [...new Set(rows)].sort((a, b) => a - b)) {
+      const group = groups[groups.length - 1]
+      if (group && group[group.length - 1] + 1 === row) group.push(row)
+      else groups.push([row])
+    }
+    groups.forEach((group, groupIndex) => {
+      const groupTop = group[0] * s
+      const groupHeight = (group[group.length - 1] - group[0] + 1) * s
+      for (const r of group) {
+        for (let x = 0; x < W; x++) {
+          const c = t.pieces[board[r][x]], erased = clamp01((ex - x * s) / (s * 1.5))
+          if (erased < 1) CELL.sketchbook(ctx, x * s, r * s, s, c, t, x, r, erased > 0 ? 1 - erased : 1)
+          if (erased > 0) {
+            ctx.fillStyle = `rgb(80 80 80 / ${0.12 * (1 - p)})`; ctx.fillRect(x * s, r * s + s * 0.3, s, s * 0.4)
+            for (let k = 0; k < 3; k++) {
+              const f = clamp01(erased * 1.4 - hash(x, r, k) * 0.4)
+              ctx.fillStyle = `rgb(150 110 115 / ${0.7 * (1 - f)})`
+              ctx.beginPath(); ctx.ellipse(x * s + s * hash(x, r, k + 2), r * s + s * 0.8 + f * s * 0.9, s * 0.06, s * 0.04, hash(x, r, k + 4) * 3, 0, Math.PI * 2); ctx.fill()
+            }
           }
         }
       }
       if (p < 0.85) {
-        ctx.save(); ctx.translate(ex, r * s + s / 2 + Math.sin(p * 46 + ri) * s * 0.08); ctx.rotate(-0.14)
-        ctx.fillStyle = '#f4a6b4'; roundRect(ctx, -s * 0.7, -s * 0.48, s * 1.0, s * 0.96, s * 0.12); ctx.fill()
+        const verticalSpan = Math.max(0, (groupHeight - s) / 2)
+        const verticalMotion = verticalSpan > 0
+          ? Math.sin(p * Math.PI * 6) * verticalSpan
+          : Math.sin(p * 46 + groupIndex) * s * 0.08
+        ctx.save(); ctx.translate(ex, groupTop + groupHeight / 2 + verticalMotion); ctx.rotate(-0.14)
+        ctx.fillStyle = '#f4a6b4'; ctx.fillRect(-s * 0.7, -s * 0.48, s * 1.0, s * 0.96)
         ctx.fillStyle = '#3d6fb6'; ctx.fillRect(s * 0.3, -s * 0.48, s * 0.55, s * 0.96)
         ctx.strokeStyle = '#3a3a3a'; ctx.lineWidth = 1.2; ctx.strokeRect(-s * 0.7, -s * 0.48, s * 1.55, s * 0.96)
         ctx.restore()

@@ -1070,6 +1070,129 @@ test('shows Nature leaves drifting during a phone double-line clear', async ({
   }
 })
 
+test('shows Sketchbook pencil hatching and the eraser clear on a phone', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.addInitScript(() => {
+    Date.now = () => 42
+  })
+  await page.goto('./')
+  await page.evaluate(() => {
+    window.localStorage.setItem('games.block-drop.theme', 'sketchbook')
+  })
+  await page.getByRole('button', { name: 'Play Block Drop' }).click()
+
+  const game = page.locator('.block-drop')
+  const canvas = page.getByRole('img', { name: 'Block Drop board' })
+  await expect(game).toHaveAttribute('data-theme', 'sketchbook')
+  await expectGameFitsViewport(page)
+  await expectBoardHasNoFrame(page)
+  await expectSquareThemeCorners(page)
+
+  const preview = page.locator('.next-piece-cell.is-filled').first()
+  const previewStyles = await preview.evaluate((element) => {
+    const styles = getComputedStyle(element)
+    return {
+      backgroundImage: styles.backgroundImage,
+      borderColor: styles.borderColor,
+      borderWidth: styles.borderWidth,
+    }
+  })
+  expect(previewStyles.backgroundImage).toContain('repeating-linear-gradient')
+  expect(previewStyles.borderColor).toBe('rgb(58, 58, 58)')
+  expect(previewStyles.borderWidth).toBe('2px')
+  await page.screenshot({
+    path: 'test-results/block-drop-themes/phone-sketchbook-playing.png',
+  })
+
+  await page.getByRole('button', { name: 'Pause game' }).click()
+  const pause = page.getByRole('group', { name: 'Paused' })
+  await expect(pause).toBeVisible()
+  await expectSquareThemeCorners(page)
+  const disabledControl = page.locator('.game-controls .button-control').first()
+  await expect(disabledControl).toBeDisabled()
+  const disabledStyles = await disabledControl.evaluate((element) => {
+    const styles = getComputedStyle(element)
+    return { borderStyle: styles.borderStyle, opacity: styles.opacity }
+  })
+  expect(disabledStyles).toEqual({ borderStyle: 'dashed', opacity: '0.46' })
+
+  const sketchbookOption = pause.locator(
+    'label[data-theme-option="sketchbook"]',
+  )
+  await page.keyboard.press('Tab')
+  await sketchbookOption.getByRole('radio', { name: 'Sketchbook' }).focus()
+  const focusStyles = await sketchbookOption.evaluate((element) => {
+    const styles = getComputedStyle(element)
+    return {
+      outlineColor: styles.outlineColor,
+      outlineStyle: styles.outlineStyle,
+      outlineWidth: styles.outlineWidth,
+    }
+  })
+  expect(focusStyles).toEqual({
+    outlineColor: 'rgb(31, 111, 209)',
+    outlineStyle: 'solid',
+    outlineWidth: '3px',
+  })
+  await page.screenshot({
+    path: 'test-results/block-drop-themes/phone-sketchbook-paused.png',
+  })
+
+  const resumeButton = pause.getByRole('button', { name: 'Resume game' })
+  const resumeBox = await resumeButton.boundingBox()
+  expect(resumeBox).not.toBeNull()
+  await page.mouse.move(
+    resumeBox!.x + resumeBox!.width / 2,
+    resumeBox!.y + resumeBox!.height / 2,
+  )
+  await page.mouse.down()
+  expect(
+    await resumeButton.evaluate((element) =>
+      getComputedStyle(element).boxShadow.includes('inset'),
+    ),
+  ).toBe(true)
+  await page.mouse.up()
+  await expect(page.locator('.game-status')).toHaveText('Playing')
+
+  for (const step of doubleLineClearSteps) {
+    await page.evaluate((keys) => {
+      for (const key of keys) {
+        window.dispatchEvent(
+          new KeyboardEvent('keydown', {
+            key: key === 'Space' ? ' ' : key,
+            bubbles: true,
+            cancelable: true,
+          }),
+        )
+      }
+    }, step.keys)
+
+    if (step.rows.length === 1) {
+      await expect(canvas).toHaveAttribute(
+        'data-clearing-rows',
+        step.rows.join(','),
+      )
+      await expect(canvas).not.toHaveAttribute('data-clearing-rows')
+    } else if (step.rows.length > 1) {
+      await expect(canvas).toHaveAttribute(
+        'data-clearing-rows',
+        step.rows.join(','),
+      )
+      await expect(page.locator('.line-clear-callout')).toHaveText(
+        '+300 · Double',
+      )
+      await page.waitForTimeout(220)
+      await expect(canvas).toHaveAttribute('data-clearing-rows', '18,19')
+      await page.screenshot({
+        path: 'test-results/block-drop-themes/phone-sketchbook-eraser.png',
+      })
+      await expect(canvas).not.toHaveAttribute('data-clearing-rows')
+    }
+  }
+})
+
 test('opens Block Drop directly and follows browser history', async ({ page }) => {
   await page.goto('./?theme=dark#catalog')
   await page.getByRole('button', { name: 'Play Block Drop' }).click()
@@ -1214,7 +1337,7 @@ test('selects a theme while paused and restores it after reload and Back', async
       getComputedStyle(element).gridTemplateColumns.split(' ').length,
     ),
   ).toBe(1)
-  await expect(themeGroup.getByRole('radio')).toHaveCount(4)
+  await expect(themeGroup.getByRole('radio')).toHaveCount(5)
   await expect(themeGroup.getByRole('radio', { name: 'Classic' })).toBeChecked()
   await expect(
     themeGroup.getByRole('radio', { name: 'Chocolate' }),
@@ -1235,6 +1358,9 @@ test('selects a theme while paused and restores it after reload and Back', async
 
   await pause.locator('label[data-theme-option="nature"]').click()
   await expect(game).toHaveAttribute('data-theme', 'nature')
+  await expectSquareThemeCorners(page)
+  await pause.locator('label[data-theme-option="sketchbook"]').click()
+  await expect(game).toHaveAttribute('data-theme', 'sketchbook')
   await expectSquareThemeCorners(page)
   await pause.locator('label[data-theme-option="classic"]').click()
   await expect(game).toHaveAttribute('data-theme', 'classic')

@@ -347,11 +347,15 @@ pencil hatching, graphite, pink eraser, notebook*.
 - *Ghost:* a dashed graphite outline at 45% alpha, `lineWidth 1.2`, with no
   hatch. It looks like a light construction line.
 - *Clear "Eraser" (760 ms):*
-  - A classic pink-and-blue eraser scrubs each cleared row from left to
-    right. Its x position is `ease(p/0.8)·(W + 1.2)·size − 0.6·size`. The
-    body is pink `#f4a6b4` and the sleeve is blue `#3d6fb6`. It has a
-    graphite outline, is tilted −8°, and wobbles vertically by
-    `sin(p·46 + rowIndex)·0.08·size`.
+  - One classic pink-and-blue eraser scrubs each contiguous group of cleared
+    rows from left to right. Its x position is
+    `ease(p/0.8)·(W + 1.2)·size − 0.6·size`. The body is pink `#f4a6b4` and
+    the sleeve is blue `#3d6fb6`. It has a graphite outline and is tilted
+    −8°. For a multi-row group, it bobs between the rows while moving across
+    them: with `groupTop` and `groupHeight` in pixels, its center y is
+    `groupTop + groupHeight/2 + sin(p·6π)·(groupHeight − size)/2`. A
+    single-row group keeps a small wobble of
+    `sin(p·46 + groupIndex)·0.08·size`.
   - Cells that the eraser has passed lose their hatch over 1.5 cells, and
     their outline disappears immediately. A faint gray smudge band
     `rgb(80 80 80 / 12%)`, from 30% to 70% of the row height, fades out over
