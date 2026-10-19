@@ -944,6 +944,70 @@ test('animates an exact deterministic line clear and gates gameplay', async ({
   ).toBe(settled)
 })
 
+test('shows Tron grid and scanline clear on a phone', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.addInitScript(() => {
+    Date.now = () => 42
+  })
+  await page.goto('./')
+  await page.evaluate(() => {
+    window.localStorage.setItem('games.block-drop.theme', 'tron')
+  })
+  await page.getByRole('button', { name: 'Play Block Drop' }).click()
+
+  const game = page.locator('.block-drop')
+  const canvas = page.getByRole('img', { name: 'Block Drop board' })
+  await expect(game).toHaveAttribute('data-theme', 'tron')
+  await expectGameFitsViewport(page)
+  await expectSquareThemeCorners(page)
+  await page.screenshot({
+    path: 'test-results/block-drop-themes/phone-tron-playing.png',
+  })
+
+  await page.getByRole('button', { name: 'Pause game' }).click()
+  await expect(page.getByRole('group', { name: 'Paused' })).toBeVisible()
+  await page.screenshot({
+    path: 'test-results/block-drop-themes/phone-tron-paused.png',
+  })
+  await page
+    .getByRole('group', { name: 'Paused' })
+    .getByRole('button', { name: 'Resume game' })
+    .click()
+
+  for (const step of doubleLineClearSteps) {
+    await page.evaluate((keys) => {
+      for (const key of keys) {
+        window.dispatchEvent(
+          new KeyboardEvent('keydown', {
+            key: key === 'Space' ? ' ' : key,
+            bubbles: true,
+            cancelable: true,
+          }),
+        )
+      }
+    }, step.keys)
+
+    if (step.rows.length === 1) {
+      await expect(canvas).toHaveAttribute(
+        'data-clearing-rows',
+        step.rows.join(','),
+      )
+      await expect(canvas).not.toHaveAttribute('data-clearing-rows')
+    } else if (step.rows.length > 1) {
+      await expect(canvas).toHaveAttribute('data-clearing-rows', '18,19')
+      await expect(page.locator('.line-clear-callout')).toHaveText(
+        '+300 · Double',
+      )
+      await page.waitForTimeout(220)
+      await expect(canvas).toHaveAttribute('data-clearing-rows', '18,19')
+      await page.screenshot({
+        path: 'test-results/block-drop-themes/phone-tron-scanline.png',
+      })
+      await expect(canvas).not.toHaveAttribute('data-clearing-rows')
+    }
+  }
+})
+
 test('shows the Chocolate stacked melt effect during a phone double-line clear', async ({
   page,
 }) => {

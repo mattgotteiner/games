@@ -72,7 +72,7 @@ For each theme, implement:
   - unmount restores the `html` attributes and meta `theme-color`
 - [x] 6.4 Controller tests: a line clear lasts the active theme's `clearMs`; `setTheme` while paused redraws without changing state; reduced motion skips the effect in every theme.
 - [x] 6.5 Browser flow: pause, choose Chocolate, confirm `data-theme` and the meta `theme-color`, reload, and confirm Chocolate is restored and checked. Browser Back to the catalog restores the catalog background.
-- [ ] 6.6 Save a phone-size screenshot of each theme while playing, paused, and mid-clear to `test-results/` for review. Do not commit the screenshots.
+- [x] 6.6 Save a phone-size screenshot of each theme while playing, paused, and mid-clear to `test-results/` for review. Do not commit the screenshots.
 - [x] 6.7 Run `npm run check`.
 - [ ] 6.8 Do a phone review of all six themes using the checklist at the end of `art-direction.md`.
 - [x] 6.9 Component and phone E2E coverage for themed line milestones at 10 and 20 lines, accessible announcement, reduced motion, and dismissal on restart.
