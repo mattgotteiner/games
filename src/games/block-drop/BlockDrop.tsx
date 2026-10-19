@@ -361,7 +361,7 @@ function getThemeSwatchStyle(theme: BlockDropTheme): JSX.CSSProperties {
   } as JSX.CSSProperties
 }
 
-const PREVIEW_FRAME_SIZE = 6
+const PREVIEW_FRAME_SIZE = 4
 
 function getPreviewShape(type: Tetromino) {
   const cells = getInitialPieceCells(type)
@@ -387,6 +387,13 @@ function PiecePreview({
   readonly theme: BlockDropTheme
 }) {
   const shape = type === null ? null : getPreviewShape(type)
+  const offsetX =
+    shape === null ? 0 : Math.floor((PREVIEW_FRAME_SIZE - shape.width) / 2)
+  const offsetY =
+    shape === null ? 0 : Math.floor((PREVIEW_FRAME_SIZE - shape.height) / 2)
+  const filledCells = new Set(
+    shape?.cells.map(({ x, y }) => `${x + offsetX},${y + offsetY}`),
+  )
   const accessibleLabel =
     label === 'Hold'
       ? type === null
@@ -403,38 +410,31 @@ function PiecePreview({
       <div
         class="next-piece-grid"
         data-frame-size={PREVIEW_FRAME_SIZE}
+        data-piece-width={shape?.width ?? 0}
+        data-piece-height={shape?.height ?? 0}
         aria-hidden="true"
       >
         {Array.from(
           { length: PREVIEW_FRAME_SIZE * PREVIEW_FRAME_SIZE },
-          (_, index) => (
-            <span class="next-piece-grid-cell" key={index} />
-          ),
-        )}
-        {shape && type !== null && (
-          <span
-            class="next-piece-shape"
-            data-height={shape.height}
-            data-width={shape.width}
-            style={{
-              gridTemplateColumns: `repeat(${shape.width}, 1fr)`,
-              gridTemplateRows: `repeat(${shape.height}, 1fr)`,
-              height: `${(shape.height / PREVIEW_FRAME_SIZE) * 100}%`,
-              width: `${(shape.width / PREVIEW_FRAME_SIZE) * 100}%`,
-            }}
-          >
-            {shape.cells.map(({ x, y }) => (
+          (_, index) => {
+            const column = index % PREVIEW_FRAME_SIZE
+            const row = Math.floor(index / PREVIEW_FRAME_SIZE)
+            const isFilled = filledCells.has(`${column},${row}`)
+
+            return (
               <span
-                class="next-piece-cell is-filled"
-                key={`${x}-${y}`}
-                style={{
-                  '--piece': theme.pieces[type],
-                  gridColumn: x + 1,
-                  gridRow: y + 1,
-                } as JSX.CSSProperties}
+                class={`next-piece-grid-cell${
+                  isFilled ? ' next-piece-cell is-filled' : ''
+                }`}
+                key={index}
+                style={
+                  isFilled && type !== null
+                    ? ({ '--piece': theme.pieces[type] } as JSX.CSSProperties)
+                    : undefined
+                }
               />
-            ))}
-          </span>
+            )
+          },
         )}
       </div>
       <p class="next-piece-name">

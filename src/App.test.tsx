@@ -1464,26 +1464,30 @@ describe('App', () => {
         name: `Next piece: ${type} tetromino`,
       })
       const frame = region.querySelector<HTMLElement>('.next-piece-grid')
-      const shape = region.querySelector<HTMLElement>('.next-piece-shape')
       const cells = Array.from(
         region.querySelectorAll<HTMLElement>('.next-piece-cell.is-filled'),
       )
-      const columns = cells.map((cell) => Number(cell.style.gridColumn))
-      const rows = cells.map((cell) => Number(cell.style.gridRow))
+      const filledIndexes = Array.from(frame?.children ?? [])
+        .map((cell, index) => (cell.classList.contains('is-filled') ? index : -1))
+        .filter((index) => index >= 0)
+      const columns = filledIndexes.map((index) => index % 4)
+      const rows = filledIndexes.map((index) => Math.floor(index / 4))
       const [width, height] = expectedDimensions[type]
+      const startColumn = Math.floor((4 - width) / 2)
+      const startRow = Math.floor((4 - height) / 2)
 
       expect(region).toHaveTextContent(`${type} tetromino`)
-      expect(frame).toHaveAttribute('data-frame-size', '6')
+      expect(frame).toHaveAttribute('data-frame-size', '4')
+      expect(frame).toHaveAttribute('data-piece-width', String(width))
+      expect(frame).toHaveAttribute('data-piece-height', String(height))
       expect(
         region.querySelectorAll('.next-piece-grid-cell'),
-      ).toHaveLength(36)
-      expect(shape).toHaveAttribute('data-width', String(width))
-      expect(shape).toHaveAttribute('data-height', String(height))
+      ).toHaveLength(16)
       expect(cells).toHaveLength(4)
-      expect(Math.min(...columns)).toBe(1)
-      expect(Math.max(...columns)).toBe(width)
-      expect(Math.min(...rows)).toBe(1)
-      expect(Math.max(...rows)).toBe(height)
+      expect(Math.min(...columns)).toBe(startColumn)
+      expect(Math.max(...columns)).toBe(startColumn + width - 1)
+      expect(Math.min(...rows)).toBe(startRow)
+      expect(Math.max(...rows)).toBe(startRow + height - 1)
     }
   })
 

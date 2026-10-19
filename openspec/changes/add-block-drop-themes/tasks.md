@@ -26,7 +26,7 @@ and keep `npm run check` green before starting the next one.
 - [x] 3.4 Change Hold and Next preview cells to use `--piece` instead of an inline `backgroundColor`.
 - [ ] 3.5 Compare Classic with the baseline again. It must be identical.
 - [x] 3.6 Set all six themes' panel, control, score, cell, preview, swatch, and popup corners to square, including gameplay control buttons.
-- [ ] 3.7 Improve the visibility of the Hold and Next piece previews across all themes, especially at phone size.
+- [x] 3.7 Improve the visibility of the Hold and Next piece previews across all themes, especially at phone size.
 
 ## 4. Picker and persistence
 

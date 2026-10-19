@@ -128,6 +128,15 @@ const doubleLineClearSteps = [
   },
 ] as const
 
+const blockDropThemes = [
+  'classic',
+  'tron',
+  'chocolate',
+  'nature',
+  'sketchbook',
+  'stained-glass',
+] as const
+
 async function expectHudDifficulty(
   page: import('@playwright/test').Page,
   label: string,
@@ -341,25 +350,39 @@ async function expectScoringGuideVisible(page: import('@playwright/test').Page) 
   }
 }
 
-async function expectPreviewCentered(page: import('@playwright/test').Page) {
-  const preview = page.getByRole('region', { name: /Next piece:/ })
-  const frame = await preview.locator('.next-piece-grid').boundingBox()
-  const shape = await preview.locator('.next-piece-shape').boundingBox()
-
+async function expectPreviewCellsAlignToGrid(
+  preview: import('@playwright/test').Locator,
+) {
+  const grid = preview.locator('.next-piece-grid')
+  const frame = await grid.boundingBox()
   expect(frame).not.toBeNull()
-  expect(shape).not.toBeNull()
-  expect(shape!.x).toBeGreaterThanOrEqual(frame!.x)
-  expect(shape!.y).toBeGreaterThanOrEqual(frame!.y)
-  expect(shape!.x + shape!.width).toBeLessThanOrEqual(frame!.x + frame!.width)
-  expect(shape!.y + shape!.height).toBeLessThanOrEqual(frame!.y + frame!.height)
-  expect(shape!.x + shape!.width / 2).toBeCloseTo(
-    frame!.x + frame!.width / 2,
-    0,
-  )
-  expect(shape!.y + shape!.height / 2).toBeCloseTo(
-    frame!.y + frame!.height / 2,
-    0,
-  )
+
+  const cells = await preview
+    .locator('.next-piece-cell.is-filled')
+    .evaluateAll((elements) =>
+      elements.map((element) => {
+        const box = element.getBoundingClientRect()
+        return { x: box.x + box.width / 2, y: box.y + box.height / 2 }
+      }),
+    )
+  expect(cells).toHaveLength(4)
+
+  const trackWidth = frame!.width / 4
+  const trackHeight = frame!.height / 4
+  for (const cell of cells) {
+    const column = Math.round((cell.x - frame!.x) / trackWidth - 0.5)
+    const row = Math.round((cell.y - frame!.y) / trackHeight - 0.5)
+    expect(column).toBeGreaterThanOrEqual(0)
+    expect(column).toBeLessThan(4)
+    expect(row).toBeGreaterThanOrEqual(0)
+    expect(row).toBeLessThan(4)
+    expect(
+      Math.abs(cell.x - (frame!.x + (column + 0.5) * trackWidth)),
+    ).toBeLessThanOrEqual(1)
+    expect(
+      Math.abs(cell.y - (frame!.y + (row + 0.5) * trackHeight)),
+    ).toBeLessThanOrEqual(1)
+  }
 }
 
 async function expectMovementOrder(page: import('@playwright/test').Page) {
@@ -576,14 +599,18 @@ test('plays Block Drop with touch and keyboard across phone orientations', async
     name: /Next piece: [IJLOSTZ] tetromino/,
   })
   await expect(preview).toBeVisible()
-  await expect(preview.locator('.next-piece-grid-cell')).toHaveCount(36)
+  await expect(preview.locator('.next-piece-grid-cell')).toHaveCount(16)
+  await expect(preview.locator('.next-piece-grid')).toHaveAttribute(
+    'data-frame-size',
+    '4',
+  )
   await expect(preview.locator('.next-piece-cell')).toHaveCount(4)
   await expect(preview.locator('.next-piece-cell.is-filled')).toHaveCount(4)
-  await expect(preview.locator('.next-piece-shape')).toHaveAttribute(
-    'data-width',
+  await expect(preview.locator('.next-piece-grid')).toHaveAttribute(
+    'data-piece-width',
     '2',
   )
-  await expectPreviewCentered(page)
+  await expectPreviewCellsAlignToGrid(preview)
   await expectMovementOrder(page)
   await expectScoringGuideVisible(page)
   const initialPreview = await preview.getAttribute('aria-label')
@@ -624,10 +651,11 @@ test('plays Block Drop with touch and keyboard across phone orientations', async
   await page.keyboard.press('Space')
   await expect(preview).not.toHaveAttribute('aria-label', initialPreview!)
   await expect(preview.locator('.next-piece-cell.is-filled')).toHaveCount(4)
-  await expect(preview.locator('.next-piece-shape')).toHaveAttribute(
-    'data-width',
+  await expect(preview.locator('.next-piece-grid')).toHaveAttribute(
+    'data-piece-width',
     '3',
   )
+  await expectPreviewCellsAlignToGrid(preview)
   expect(await preview.locator('.next-piece-grid').innerHTML()).not.toBe(
     initialPreviewGrid,
   )
@@ -670,7 +698,7 @@ test('plays Block Drop with touch and keyboard across phone orientations', async
     390,
   )
   await expectGameFitsViewport(page)
-  await expectPreviewCentered(page)
+  await expectPreviewCellsAlignToGrid(preview)
   await expectMovementOrder(page)
   await expectScoringGuideVisible(page)
   const landscapeBoard = await canvas.boundingBox()
@@ -684,7 +712,7 @@ test('plays Block Drop with touch and keyboard across phone orientations', async
     320,
   )
   await expectGameFitsViewport(page)
-  await expectPreviewCentered(page)
+  await expectPreviewCellsAlignToGrid(preview)
   await expectMovementOrder(page)
   await expectScoringGuideVisible(page)
   expect(
@@ -760,7 +788,7 @@ test('holds and swaps pieces with the C key and phone control', async ({ page })
   const nextPreview = page.getByRole('region', { name: /Next piece:/ })
   const initialNext = await nextPreview.getAttribute('aria-label')
   await expect(holdSlot).toHaveAttribute('aria-label', 'Held piece: empty')
-  await expect(holdSlot.locator('.next-piece-shape')).toHaveCount(0)
+  await expect(holdSlot.locator('.next-piece-cell')).toHaveCount(0)
   await expect(holdButton).toHaveAttribute('aria-keyshortcuts', 'C')
   await expectGameFitsViewport(page)
 
@@ -1007,6 +1035,66 @@ test('shows Tron grid and scanline clear on a phone', async ({ page }) => {
     }
   }
 })
+
+for (const theme of blockDropThemes) {
+  test(`shows larger Hold and Next previews for ${theme} on a phone`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.addInitScript(() => {
+      Date.now = () => 42
+    })
+    await page.goto('./')
+    await page.evaluate((themeId) => {
+      window.localStorage.setItem('games.block-drop.theme', themeId)
+    }, theme)
+    await page.getByRole('button', { name: 'Play Block Drop' }).click()
+
+    const game = page.locator('.block-drop')
+    await expect(game).toHaveAttribute('data-theme', theme)
+    await expectGameFitsViewport(page)
+
+    const nextPreview = page.getByRole('region', { name: /^Next piece:/ })
+    const expectPreviewShapeToFillItsFrame = async (
+      preview: import('@playwright/test').Locator,
+    ) => {
+      await expectPreviewCellsAlignToGrid(preview)
+      const grid = preview.locator('.next-piece-grid')
+      const width = Number(await grid.getAttribute('data-piece-width'))
+      const height = Number(await grid.getAttribute('data-piece-height'))
+      expect(Math.max(width, height)).toBeGreaterThanOrEqual(2)
+      await expect(preview.locator('.next-piece-grid-cell')).toHaveCount(16)
+    }
+
+    await expectPreviewShapeToFillItsFrame(nextPreview)
+    const previewCell = nextPreview.locator('.next-piece-cell.is-filled').first()
+    expect(
+      await previewCell.evaluate((element) => {
+        const style = window.getComputedStyle(element)
+        return (
+          style.backgroundImage !== 'none' ||
+          style.backgroundColor !== 'rgba(0, 0, 0, 0)'
+        )
+      }),
+    ).toBe(true)
+
+    await page.getByRole('button', { name: 'Hold piece' }).click()
+    const holdPreview = page.getByRole('region', {
+      name: /^Held piece: [IJLOSTZ] tetromino$/,
+    })
+    await expectPreviewShapeToFillItsFrame(holdPreview)
+    await page.screenshot({
+      path: `test-results/block-drop-themes/phone-${theme}-previews.png`,
+    })
+
+    await page.setViewportSize({ width: 320, height: 568 })
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    ).toBe(true)
+  })
+}
 
 test('shows the Chocolate stacked melt effect during a phone double-line clear', async ({
   page,
