@@ -1530,6 +1530,13 @@ test('selects a theme while paused and restores it after reload and Back', async
     'content',
     '#1b0f0a',
   )
+  await page.getByRole('button', { name: 'Pause game' }).click()
+  const restoredThemeGroup = page
+    .getByRole('group', { name: 'Paused' })
+    .getByRole('group', { name: /^Theme/ })
+  await expect(
+    restoredThemeGroup.getByRole('radio', { name: 'Chocolate' }),
+  ).toBeChecked()
 
   await page.goBack()
   await expect(page.getByRole('button', { name: 'Play Block Drop' })).toBeVisible()
@@ -1540,6 +1547,11 @@ test('selects a theme while paused and restores it after reload and Back', async
     'content',
     '#162033',
   )
+  expect(
+    await page.evaluate(
+      () => getComputedStyle(document.documentElement).backgroundColor,
+    ),
+  ).toBe('rgb(7, 17, 31)')
 })
 
 test('styles a level-milestone popup with the active theme and reduced motion', async ({
