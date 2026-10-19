@@ -770,6 +770,38 @@ button:disabled {
     inset -2px -2px 0 rgb(0 0 0 / 30%);
 }
 
+.theme-option[data-theme-option='nature'] .theme-swatch i {
+  border-radius: 0;
+  background: radial-gradient(
+    circle at 35% 30%,
+    color-mix(in srgb, var(--swatch-color), white 28%),
+    var(--swatch-color) 55%,
+    color-mix(in srgb, var(--swatch-color), black 20%)
+  );
+  box-shadow: none;
+}
+
+.block-drop[data-theme='nature'] .game-hud,
+.block-drop[data-theme='nature'] .game-overlay-card,
+.block-drop[data-theme='nature'] .help-dialog {
+  box-shadow: 0 0.4rem 1.15rem rgb(0 0 0 / 24%);
+}
+
+.block-drop[data-theme='nature'] .next-piece-cell.is-filled {
+  border-radius: 0;
+  background: radial-gradient(
+    circle at 35% 30%,
+    color-mix(in srgb, var(--piece), white 28%),
+    var(--piece) 55%,
+    color-mix(in srgb, var(--piece), black 20%)
+  ) !important;
+  box-shadow: none;
+}
+
+.block-drop[data-theme='nature'] .line-clear-callout {
+  animation: line-clear-callout-nature 1560ms ease-out both;
+}
+
 .game-over-scores {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -925,6 +957,21 @@ button:disabled {
   100% {
     opacity: 0;
     transform: translateY(-0.2rem);
+  }
+}
+
+@keyframes line-clear-callout-nature {
+  0% {
+    opacity: 0;
+  }
+  23% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
   }
 }
 
@@ -1332,6 +1379,19 @@ button:disabled {
 }
 
 @media (max-width: 42rem) {
+  .game-overlay-card {
+    padding: 0.75rem;
+  }
+
+  .pause-theme {
+    gap: 0.35rem;
+    padding-top: 0.5rem;
+  }
+
+  .theme-options {
+    gap: 0.25rem;
+  }
+
   .game-stage {
     grid-template-areas:
       "hud"

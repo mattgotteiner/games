@@ -25,9 +25,12 @@ function recordingContext(): {
     {},
     {
       get(_target, property) {
-        if (property === 'createLinearGradient') {
+        if (
+          property === 'createLinearGradient' ||
+          property === 'createRadialGradient'
+        ) {
           return (...args: unknown[]) => {
-            calls.push(['createLinearGradient', ...args])
+            calls.push([String(property), ...args])
             return gradient
           }
         }
@@ -131,6 +134,37 @@ describe('Block Drop theme renderers', () => {
     )
 
     expect(calls.filter(([name]) => name === 'stroke')).toHaveLength(1)
+  })
+
+  it('keeps Nature stone cells and ghosts square-cornered', () => {
+    const { calls, context } = recordingContext()
+    const renderer = THEME_RENDERERS.nature!
+    renderer.drawCell(context, BLOCK_DROP_THEMES.nature, cell)
+    renderer.drawGhostCell(context, BLOCK_DROP_THEMES.nature, {
+      ...cell,
+      x: 5,
+      y: 17,
+      type: 'I',
+    })
+
+    const callNames = calls.map(([name]) => name)
+    expect(callNames).not.toContain('roundRect')
+    expect(callNames).toContain('createRadialGradient')
+    expect(callNames).toContain('fillRect')
+    expect(callNames).toContain('strokeRect')
+  })
+
+  it('turns Nature clear stones into drifting leaves', () => {
+    const { calls, context } = recordingContext()
+    THEME_RENDERERS.nature!.drawLineClear(
+      context,
+      BLOCK_DROP_THEMES.nature,
+      lineClear(0.5),
+    )
+
+    expect(calls.filter(([name]) => name === 'quadraticCurveTo')).toHaveLength(
+      BOARD_WIDTH * 2,
+    )
   })
 
   it.each(IMPLEMENTED_BLOCK_DROP_THEME_ORDER)(

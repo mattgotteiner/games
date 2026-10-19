@@ -1,11 +1,13 @@
 import type { BlockDropThemeId } from '../themes'
 import { chocolateRenderer } from './chocolate'
 import { classicRenderer } from './classic'
+import { natureRenderer } from './nature'
 import { tronRenderer } from './tron'
 import type { ThemeRenderer } from './types'
 
 export { classicRenderer } from './classic'
 export { chocolateRenderer } from './chocolate'
+export { natureRenderer } from './nature'
 export { tronRenderer } from './tron'
 export type { BoardGeometry, CellDraw, LineClearDraw, ThemeRenderer } from './types'
 
@@ -13,6 +15,7 @@ export const IMPLEMENTED_BLOCK_DROP_THEME_ORDER: ReadonlyArray<BlockDropThemeId>
   'classic',
   'tron',
   'chocolate',
+  'nature',
 ]
 
 export const THEME_RENDERERS: Readonly<
@@ -21,6 +24,7 @@ export const THEME_RENDERERS: Readonly<
   classic: classicRenderer,
   tron: tronRenderer,
   chocolate: chocolateRenderer,
+  nature: natureRenderer,
 })
 
 export function isBlockDropThemeImplemented(

@@ -825,7 +825,7 @@ describe('App', () => {
     }).toEqual(stateBefore)
   })
 
-  it.each(['not-a-theme', 'nature'])(
+  it.each(['not-a-theme', 'sketchbook'])(
     'falls back to Classic for invalid or unavailable theme %s',
     (value) => {
       window.localStorage.setItem('games.block-drop.theme', value)

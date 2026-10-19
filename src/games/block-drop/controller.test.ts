@@ -26,6 +26,9 @@ function canvasContext(): CanvasRenderingContext2D {
     createLinearGradient: vi.fn(() => ({
       addColorStop: vi.fn(),
     })) as unknown as CanvasRenderingContext2D['createLinearGradient'],
+    createRadialGradient: vi.fn(() => ({
+      addColorStop: vi.fn(),
+    })) as unknown as CanvasRenderingContext2D['createRadialGradient'],
     fillRect: vi.fn(),
     fill: vi.fn(),
     fillText: vi.fn(),
