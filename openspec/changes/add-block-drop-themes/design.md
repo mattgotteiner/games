@@ -311,6 +311,12 @@ With reduced motion, keep the notice visible for the same duration but remove
 its entrance and exit animation. The popup does not pause input, change score,
 or alter the line-clear effect.
 
+For the phone presentation, double the compact card's font size, padding,
+border thickness, and theme panel radius. Use a responsive font size from
+1.44 rem to 1.9 rem and padding of 1.1 rem by 1.7 rem. Keep its existing
+maximum width inside the board frame so the message can wrap on narrower
+screens.
+
 ## Risks / Trade-offs
 
 - **Tokenization regressions in Classic.** Mitigate this with the

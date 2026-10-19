@@ -1130,11 +1130,21 @@ test('styles a level-milestone popup with the active theme and reduced motion', 
       animationName: style.animationName,
       backgroundImage: style.backgroundImage,
       borderColor: style.borderColor,
+      borderRadius: Number.parseFloat(style.borderTopLeftRadius),
+      borderWidth: Number.parseFloat(style.borderTopWidth),
+      fontSize: Number.parseFloat(style.fontSize),
+      paddingTop: Number.parseFloat(style.paddingTop),
+      paddingRight: Number.parseFloat(style.paddingRight),
     }
   })
   expect(popupStyle.animationName).toBe('level-milestone-popup')
   expect(popupStyle.backgroundImage).not.toBe('none')
   expect(popupStyle.borderColor).toBe('rgb(82, 116, 156)')
+  expect(popupStyle.borderWidth).toBe(2)
+  expect(popupStyle.fontSize).toBeCloseTo(390 * 0.064)
+  expect(popupStyle.paddingTop).toBeCloseTo(16 * 1.1)
+  expect(popupStyle.paddingRight).toBeCloseTo(16 * 1.7)
+  expect(popupStyle.borderRadius).toBeCloseTo(32)
   await page.locator('.board-frame').screenshot({
     path: 'test-results/block-drop-themes/phone-classic-milestone-popup.png',
   })

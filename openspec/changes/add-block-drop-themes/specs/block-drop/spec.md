@@ -58,7 +58,7 @@ The pause menu SHALL include a Theme radio group after the Difficulty control an
 - **THEN** the selection moves between themes and each change applies and saves as if the option were tapped
 
 ### Requirement: Line milestone feedback
-Whenever the cumulative cleared-line count reaches a new multiple of 10, Block Drop SHALL show a brief themed popup whose only text is the milestone count in the form “X lines cleared!”. The popup SHALL remain visible for 1800 milliseconds, SHALL use the active theme's colors and typography, and SHALL NOT change or block gameplay. The existing game-announcement live region SHALL announce the same milestone text. The popup SHALL be absent at other line counts.
+Whenever the cumulative cleared-line count reaches a new multiple of 10, Block Drop SHALL show a brief themed popup whose only text is the milestone count in the form “X lines cleared!”. The popup SHALL remain visible for 1800 milliseconds, SHALL use the active theme's colors and typography, and SHALL be approximately twice the compact presentation's size while remaining within the board frame. It SHALL NOT change or block gameplay. The existing game-announcement live region SHALL announce the same milestone text. The popup SHALL be absent at other line counts.
 
 #### Scenario: A ten-line milestone is reached
 - **WHEN** a line clear raises the cumulative total to 10 lines
