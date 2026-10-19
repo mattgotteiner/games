@@ -249,6 +249,61 @@ describe('Block Drop theme renderers', () => {
     expect(lowerEraser![2]).toBeGreaterThan(upperEraser![2] as number)
   })
 
+  it('draws Stained Glass panes with jewel gradients, streaks, glints, and lead', () => {
+    const { calls, context } = recordingContext()
+    const renderer = THEME_RENDERERS['stained-glass']!
+    renderer.drawCell(context, BLOCK_DROP_THEMES['stained-glass'], cell)
+    renderer.drawGhostCell(context, BLOCK_DROP_THEMES['stained-glass'], cell)
+
+    const callNames = calls.map(([name]) => name)
+    expect(callNames).not.toContain('roundRect')
+    expect(callNames).toContain('createLinearGradient')
+    expect(callNames).toContain('quadraticCurveTo')
+    expect(callNames).toContain('fill')
+    expect(callNames).toContain('strokeRect')
+    expect(
+      calls.some(
+        ([name, property, value]) =>
+          name === 'set' && property === 'strokeStyle' && value === '#161616',
+      ),
+    ).toBe(true)
+    expect(
+      calls.some(
+        ([name, property, value]) =>
+          name === 'set' && property === 'strokeStyle' && value === '#5a5a5a',
+      ),
+    ).toBe(true)
+  })
+
+  it('cracks Stained Glass panes before splitting them into four shards', () => {
+    const renderer = THEME_RENDERERS['stained-glass']!
+    const cracking = recordingContext()
+    const shattering = recordingContext()
+    renderer.drawLineClear(
+      cracking.context,
+      BLOCK_DROP_THEMES['stained-glass'],
+      lineClear(0.15),
+    )
+    renderer.drawLineClear(
+      shattering.context,
+      BLOCK_DROP_THEMES['stained-glass'],
+      doubleLineClear(0.65),
+    )
+
+    expect(
+      cracking.calls.filter(([name]) => name === 'createLinearGradient'),
+    ).toHaveLength(BOARD_WIDTH)
+    expect(
+      cracking.calls.filter(([name]) => name === 'lineTo'),
+    ).toHaveLength(BOARD_WIDTH * 5)
+    expect(
+      shattering.calls.filter(([name]) => name === 'translate'),
+    ).toHaveLength(BOARD_WIDTH * 2 * 4)
+    expect(
+      shattering.calls.filter(([name]) => name === 'rotate'),
+    ).toHaveLength(BOARD_WIDTH * 2 * 4)
+  })
+
   it.each(IMPLEMENTED_BLOCK_DROP_THEME_ORDER)(
     '%s draws deterministically without random values and supports clear endpoints',
     (themeId) => {

@@ -1193,6 +1193,88 @@ test('shows Sketchbook pencil hatching and the eraser clear on a phone', async (
   }
 })
 
+test('shows Stained Glass panes and the shatter clear on a phone', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.addInitScript(() => {
+    Date.now = () => 42
+  })
+  await page.goto('./')
+  await page.evaluate(() => {
+    window.localStorage.setItem('games.block-drop.theme', 'stained-glass')
+  })
+  await page.getByRole('button', { name: 'Play Block Drop' }).click()
+
+  const game = page.locator('.block-drop')
+  const canvas = page.getByRole('img', { name: 'Block Drop board' })
+  await expect(game).toHaveAttribute('data-theme', 'stained-glass')
+  await expectGameFitsViewport(page)
+  await expectBoardHasNoFrame(page)
+  await expectSquareThemeCorners(page)
+
+  const preview = page.locator('.next-piece-cell.is-filled').first()
+  const previewStyles = await preview.evaluate((element) => {
+    const styles = getComputedStyle(element)
+    return {
+      backgroundImage: styles.backgroundImage,
+      borderRadius: styles.borderTopLeftRadius,
+    }
+  })
+  expect(previewStyles.backgroundImage).toContain('linear-gradient')
+  expect(previewStyles.borderRadius).toBe('0px')
+  await page.screenshot({
+    path: 'test-results/block-drop-themes/phone-stained-glass-playing.png',
+  })
+
+  await page.getByRole('button', { name: 'Pause game' }).click()
+  const pause = page.getByRole('group', { name: 'Paused' })
+  await expect(pause).toBeVisible()
+  await expectSquareThemeCorners(page)
+  await page.screenshot({
+    path: 'test-results/block-drop-themes/phone-stained-glass-paused.png',
+  })
+  await pause.getByRole('button', { name: 'Resume game' }).click()
+  await expect(page.locator('.game-status')).toHaveText('Playing')
+
+  for (const step of doubleLineClearSteps) {
+    await page.evaluate((keys) => {
+      for (const key of keys) {
+        window.dispatchEvent(
+          new KeyboardEvent('keydown', {
+            key: key === 'Space' ? ' ' : key,
+            bubbles: true,
+            cancelable: true,
+          }),
+        )
+      }
+    }, step.keys)
+
+    if (step.rows.length === 1) {
+      await expect(canvas).toHaveAttribute(
+        'data-clearing-rows',
+        step.rows.join(','),
+      )
+      await expect(canvas).not.toHaveAttribute('data-clearing-rows')
+    } else if (step.rows.length > 1) {
+      await expect(canvas).toHaveAttribute('data-clearing-rows', '18,19')
+      await expect(page.locator('.line-clear-callout')).toHaveText(
+        '+300 · Double',
+      )
+      await page.waitForTimeout(140)
+      await page.screenshot({
+        path: 'test-results/block-drop-themes/phone-stained-glass-cracks.png',
+      })
+      await page.waitForTimeout(40)
+      await expect(canvas).toHaveAttribute('data-clearing-rows', '18,19')
+      await page.screenshot({
+        path: 'test-results/block-drop-themes/phone-stained-glass-shatter.png',
+      })
+      await expect(canvas).not.toHaveAttribute('data-clearing-rows')
+    }
+  }
+})
+
 test('opens Block Drop directly and follows browser history', async ({ page }) => {
   await page.goto('./?theme=dark#catalog')
   await page.getByRole('button', { name: 'Play Block Drop' }).click()
@@ -1337,7 +1419,7 @@ test('selects a theme while paused and restores it after reload and Back', async
       getComputedStyle(element).gridTemplateColumns.split(' ').length,
     ),
   ).toBe(1)
-  await expect(themeGroup.getByRole('radio')).toHaveCount(5)
+  await expect(themeGroup.getByRole('radio')).toHaveCount(6)
   await expect(themeGroup.getByRole('radio', { name: 'Classic' })).toBeChecked()
   await expect(
     themeGroup.getByRole('radio', { name: 'Chocolate' }),
@@ -1361,6 +1443,9 @@ test('selects a theme while paused and restores it after reload and Back', async
   await expectSquareThemeCorners(page)
   await pause.locator('label[data-theme-option="sketchbook"]').click()
   await expect(game).toHaveAttribute('data-theme', 'sketchbook')
+  await expectSquareThemeCorners(page)
+  await pause.locator('label[data-theme-option="stained-glass"]').click()
+  await expect(game).toHaveAttribute('data-theme', 'stained-glass')
   await expectSquareThemeCorners(page)
   await pause.locator('label[data-theme-option="classic"]').click()
   await expect(game).toHaveAttribute('data-theme', 'classic')

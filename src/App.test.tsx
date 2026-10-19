@@ -825,38 +825,36 @@ describe('App', () => {
     }).toEqual(stateBefore)
   })
 
-  it.each(['not-a-theme', 'stained-glass'])(
-    'falls back to Classic for invalid or unavailable theme %s',
-    (value) => {
-      window.localStorage.setItem('games.block-drop.theme', value)
-      let initialTheme: string | undefined
-      const factory: BlockDropControllerFactory = (
-        _canvas,
-        _container,
-        _onStateChange,
-        options,
-      ) => {
-        initialTheme = options?.theme
-        return {
-          dispatch: vi.fn(),
-          destroy: vi.fn(),
-          getState: () => createGame(5),
-        }
+  it('falls back to Classic for an invalid saved theme', () => {
+    const value = 'not-a-theme'
+    window.localStorage.setItem('games.block-drop.theme', value)
+    let initialTheme: string | undefined
+    const factory: BlockDropControllerFactory = (
+      _canvas,
+      _container,
+      _onStateChange,
+      options,
+    ) => {
+      initialTheme = options?.theme
+      return {
+        dispatch: vi.fn(),
+        destroy: vi.fn(),
+        getState: () => createGame(5),
       }
+    }
 
-      render(<BlockDrop controllerFactory={factory} />)
+    render(<BlockDrop controllerFactory={factory} />)
 
-      expect(initialTheme).toBe('classic')
-      expect(document.querySelector('.block-drop')).toHaveAttribute(
-        'data-theme',
-        'classic',
-      )
-      expect(document.querySelector('meta[name="theme-color"]')).toHaveAttribute(
-        'content',
-        '#162033',
-      )
-    },
-  )
+    expect(initialTheme).toBe('classic')
+    expect(document.querySelector('.block-drop')).toHaveAttribute(
+      'data-theme',
+      'classic',
+    )
+    expect(document.querySelector('meta[name="theme-color"]')).toHaveAttribute(
+      'content',
+      '#162033',
+    )
+  })
 
   it('restores previous document theme attributes and browser chrome on unmount', () => {
     const root = document.documentElement

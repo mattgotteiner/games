@@ -48,7 +48,7 @@ For each theme, implement:
 - [x] 5.2 Chocolate
 - [x] 5.3 Nature
 - [x] 5.4 Sketchbook. Also check the press, disabled, and focus states on the light surfaces.
-- [ ] 5.5 Stained Glass
+- [x] 5.5 Stained Glass
 - [ ] 5.6 Profile a four-row clear with a full board in each theme, using a 4× CPU slowdown. Each frame must take under 16 ms. If a theme is too slow, simplify its texture before its clear effect.
 
 ## 6. Verification

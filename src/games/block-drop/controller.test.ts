@@ -34,6 +34,7 @@ function canvasContext(): CanvasRenderingContext2D {
     fillText: vi.fn(),
     lineTo: vi.fn(),
     moveTo: vi.fn(),
+    quadraticCurveTo: vi.fn(),
     rect: vi.fn(),
     restore: vi.fn(),
     roundRect: vi.fn(),
