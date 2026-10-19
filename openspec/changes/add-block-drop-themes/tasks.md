@@ -16,7 +16,7 @@ and keep `npm run check` green before starting the next one.
   - add the `theme` option, defaulting to Classic, and `setTheme(id)`, which redraws
   - follow the draw order in design §2: skip cleared rows, clip the clear to the board, and use theme veils
   - store `durationMs` on the line-clear effect and remove `LINE_CLEAR_MS`
-- [ ] 2.4 Check that existing tests still pass and that the Classic screenshots match the baseline.
+- [x] 2.4 Check that existing tests still pass and that the Classic screenshots match the baseline.
 
 ## 3. Tokens and chrome
 
