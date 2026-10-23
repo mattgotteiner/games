@@ -167,7 +167,7 @@ describe('Brick Burst controller', () => {
     expect(ball).toHaveBeenCalled()
     for (const call of ball.mock.calls) expect(call[4]).toEqual([])
     query.matches = false; query.dispatchEvent(new Event('change'))
-    ball.mockClear(); t.frame(516)
+    ball.mockClear(); t.frame(532)
     expect(ball.mock.calls.some((call) => call[4]!.length > 0)).toBe(true)
     t.controller.destroy()
     expect(remove).toHaveBeenCalledWith('change', add.mock.calls[0][1])
