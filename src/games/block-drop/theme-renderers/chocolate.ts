@@ -1,6 +1,6 @@
 import { BOARD_HEIGHT, BOARD_WIDTH } from '../rules'
 import type { BlockDropTheme } from '../themes'
-import { align, clamp01, ease, hash } from './shared'
+import { align, clamp01, ease, hash } from '../../shared/canvas'
 import type { BoardGeometry, CellDraw, ThemeRenderer } from './types'
 
 const lightEmboss = 'rgb(255 240 220 / '

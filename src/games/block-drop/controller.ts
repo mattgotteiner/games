@@ -17,7 +17,7 @@ import {
   BLOCK_DROP_THEMES,
   type BlockDropThemeId,
 } from './themes'
-import { hash } from './theme-renderers/shared'
+import { hash } from '../shared/canvas'
 import {
   classicRenderer,
   isBlockDropThemeImplemented,

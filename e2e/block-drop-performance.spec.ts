@@ -94,7 +94,7 @@ test('keeps full-board four-row clears under 16 ms with 4× CPU slowdown', async
       const [rendererModule, themeModule, sharedModule] = await Promise.all([
         importViteModule('/games/src/games/block-drop/theme-renderers/index.ts'),
         importViteModule('/games/src/games/block-drop/themes.ts'),
-        importViteModule('/games/src/games/block-drop/theme-renderers/shared.ts'),
+        importViteModule('/games/src/games/shared/canvas.ts'),
       ]) as [
         { THEME_RENDERERS: RendererMap },
         { BLOCK_DROP_THEMES: ThemeMap },

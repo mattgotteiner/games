@@ -1,6 +1,6 @@
 import { BOARD_HEIGHT, BOARD_WIDTH, TETROMINOES } from '../rules'
 import type { BlockDropTheme } from '../themes'
-import { align, alpha, clamp01, ease, hash } from './shared'
+import { align, alpha, clamp01, ease, hash } from '../../shared/canvas'
 import type { BoardGeometry, CellDraw, ThemeRenderer } from './types'
 
 type TronCellColors = Readonly<Record<'fill' | 'glow', string>>

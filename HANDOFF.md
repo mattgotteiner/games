@@ -162,8 +162,10 @@ A generalized game registry/runtime remains deferred.
 Introduce shared platform abstractions only after another game exposes
 concrete duplication.
 
-The active changes are `remove-block-drop-catalog-buttons` and
-`add-block-drop-themes`, described below.
+The remaining active change folders are `remove-block-drop-catalog-buttons`,
+`add-block-drop-themes`, and `increase-brick-burst-pace`, described below. Brick Burst is complete and archived.
+It extracts only the small helpers that both games duplicate. The game registry
+and runtime stay deferred.
 
 ## Active OpenSpec Change
 
@@ -180,10 +182,52 @@ line-clear animation. A Theme picker in the pause menu saves the choice under
 Start with `design.md`, `art-direction.md`, and the runnable reference
 `art-direction/preview.html`, then follow `tasks.md` in order.
 
+`increase-brick-burst-pace` is implemented locally for phone review after
+`4fe1381` added the required review fixes. Those fixes were committed separately
+before tuning. The build uses base ball speed 390 units/s, +4% every four brick
+hits, held paddle speed 540 units/s, and 400/650 ms loss/clear feedback. Touch
+mapping, difficulty multipliers, layouts, score rules, and storage retain their
+rules. The final full check passed 351 unit/component tests, the production
+build, and all 37 Chromium flows. The 4× CPU profile peaked at 4.2 ms. The active
+art reference is `openspec/changes/increase-brick-burst-pace/art-direction/preview.html`.
+See that change's `review.md` for seeded timing observations and preserved
+baseline locations. Physical phone acceptance remains pending; the change stays
+active until review and archival. The existing Tailscale test server runs the
+updated source at port 10000.
+
+## Completed Brick Burst
+
+`add-brick-burst` adds Brick Burst, a brick breaker and the catalog's second
+game (`?game=brick-burst`). It has:
+
+- deterministic fixed-step rules and five repeating layouts
+- tough bricks and three lives
+- Easy, Medium, and Hard difficulty
+- relative thumb-drag steering
+- the Block Drop Classic chrome
+
+Brick Burst was implemented on `spec/add-brick-burst`, based on
+`5257e1c` (which includes `main` at `d36b439`). It has pure seeded
+240 Hz rules, the five layouts, Classic Canvas art and effects, mouse/keyboard
+and relative touch controls, accessible chrome, difficulty/best-score storage,
+catalog launch, deep links, and offline play. Block Drop now uses the three
+shared helpers with its existing tests unchanged.
+
+Automated coverage includes rules, controller timing and cleanup, renderer
+determinism, component accessibility, browser navigation, real touch gestures,
+responsive layouts, lives/restart, persistence, offline launch, and a 4× CPU
+rendering benchmark. Phone review screenshots are generated under ignored
+`test-results/brick-burst/`. The user approved the game and requested a commit
+on 2026-10-22. The completed change is archived at
+`openspec/changes/archive/2026-10-22-add-brick-burst/`, and the canonical
+capability is `openspec/specs/brick-burst/spec.md`. The last full check passed
+323 unit/component tests, the production build, and all 34 Chromium flows; all
+6 Brick Burst phone flows also passed. Faster pacing is specified in the active
+`increase-brick-burst-pace` proposal. Brick Burst themes are a separate follow-up.
+
 ## Most Recent OpenSpec Change
 
-`consolidate-block-drop-help` has a written spec for one Help entry in the
-pause menu. Its dialog begins with beginner-friendly `How to play` guidance,
-then preserves the existing scoring and controls reference. Implementation,
-automated checks, and phone review are complete. Its archived spec is at
-`openspec/changes/archive/2026-10-18-consolidate-block-drop-help`.
+`add-brick-burst` is implemented, approved, and archived. Its rules, controls,
+Classic rendering, shared helpers, navigation, and offline play are covered by
+the validation recorded above. The existing Tailscale review server remains at
+`https://matt-srv.tail18ced3.ts.net:10000/games/?game=brick-burst`.

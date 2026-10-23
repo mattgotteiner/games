@@ -1,4 +1,7 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks'
+import { readStored, writeStored } from '../shared/storage'
+import { vibrate } from '../shared/haptics'
+import { usePageColor } from '../shared/use-page-color'
+import { useEffect, useRef, useState } from 'preact/hooks'
 import type { JSX } from 'preact'
 import {
   BlockDropController,
@@ -263,14 +266,7 @@ function vibrateForGameEvent(
     : presentation?.locked
       ? 10
       : 0
-  if (
-    duration === 0 ||
-    window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ||
-    typeof navigator.vibrate !== 'function'
-  ) {
-    return
-  }
-  navigator.vibrate(duration)
+  if (duration) vibrate(duration)
 }
 
 const BEST_SCORE_STORAGE_KEY = 'games.block-drop.best-score'
@@ -282,63 +278,35 @@ const availableThemeOrder = BLOCK_DROP_THEME_ORDER.filter((themeId) =>
 )
 
 function readBestScore(): number {
-  try {
-    const value = window.localStorage.getItem(BEST_SCORE_STORAGE_KEY)
-    if (value === null || !/^\d+(?:\.5)?$/.test(value)) return 0
+  return readStored(BEST_SCORE_STORAGE_KEY, (value) => {
+    if (!/^\d+(?:\.5)?$/.test(value)) return undefined
     const score = Number(value)
     return Number.isSafeInteger(score) || Number.isSafeInteger(score * 2)
-      ? score
-      : 0
-  } catch {
-    return 0
-  }
+      ? score : undefined
+  }, 0)
 }
 
 function writeBestScore(score: number): void {
-  try {
-    window.localStorage.setItem(BEST_SCORE_STORAGE_KEY, String(score))
-  } catch {
-    // Best-score persistence is optional; the current game stays playable.
-  }
+  writeStored(BEST_SCORE_STORAGE_KEY, String(score))
 }
 
 function readDifficulty(): BlockDropDifficulty {
-  try {
-    const value = window.localStorage.getItem(DIFFICULTY_STORAGE_KEY)
-    return (
-      BLOCK_DROP_DIFFICULTY_ORDER.find((difficulty) => difficulty === value) ??
-      'medium'
-    )
-  } catch {
-    return 'medium'
-  }
+  return readStored(DIFFICULTY_STORAGE_KEY,
+    (value) => BLOCK_DROP_DIFFICULTY_ORDER.find((difficulty) => difficulty === value), 'medium')
 }
 
 function writeDifficulty(difficulty: BlockDropDifficulty): void {
-  try {
-    window.localStorage.setItem(DIFFICULTY_STORAGE_KEY, difficulty)
-  } catch {
-    // Difficulty persistence is optional; the current game stays playable.
-  }
+  writeStored(DIFFICULTY_STORAGE_KEY, difficulty)
 }
 
 function readTheme(): BlockDropThemeId {
-  try {
-    const value = window.localStorage.getItem(THEME_STORAGE_KEY)
-    return isBlockDropThemeId(value) && isBlockDropThemeImplemented(value)
-      ? value
-      : 'classic'
-  } catch {
-    return 'classic'
-  }
+  return readStored(THEME_STORAGE_KEY,
+    (value) => isBlockDropThemeId(value) && isBlockDropThemeImplemented(value) ? value : undefined,
+    'classic')
 }
 
 function writeTheme(themeId: BlockDropThemeId): void {
-  try {
-    window.localStorage.setItem(THEME_STORAGE_KEY, themeId)
-  } catch {
-    // Theme persistence is optional; the current game stays playable.
-  }
+  writeStored(THEME_STORAGE_KEY, themeId)
 }
 
 function getThemeStyle(theme: BlockDropTheme): JSX.CSSProperties {
@@ -736,45 +704,7 @@ export function BlockDrop({
     }
   }, [controllerFactory])
 
-  useLayoutEffect(() => {
-    const root = document.documentElement
-    const previousTheme = root.getAttribute('data-block-drop-theme')
-    const previousPage = root.style.getPropertyValue('--bd-page')
-    const previousPagePriority = root.style.getPropertyPriority('--bd-page')
-    const existingMeta = document.querySelector<HTMLMetaElement>(
-      'meta[name="theme-color"]',
-    )
-    const meta = existingMeta ?? document.createElement('meta')
-    const previousMetaContent = meta.getAttribute('content')
-
-    if (existingMeta === null) {
-      meta.name = 'theme-color'
-      document.head.append(meta)
-    }
-    root.dataset.blockDropTheme = theme.id
-    root.style.setProperty('--bd-page', theme.tokens.page)
-    meta.content = theme.metaThemeColor
-
-    return () => {
-      if (previousTheme === null) {
-        root.removeAttribute('data-block-drop-theme')
-      } else {
-        root.setAttribute('data-block-drop-theme', previousTheme)
-      }
-      if (previousPage) {
-        root.style.setProperty('--bd-page', previousPage, previousPagePriority)
-      } else {
-        root.style.removeProperty('--bd-page')
-      }
-      if (existingMeta === null) {
-        meta.remove()
-      } else if (previousMetaContent === null) {
-        meta.removeAttribute('content')
-      } else {
-        meta.content = previousMetaContent
-      }
-    }
-  }, [theme])
+  usePageColor('data-block-drop-theme', theme.id, theme.tokens.page, theme.metaThemeColor)
 
   useEffect(() => {
     const handleVisibilityChange = () => {

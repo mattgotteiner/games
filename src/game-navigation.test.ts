@@ -1,3 +1,4 @@
+import * as navigation from './game-navigation'
 import { describe, expect, it } from 'vitest'
 import {
   parseGameUrl,
@@ -9,6 +10,7 @@ describe('parseGameUrl', () => {
   it.each([
     ['https://example.test/games/', 'catalog', false],
     ['https://example.test/games/?game=block-drop', 'block-drop', false],
+    ['https://example.test/games/?game=brick-burst', 'brick-burst', false],
     ['https://example.test/games/?game=', 'catalog', true],
     ['https://example.test/games/?game=unknown', 'catalog', true],
   ] as const)(
@@ -43,4 +45,11 @@ describe('urlForView', () => {
       'https://example.test/games/?theme=dark&mode=compact#catalog',
     )
   })
+})
+
+it('exposes a single supported game list and rejects non-game identifiers', () => {
+  expect(navigation.GAME_IDS).toEqual(['block-drop', 'brick-burst'])
+  for (const id of navigation.GAME_IDS) expect(navigation.isGameId(id)).toBe(true)
+  expect(navigation.isGameId('unknown')).toBe(false)
+  expect(navigation.isGameId(null)).toBe(false)
 })

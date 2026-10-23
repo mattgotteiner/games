@@ -1,3 +1,5 @@
+import { createGame as createBrickBurst } from './games/brick-burst/rules'
+import type { BrickBurstControllerFactory } from './games/brick-burst/BrickBurst'
 import {
   act,
   cleanup,
@@ -134,6 +136,30 @@ describe('App', () => {
   beforeEach(() => {
     window.history.replaceState(null, '', '/games/')
     window.localStorage.clear()
+  })
+
+  it('lists both games in order and cleans up Brick Burst on browser Back', () => {
+    const destroy = vi.fn()
+    const factory: BrickBurstControllerFactory = vi.fn(() => ({ dispatch: vi.fn(), destroy, getState: () => createBrickBurst(41) }))
+    const view = render(<App brickBurstControllerFactory={factory} />)
+    expect(screen.getByText('2 games')).toBeInTheDocument()
+    expect(screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent)).toEqual(['Block Drop', 'Brick Burst'])
+    fireEvent.click(screen.getByRole('button', { name: 'Play Brick Burst' }))
+    expect(window.location.search).toBe('?game=brick-burst')
+    expect(view.container.querySelector('.game-shell')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Serve ball' })).toBeEnabled()
+    act(() => { window.history.replaceState(null, '', '/games/'); window.dispatchEvent(new PopStateEvent('popstate')) })
+    expect(destroy).toHaveBeenCalledOnce()
+    expect(document.documentElement.hasAttribute('data-brick-burst-theme')).toBe(false)
+  })
+
+  it('opens Brick Burst directly while preserving deployment path and other query parameters', () => {
+    window.history.replaceState(null, '', '/games/?source=phone&game=brick-burst#play')
+    const factory: BrickBurstControllerFactory = vi.fn(() => ({ dispatch: vi.fn(), destroy: vi.fn(), getState: () => createBrickBurst(41) }))
+    render(<App brickBurstControllerFactory={factory} />)
+    expect(screen.getByRole('heading', { level: 1, name: 'Brick Burst' })).toBeInTheDocument()
+    expect(window.location.pathname).toBe('/games/')
+    expect(window.location.search).toBe('?source=phone&game=brick-burst')
   })
 
   it('launches Block Drop and cleans up when history changes', () => {
