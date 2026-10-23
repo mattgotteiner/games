@@ -1,6 +1,6 @@
 import { BOARD_HEIGHT, BOARD_WIDTH } from '../rules'
 import type { BlockDropTheme } from '../themes'
-import { align, alpha, clamp01, hash, mix } from './shared'
+import { align, alpha, clamp01, hash, mix } from '../../shared/canvas'
 import type { BoardGeometry, CellDraw, ThemeRenderer } from './types'
 
 export const stainedGlassRenderer: ThemeRenderer = {

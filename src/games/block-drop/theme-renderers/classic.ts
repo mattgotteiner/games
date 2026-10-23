@@ -1,6 +1,6 @@
 import { BOARD_HEIGHT, BOARD_WIDTH } from '../rules'
 import type { BlockDropTheme } from '../themes'
-import { align } from './shared'
+import { align } from '../../shared/canvas'
 import type {
   BoardGeometry,
   CellDraw,

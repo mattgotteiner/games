@@ -1,4 +1,4 @@
-import { hash, ease, clamp01 } from '../block-drop/theme-renderers/shared'
+import { hash, ease, clamp01 } from '../shared/canvas'
 import { BRICK_BURST_LOOKS, type BrickBurstLook } from './palette'
 import { classicRenderer, type BrickBurstRenderer, type BrickDraw, type DrawContext } from './renderer'
 import {

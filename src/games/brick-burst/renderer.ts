@@ -1,4 +1,4 @@
-import { alpha, mix, hash, ease, clamp01, roundRect } from '../block-drop/theme-renderers/shared'
+import { alpha, mix, hash, ease, clamp01, roundRect } from '../shared/canvas'
 import type { BrickBurstLook } from './palette'
 import type { BrickKind } from './rules'
 import { FIELD_WIDTH as FW, FIELD_HEIGHT as FH, BRICK_W as BW, BRICK_H as BH, BRICKS_TOP as TOP, PADDLE_W as PW, PADDLE_H as PH, PADDLE_TOP as PTOP, BALL_R as R } from './rules'
