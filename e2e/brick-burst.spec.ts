@@ -1,11 +1,11 @@
 import { mkdir } from 'node:fs/promises'
 import { expect, test, type Page } from '@playwright/test'
 interface FixtureState {
-  status: string; lives: number; score: number; paddleX: number; feedbackMs: number
+  difficulty: 'easy'|'medium'|'hard'; activeSpeedMultiplier: number; rallyHits: number; status: string; lives: number; score: number; paddleX: number; feedbackMs: number
   ball: { x: number; y: number; vx: number; vy: number; speed: number }
   bricks: Array<{ kind: string; damaged: boolean } | null>
 }
-interface FixtureController { getState(): FixtureState; dispatch(action: { type: string; x?: number }): void }
+interface FixtureController { getState(): FixtureState; dispatch(action: { type: string; x?: number; difficulty?: 'easy'|'medium'|'hard' }): void }
 declare global {
   interface Window {
     __brickBurstFrame: FrameRequestCallback
@@ -14,7 +14,7 @@ declare global {
   }
 }
 const devURL = process.env.PLAYWRIGHT_BASE_URL ?? 'http://127.0.0.1:5174/games/'
-const output = 'test-results/brick-burst'
+const output = 'test-results/brick-burst/pace'
 
 // Only the browser test intercepts this module. No fixture or debug hooks ship in the app.
 async function fixture(page: Page, patch: Partial<FixtureState>) {
@@ -127,7 +127,7 @@ test('steers with real touch gestures without scrolling or accidental serves, th
 })
 
 test('keeps held ArrowLeft steering through a seeded lost ball', async ({ page }) => {
-  await fixture(page, { status: 'playing', ball: { x: 80, y: 582, vx: 0, vy: 300, speed: 300 } })
+  await fixture(page, { status: 'playing', ball: { x: 80, y: 582, vx: 0, vy: 390, speed: 390 } })
   await page.keyboard.down('ArrowLeft')
   await advance(page, 0, 50)
   await expect(page.locator('.game-status')).toHaveText('Ball lost')
@@ -178,6 +178,16 @@ test('launches and plays Brick Burst offline after a controlled online load', as
   await page.getByRole('button', { name: 'Pause game' }).click(); await expect(page.getByRole('group', { name: 'Paused' })).toBeVisible()
 })
 
+test('uses a 650 ms DOM callout and matching level-clear rules', async ({ page }) => {
+  await fixture(page,{bricks:Array(96).fill(null),status:'level-clear',feedbackMs:650})
+  expect(await page.locator('.line-clear-callout').evaluate(el=>getComputedStyle(el).animationDuration)).toBe('0.65s')
+  await advance(page,0,1000 / 60 * 38)
+  await expect(page.locator('.game-status')).toHaveText('Level clear')
+  await advance(page,1000 / 60 * 38,650)
+  await expect(page.locator('.game-status')).toHaveText('Ready')
+  await expect(page.locator('.brick-level strong')).toHaveText('2')
+})
+
 test('captures the phone serving, rally, pop, ball lost, level clear, pause, and game over states', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await fixture(page, {}); await advance(page, 0, 500); await capture(page, 'phone-serving')
@@ -185,13 +195,46 @@ test('captures the phone serving, rally, pop, ball lost, level clear, pause, and
   await page.getByRole('button', { name: 'Pause game' }).click(); await capture(page, 'phone-paused')
   await page.unrouteAll()
   const pop = { status: 'playing' }
-  await fixture(page, { ...pop, ball: { x: 176, y: 181.5, vx: 0, vy: -300, speed: 300 } })
+  await fixture(page, { ...pop, ball: { x: 176, y: 181.5, vx: 0, vy: -390, speed: 390 } })
   await advance(page, 0, 66.6667); await capture(page, 'phone-mid-pop')
   await page.unrouteAll()
-  await fixture(page, { status: 'ball-lost', lives: 2, feedbackMs: 300 })
+  await fixture(page, { status: 'ball-lost', lives: 2, feedbackMs: 200 })
   await page.waitForTimeout(320); await capture(page, 'phone-ball-lost'); await page.unrouteAll()
-  await fixture(page, { bricks: Array(96).fill(null), status: 'level-clear', score: 2500, feedbackMs: 585 })
+  await fixture(page, { bricks: Array(96).fill(null), status: 'level-clear', score: 2500, feedbackMs: 422.5 })
   await capture(page, 'phone-level-clear'); await page.unrouteAll()
   await fixture(page, { status: 'over', score: 2500, lives: 0 })
   await expect(page.getByRole('button', { name: 'Play again' })).toBeFocused(); await page.waitForTimeout(320); await capture(page, 'phone-game-over')
+})
+
+test('captures sustained and capped rallies on each difficulty plus reduced motion', async ({ page }) => {
+  await page.setViewportSize({width:390,height:844})
+  for (const [difficulty,multiplier] of [['easy',0.75],['medium',1],['hard',1.25]] as const) {
+    await page.emulateMedia({reducedMotion:'no-preference'})
+    await fixture(page,{})
+    await page.evaluate((difficulty)=>{
+      const c=window.__brickBurstController
+      c.dispatch({type:'set-difficulty',difficulty});c.dispatch({type:'serve'})
+    },difficulty)
+    await page.evaluate(()=>{
+      for(let time=1000/60;time<=4000+1e-6;time+=1000/60) {
+        const c=window.__brickBurstController
+        c.dispatch({type:'paddle-to',x:c.getState().ball.x})
+        window.__brickBurstFrame(time)
+      }
+    })
+    await expect(page.locator('.game-status')).toHaveText('Playing')
+    expect(await page.evaluate(()=>window.__brickBurstController.getState().score)).toBeGreaterThan(0)
+    await capture(page,`${difficulty}-sustained-rally`)
+    await page.unrouteAll()
+    const speed=390*multiplier*1.6
+    await fixture(page,{status:'playing',difficulty,activeSpeedMultiplier:multiplier,rallyHits:48,
+      score:[40,30,30,20].reduce((sum,points)=>sum+12*Math.round(points*multiplier),0),
+      bricks:Array.from({length:96},(_,i)=>i>=60&&i<84?{kind:'normal',damaged:false}:null),
+      ball:{x:230,y:300,vx:speed*0.5,vy:-speed*Math.sqrt(0.75),speed}})
+    await advance(page,0,100);await capture(page,`${difficulty}-capped-rally`)
+    await page.unrouteAll()
+  }
+  await page.emulateMedia({reducedMotion:'reduce'})
+  await fixture(page,{bricks:Array(96).fill(null),status:'level-clear',feedbackMs:422.5})
+  await capture(page,'phone-reduced-motion-level-clear')
 })

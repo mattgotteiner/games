@@ -2,9 +2,10 @@ import { layoutForLevel, ROW_POINTS } from './levels'
 
 export const FIELD_WIDTH = 384, FIELD_HEIGHT = 576
 export const COLUMNS = 12, ROWS = 8, BRICK_W = 32, BRICK_H = 16, BRICKS_TOP = 64
-export const PADDLE_W = 64, PADDLE_H = 10, PADDLE_TOP = 536, PADDLE_SPEED = 420
-export const BALL_R = 5, BASE_SPEED = 300, STEP_MS = 1000 / 240
-export const NUDGE = 24, BALL_LOST_MS = 600, LEVEL_CLEAR_MS = 900
+export const PADDLE_W = 64, PADDLE_H = 10, PADDLE_TOP = 536, PADDLE_SPEED = 540
+export const BALL_R = 5, BASE_SPEED = 390, STEP_MS = 1000 / 240
+export const NUDGE = 24, BALL_LOST_MS = 400, LEVEL_CLEAR_MS = 650
+export const RALLY_HITS_PER_INCREASE = 4, RALLY_SPEED_FACTOR = 1.04, RALLY_SPEED_CAP = 1.6
 export const DIFFICULTIES = {
   easy: { label: 'Easy', multiplier: 0.75 },
   medium: { label: 'Medium', multiplier: 1 },
@@ -148,9 +149,9 @@ export function step(s: BrickBurstState): { state: BrickBurstState; events: Bric
     bricks = [...bricks]; (bricks as (Brick | null)[])[hit] = broken ? null : { ...brick, damaged: true }
     score += points; rallyHits++
     events.push({ type: 'brick-hit', row, col, kind: brick.kind, broken, points, impactX, impactY, ballVx, ballVy })
-    if (rallyHits % 8 === 0) {
+    if (rallyHits % RALLY_HITS_PER_INCREASE === 0) {
       const base = levelSpeedFor(s.level, s.activeSpeedMultiplier)
-      const speed = Math.min(ball.speed * 1.02, base * 1.6), factor = speed / ball.speed
+      const speed = Math.min(ball.speed * RALLY_SPEED_FACTOR, base * RALLY_SPEED_CAP), factor = speed / ball.speed
       ball.speed = speed; ball.vx *= factor; ball.vy *= factor
     }
   }

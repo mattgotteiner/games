@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'preact/hooks'
 import type { JSX } from 'preact'
 import { BrickBurstController, type BrickBurstControllerOptions, type BrickBurstStateListener } from './controller'
 import { BRICK_BURST_LOOKS } from './palette'
-import { createGame, DIFFICULTIES, DIFFICULTY_ORDER, isDifficulty, type BrickBurstState } from './rules'
+import { createGame, LEVEL_CLEAR_MS, DIFFICULTIES, DIFFICULTY_ORDER, isDifficulty, type BrickBurstState } from './rules'
 import { readStored, writeStored } from '../shared/storage'
 import { vibrate } from '../shared/haptics'
 import { usePageColor } from '../shared/use-page-color'
@@ -15,7 +15,10 @@ export type BrickBurstControllerFactory = (
 const defaultFactory: BrickBurstControllerFactory = (...args) => new BrickBurstController(...args)
 const BEST_KEY = 'games.brick-burst.best-score', DIFFICULTY_KEY = 'games.brick-burst.difficulty'
 const look = BRICK_BURST_LOOKS.classic
-const tokens = Object.fromEntries(Object.entries(look.tokens).map(([name, value]) => [`--bd-${name}`, value])) as JSX.CSSProperties
+const tokens = {
+  ...Object.fromEntries(Object.entries(look.tokens).map(([name, value]) => [`--bd-${name}`, value])),
+  '--bb-level-clear-ms': `${LEVEL_CLEAR_MS}ms`,
+} as JSX.CSSProperties
 const statusNames = { serving: 'Ready', playing: 'Playing', paused: 'Paused', 'ball-lost': 'Ball lost', 'level-clear': 'Level clear', over: 'Game over' } as const
 
 export function BrickBurst({ controllerFactory = defaultFactory }: { readonly controllerFactory?: BrickBurstControllerFactory }) {

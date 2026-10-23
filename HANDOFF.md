@@ -182,20 +182,18 @@ line-clear animation. A Theme picker in the pause menu saves the choice under
 Start with `design.md`, `art-direction.md`, and the runnable reference
 `art-direction/preview.html`, then follow `tasks.md` in order.
 
-`increase-brick-burst-pace` is a proposal following the approved Brick Burst
-implementation (`44efaa2`). **Start with its `tasks.md` section 0.** A code
-review found defects in `44efaa2`, and they must be fixed and tested before any
-tuning. A held steering key dies after a ball-loss or level-clear freeze. The
-canvas resizes every frame below 100% zoom. The brick tie-break is reversed.
-The level-speed formula is duplicated. There is also hot-path `matchMedia` and
-redraw work, Brick Burst imports Block Drop renderer internals, and there are
-small cleanups. See `design.md` §0 and the new spec scenarios. It recommends base ball speed 390 units/s, +4%
-every four brick hits, held paddle speed 540 units/s, and 400/650 ms loss/clear
-feedback. Difficulty multipliers, scoring, layouts, and touch gain retain their
-rules. The design compares additional pacing ideas and defines collision and
-phone-review checks at the proposed 1092 units/s maximum. The proposal passes
-strict OpenSpec validation; its implementation tasks are all unchecked. The
-Tailscale server still runs the approved original tuning.
+`increase-brick-burst-pace` is implemented locally for phone review after
+`4fe1381` added the required review fixes. Those fixes were committed separately
+before tuning. The build uses base ball speed 390 units/s, +4% every four brick
+hits, held paddle speed 540 units/s, and 400/650 ms loss/clear feedback. Touch
+mapping, difficulty multipliers, layouts, score rules, and storage retain their
+rules. The final full check passed 351 unit/component tests, the production
+build, and all 37 Chromium flows. The 4× CPU profile peaked at 4.2 ms. The active
+art reference is `openspec/changes/increase-brick-burst-pace/art-direction/preview.html`.
+See that change's `review.md` for seeded timing observations and preserved
+baseline locations. Physical phone acceptance remains pending; the change stays
+active until review and archival. The existing Tailscale test server runs the
+updated source at port 10000.
 
 ## Completed Brick Burst
 

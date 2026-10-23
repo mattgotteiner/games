@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { BrickBurstController, type BrickBurstControllerOptions } from './controller'
-import { applyAction, createGame, STEP_MS, type BrickBurstState } from './rules'
+import { applyAction, BALL_LOST_MS, createGame, LEVEL_CLEAR_MS, STEP_MS, type BrickBurstState } from './rules'
 import { classicRenderer } from './renderer'
 import { fakeObserver, pointer, recordingContext } from './test-support'
 const controllers: BrickBurstController[] = []
@@ -65,7 +65,7 @@ describe('Brick Burst controller', () => {
     pointer(t.left, 'pointerdown', 20, 200, { pointerId: 2, isPrimary: false })
     pointer(t.bar, 'pointermove', 160)
     expect(t.controller.getState().paddleX).toBe(242)
-    t.frame(0); t.frame(100); expect(t.controller.getState().paddleX).toBeCloseTo(200)
+    t.frame(0); t.frame(100); expect(t.controller.getState().paddleX).toBeCloseTo(188)
     pointer(t.left, 'pointercancel', 20, 200, { pointerId: 2 })
     expect(t.controller.getState().steer).toBe(0)
     pointer(t.bar, 'pointerup', 160); expect(t.controller.getState().status).toBe('serving')
@@ -182,9 +182,9 @@ describe('Brick Burst controller', () => {
   })
   it('keeps level-clear feedback static with reduced motion', () => {
     const sweep = vi.spyOn(classicRenderer, 'drawLevelSweep')
-    const t = setup({ initialState: { ...createGame(41), status: 'level-clear', feedbackMs: 600 }, reducedMotion: () => true })
+    const t = setup({ initialState: { ...createGame(41), status: 'level-clear', feedbackMs: LEVEL_CLEAR_MS }, reducedMotion: () => true })
     t.frame(0); t.frame(100)
-    expect(t.controller.getState().feedbackMs).toBeCloseTo(500)
+    expect(t.controller.getState().feedbackMs).toBeCloseTo(LEVEL_CLEAR_MS - 100)
     expect(sweep).not.toHaveBeenCalled()
   })
   it('draws a tough-brick flash through the selected renderer', () => {
@@ -193,6 +193,21 @@ describe('Brick Burst controller', () => {
     const t = setup({ initialState: initial })
     t.frame(0); draw.mockClear(); t.frame(STEP_MS)
     expect(draw.mock.calls.some((call) => call[3]?.crackFlash === 0)).toBe(true)
+  })
+  it('moves held steering 54 logical units in 100 ms', () => {
+    const t=setup();window.dispatchEvent(new KeyboardEvent('keydown',{key:'a'}))
+    t.frame(0);t.frame(100);expect(t.controller.getState().paddleX).toBeCloseTo(138)
+  })
+  it.each(['ball-lost','level-clear'] as const)('normalizes the shorter %s feedback and freezes progress on pause', (status) => {
+    const duration=status==='ball-lost'?BALL_LOST_MS:LEVEL_CLEAR_MS
+    const draw=vi.spyOn(classicRenderer,status==='ball-lost'?'drawBallLost':'drawLevelSweep')
+    const t=setup({initialState:{...createGame(41),status,feedbackMs:duration}})
+    t.frame(0);t.frame(100)
+    expect(draw.mock.calls[draw.mock.calls.length-1][2]).toBeCloseTo(100/duration)
+    t.controller.dispatch({type:'pause'});t.frame(10000)
+    expect(draw.mock.calls[draw.mock.calls.length-1][2]).toBeCloseTo(100/duration)
+    t.controller.dispatch({type:'resume'});t.frame(20000);t.frame(20100)
+    expect(draw.mock.calls[draw.mock.calls.length-1][2]).toBeCloseTo(200/duration)
   })
   it('cancels the frame, disconnects observation, and removes every listener on destroy', () => {
     const add = vi.spyOn(EventTarget.prototype, 'addEventListener'), remove = vi.spyOn(EventTarget.prototype, 'removeEventListener')

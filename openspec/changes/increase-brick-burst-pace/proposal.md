@@ -1,12 +1,18 @@
+## Implementation status
+
+The review fixes and faster tuning are implemented locally for phone review.
+The comparison below records the previous approved values and the new tuning.
+Physical phone acceptance is pending; the change remains active.
+
 ## Why
 
 Phone review approved Brick Burst, but the player reported that it feels slow
-paced. The current ball starts at 300 units/second on Medium and gains only
-2% after every eight brick hits. Losing a ball adds a 600 ms pause, and clearing
-a level adds a 900 ms pause.
+paced. At the approved baseline, the ball started at 300 units/second on Medium and
+gained only 2% after every eight brick hits. Losing a ball added a 600 ms pause,
+and clearing a level added a 900 ms pause.
 
 Raise the pace from the first serve, let successful rallies build speed sooner,
-and reduce the waits between rallies. These are proposed tuning values; their
+and reduce the waits between rallies. These tuning values remain provisional; their
 feel still needs a phone review.
 
 ## What Changes
@@ -37,7 +43,7 @@ make the faster pace worse (see `design.md` §0 and `tasks.md` section 0):
 
 ### Pace tuning
 
-| Setting | Current | Proposed |
+| Setting | Previous | New |
 | --- | --- | --- |
 | Base ball speed | 300 units/s | 390 units/s (+30%) |
 | Rally acceleration | +2% every 8 brick hits | +4% every 4 brick hits |
@@ -81,5 +87,5 @@ None.
   durations; updates the active art reference for those effects.
 - Updates rules, controller, and browser tests and captures fresh phone states.
 - Adds no dependencies, assets, storage keys, or settings.
-- This change is a proposal. The committed game retains the approved tuning
-  until this change is implemented and reviewed.
+- The faster build is available for review on the existing Tailscale test server.
+  Physical phone acceptance is pending.

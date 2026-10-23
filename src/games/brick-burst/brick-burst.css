@@ -28,7 +28,7 @@
 /* Direction controls still receive holds; the rules freeze movement until active. */
 .control-bar.controls-inactive button[data-serve] { pointer-events: none; }
 .control-bar button[aria-disabled='true'] { opacity: 0.46; border-style: dashed; filter: saturate(0.35); }
-.brick-burst .line-clear-callout { animation-duration: 900ms; }
+.brick-burst .line-clear-callout { animation-duration: var(--bb-level-clear-ms); }
 .brick-burst .help-dialog-content { touch-action: pan-y; }
 .brick-burst .help-dialog table { width: 100%; margin-bottom: 0.8rem; border-collapse: collapse; color: var(--bd-text); text-align: left; font-size: 0.9rem; }
 .brick-burst .help-dialog th, .brick-burst .help-dialog td { padding: 0.35rem; border-bottom: 1px solid var(--bd-panel-border); }

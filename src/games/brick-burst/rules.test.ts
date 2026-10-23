@@ -35,7 +35,7 @@ describe('Brick Burst rules', () => {
     s = applyAction(s, { type: 'paddle-to', x: 1000 }); expect(s.paddleX).toBe(352); expect(s.ball.x).toBe(352)
     s = applyAction(s, { type: 'steer', direction: -1 }); s = step(s).state
     expect(s.ball.x).toBe(s.paddleX)
-    s = applyAction(s, { type: 'serve' }); expect(s.ball.vx).toBeCloseTo(300 * Math.sin(s.serveAngle)); expect(s.ball.vy).toBeCloseTo(-300 * Math.cos(s.serveAngle))
+    s = applyAction(s, { type: 'serve' }); expect(s.ball.vx).toBeCloseTo(390 * Math.sin(s.serveAngle)); expect(s.ball.vy).toBeCloseTo(-390 * Math.cos(s.serveAngle))
     expect(applyAction(s, { type: 'serve' })).toBe(s)
   })
   it('draws seeded angles between 8 and 30 degrees on both sides over 1000 seeds', () => {
@@ -96,42 +96,42 @@ describe('Brick Burst rules', () => {
       expect(normal.events[0]).toMatchObject({ points: Math.round(ROW_POINTS[row] * multiplier) })
     }
   })
-  it('awards the Easy level 3 bonus, freezes 900 ms, then loads the next layout', () => {
+  it('awards the Easy level 3 bonus, freezes 650 ms, then loads the next layout', () => {
     const result = step(brickShot(2, 5, { level: 3, difficulty: 'easy', activeSpeedMultiplier: 0.75 }))
     expect(result.events).toContainEqual({ type: 'level-cleared', level: 3, bonus: 1125 })
     expect(result.state.status).toBe('level-clear')
-    const nearly = advance(result.state, 215)
+    const nearly = advance(result.state, 155)
     expect(nearly.status).toBe('level-clear'); expect(nearly.ball).toEqual(result.state.ball)
     const next = step(nearly); expect(next.events).toContainEqual({ type: 'level-started', level: 4 })
     expect(next.state).toMatchObject({ level: 4, status: 'serving', paddleX: 192, score: result.state.score, lives: 3 })
   })
-  it('ramps every eighth hit, caps speed, and resets after loss', () => {
-    for (const [hits, speed, expected] of [[6, 300, 300], [7, 300, 306], [79, 480, 480]]) {
+  it('ramps every fourth hit, caps speed, and resets after loss', () => {
+    for (const [hits, speed, expected] of [[2, 390, 390], [3, 390, 405.6], [6, 405.6, 405.6], [7, 405.6, 421.824], [47, 600.413, 624], [51, 624, 624]]) {
       const result = step(brickShot(2, 5, { rallyHits: hits, ball: { ...brickShot().ball, speed } }))
-      expect(result.state.ball.speed).toBe(expected)
+      expect(result.state.ball.speed).toBeCloseTo(expected)
     }
     const lost = step(playing({ rallyHits: 20, ball: { x: 50, y: 582, vx: 0, vy: 480, speed: 480 } }))
     expect(lost.state).toMatchObject({ status: 'ball-lost', lives: 2, rallyHits: 0 })
-    expect(lost.state.ball.speed).toBe(300)
-    expect(advance(lost.state, 143).status).toBe('ball-lost')
-    expect(advance(lost.state, 144).status).toBe('serving')
+    expect(lost.state.ball.speed).toBe(390)
+    expect(advance(lost.state, 95).status).toBe('ball-lost')
+    expect(advance(lost.state, 96).status).toBe('serving')
   })
   it('locks speed and points to the serve until the next serve', () => {
     let s = applyAction(playing(), { type: 'pause' })
     s = applyAction(s, { type: 'set-difficulty', difficulty: 'hard' })
     s = applyAction(s, { type: 'resume' })
-    expect(s.ball.speed).toBe(300); expect(s.activeSpeedMultiplier).toBe(1)
+    expect(s.ball.speed).toBe(390); expect(s.activeSpeedMultiplier).toBe(1)
     const shot = step(brickShot(0, 5, { ...s, bricks: isolated(0, 5, 'tough', true), ball: brickShot(0, 5).ball }))
     expect(shot.events[0]).toMatchObject({ points: 80 })
-    s = advance(step({ ...s, ball: { ...s.ball, y: 582, vy: 300 } }).state, 144)
-    s = applyAction(s, { type: 'serve' }); expect(s.ball.speed).toBe(375); expect(s.activeSpeedMultiplier).toBe(1.25)
+    s = advance(step({ ...s, ball: { ...s.ball, y: 582, vy: 300 } }).state, 96)
+    s = applyAction(s, { type: 'serve' }); expect(s.ball.speed).toBe(487.5); expect(s.activeSpeedMultiplier).toBe(1.25)
   })
   it('uses one level-speed formula for selected and serve-locked multipliers', () => {
     for (const level of [1, 4, 8, 100]) for (const d of DIFFICULTY_ORDER) {
       expect(rules.levelSpeedFor(level, DIFFICULTIES[d].multiplier)).toBe(levelSpeed(level, d))
     }
     const speed = levelSpeed(4, 'medium') * 1.6
-    let s = brickShot(2, 5, { level: 4, rallyHits: 7, ball: { ...brickShot().ball, speed } })
+    let s = brickShot(2, 5, { level: 4, rallyHits: 3, ball: { ...brickShot().ball, speed } })
     s = applyAction(s, { type: 'pause' })
     s = applyAction(s, { type: 'set-difficulty', difficulty: 'hard' })
     s = applyAction(s, { type: 'resume' })
@@ -152,7 +152,7 @@ describe('Brick Burst rules', () => {
   })
   it('does not tunnel through a brick at maximum Hard speed from 0 to 60 degrees', () => {
     for (let degrees = 0; degrees <= 60; degrees++) {
-      const angle = degrees * Math.PI / 180, speed = 840, x = 176, y = 120
+      const angle = degrees * Math.PI / 180, speed = 1092, x = 176, y = 120
       const ball = { x: x - 30 * Math.sin(angle), y: y + 30 * Math.cos(angle), vx: speed * Math.sin(angle), vy: -speed * Math.cos(angle), speed }
       let s = playing({ level: 100, difficulty: 'hard', activeSpeedMultiplier: 1.25, bricks: isolated(3, 5), ball })
       let hit = false
@@ -162,10 +162,48 @@ describe('Brick Burst rules', () => {
   })
   it('does not tunnel through the paddle at maximum speed', () => {
     for (let degrees = 0; degrees <= 60; degrees++) {
-      const a = degrees * Math.PI / 180, speed = 840
+      const a = degrees * Math.PI / 180, speed = 1092
       const s = playing({ ball: { x: 192, y: 530, vx: speed * Math.sin(a), vy: speed * Math.cos(a), speed } })
       expect(advance(s, 2).ball.vy).toBeLessThan(0)
     }
+  })
+  it('hits brick faces and corners from all legal directions at 1092 units/s', () => {
+    const targets = [[160,112],[176,112],[192,112],[160,120],[192,120],[160,128],[176,128],[192,128]]
+    for (const [x,y] of targets) for (let degrees=0;degrees<=60;degrees++) for (const sx of [-1,1]) for (const sy of [-1,1]) {
+      const angle=degrees*Math.PI/180, dx=sx*Math.sin(angle), dy=sy*Math.cos(angle), speed=1092
+      let s=playing({ level:8, difficulty:'hard', activeSpeedMultiplier:1.25, bricks:isolated(3,5), ball:{x:x-dx*80,y:y-dy*80,vx:dx*speed,vy:dy*speed,speed} })
+      let hit=false
+      for(let i=0;i<50 && !hit;i++) { const next=step(s);s=next.state;hit=next.events.some(e=>e.type==='brick-hit') }
+      expect(hit, `target ${x},${y}; angle ${degrees}; direction ${sx},${sy}`).toBe(true)
+    }
+  })
+  it.each([-37,-32,0,32,37])('catches maximum-speed paddle contact at offset %i', (offset) => {
+    const next=step(playing({ball:{x:192+offset,y:530,vx:0,vy:1092,speed:1092}}))
+    expect(next.events.some(e=>e.type==='paddle-hit')).toBe(true)
+    expect(next.state.ball.vy).toBeLessThan(0)
+  })
+  it('resolves adjacent-brick seams at maximum speed without hitting two bricks', () => {
+    const bricks=isolated(3,5);bricks[3*12+6]={kind:'normal',damaged:false}
+    const next=step(playing({bricks,ball:{x:192,y:134,vx:0,vy:-1092,speed:1092}}))
+    expect(next.events.filter(e=>e.type==='brick-hit')).toMatchObject([{row:3,col:5}])
+    expect(next.state.bricks[3*12+6]).toBe(bricks[3*12+6])
+  })
+  it('counts tough damage hits in the acceleration cadence and preserves direction', () => {
+    const s=brickShot(2,5,{rallyHits:3,bricks:isolated(2,5,'tough'),ball:{...brickShot().ball,vx:40,vy:-Math.sqrt(390**2-40**2),speed:390}})
+    const next=step(s)
+    expect(next.state.bricks[29]).toMatchObject({damaged:true})
+    expect(next.state.ball.speed).toBeCloseTo(405.6)
+    expect(Math.abs(next.state.ball.vx/next.state.ball.vy)).toBeCloseTo(Math.abs(s.ball.vx/s.ball.vy))
+  })
+  it.each(['ball-lost','level-clear'] as const)('freezes %s until its last step and preserves remaining time across pause', (status) => {
+    const count=status==='ball-lost'?96:156
+    const initial={...createGame(41),status,feedbackMs:count*STEP_MS}
+    const nearly=advance(initial,count-1)
+    expect(nearly.status).toBe(status);expect(nearly.ball).toEqual(initial.ball);expect(nearly.paddleX).toBe(initial.paddleX)
+    const paused=applyAction(nearly,{type:'pause'})
+    expect(advance(paused,240)).toEqual(paused)
+    const resumed=applyAction(paused,{type:'resume'})
+    expect(step(resumed).state.status).toBe('serving')
   })
   it('keeps paths at least 30 degrees from horizontal over 200 seeds × 20000 steps', () => {
     let samples = 0
@@ -200,8 +238,8 @@ describe('Brick Burst rules', () => {
     expect(a).toEqual(b); expect(JSON.stringify(seedState)).toBe(original)
   })
   it.each(DIFFICULTY_ORDER)('caps level speed for %s', (d: BrickBurstDifficulty) => {
-    expect(levelSpeed(1, d)).toBe(300 * DIFFICULTIES[d].multiplier)
-    expect(levelSpeed(100, d)).toBe(420 * DIFFICULTIES[d].multiplier)
+    expect(levelSpeed(1, d)).toBe(390 * DIFFICULTIES[d].multiplier)
+    expect(levelSpeed(100, d)).toBe(546 * DIFFICULTIES[d].multiplier)
     expect(STEP_MS * levelSpeed(100, d) * 1.6 / 1000).toBeLessThan(BALL_R)
     expect(FIELD_WIDTH).toBe(384); expect(FIELD_HEIGHT).toBe(576)
   })

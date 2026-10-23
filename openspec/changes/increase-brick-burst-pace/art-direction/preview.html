@@ -1,0 +1,402 @@
+<!doctype html>
+<!--
+  Brick Burst art-direction reference.
+  Open directly in a browser (no build step). It renders the recipes from
+  ../art-direction.md: game states, recipe close-ups, the brick-pop sequence,
+  all five level layouts, and a 390x844 phone mock of the chrome. All drawing
+  happens in logical field units (384 x 576), exactly like renderer.ts does.
+  This file is a reference sketch, not production code. Chrome colors in the
+  phone mock approximate BLOCK_DROP_THEMES.classic.tokens; themes.ts wins.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Brick Burst - faster pace art direction</title>
+<style>
+  :root {
+    --page: #07111f; --text: #f8fafc; --text-muted: #a8c4df; --label: #7dd3fc; --accent: #67e8f9;
+    --panel: #132641; --panel-bg: linear-gradient(160deg, rgb(25 48 79 / 96%), rgb(12 27 47 / 96%)); --panel-border: #2d4768;
+    --control-bg: #162942; --control-border: #355373; --control-text: #e0f2fe;
+    --primary-bg: #67e8f9; --primary-text: #07111f; --secondary-bg: #1e3049; --secondary-border: #3e5c82; --secondary-text: #eff6ff;
+    --board-ring: #3a5b83; --focus: #fbbf24; --radius-panel: 1rem; --radius-control: 0.8rem;
+    --font-ui: Inter, ui-rounded, "SF Pro Rounded", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  body { margin: 0; padding: 24px; background: #888; font-family: system-ui, sans-serif; color: #111; }
+  h1 { margin: 0 0 4px; font-size: 20px; }
+  h2 { margin: 28px 0 10px; font-size: 16px; }
+  p.note { margin: 0 0 12px; font-size: 13px; max-width: 70ch; }
+  .row { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-start; }
+  figure { margin: 0; }
+  figcaption { font-size: 12px; text-align: center; margin-top: 4px; }
+  canvas.field { display: block; width: 220px; aspect-ratio: 2 / 3; border-radius: 6px; box-shadow: 0 0 0 2px #3a5b83; }
+  canvas.thumb { display: block; width: 150px; aspect-ratio: 2 / 3; border-radius: 4px; box-shadow: 0 0 0 2px #3a5b83; }
+  canvas.zoom { display: block; border-radius: 6px; background: #07111f; }
+
+  /* ---- Phone mock (390 x 844) ---- */
+  .phone { width: 390px; height: 844px; box-sizing: border-box; padding: 14px 12px 18px; border-radius: 28px; background: var(--page);
+    color: var(--text); font-family: var(--font-ui); display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto; gap: 10px;
+    box-shadow: 0 0 0 10px #111, 0 20px 40px rgb(0 0 0 / 40%); }
+  .game-header { display: flex; align-items: center; gap: 8px; }
+  .game-header h3 { flex: 1; margin: 0; font-size: 1.6rem; letter-spacing: -0.045em; line-height: 1; }
+  .session-action { min-height: 44px; padding: 0 14px; border-radius: var(--radius-control); border: 1px solid var(--secondary-border);
+    background: var(--secondary-bg); color: var(--secondary-text); font: 800 0.9rem var(--font-ui); }
+  .hud { display: flex; align-items: center; gap: 12px; padding: 8px 12px; border-radius: var(--radius-panel); background: var(--panel-bg);
+    border: 1px solid var(--panel-border); }
+  .hud-item { display: grid; gap: 1px; }
+  .hud-label { color: var(--label); font-size: 0.62rem; font-weight: 900; letter-spacing: 0.14em; text-transform: uppercase; }
+  .hud-value { font-weight: 900; font-size: 1rem; font-variant-numeric: tabular-nums; }
+  .hud-score .hud-value { font-size: 1.45rem; }
+  .lives { display: flex; gap: 5px; padding-top: 3px; }
+  .pip { width: 0.7rem; height: 0.7rem; border-radius: 50%; box-sizing: border-box; }
+  .pip.live { background: #f8fafc; box-shadow: 0 0 0 2px rgb(103 232 249 / 35%); }
+  .pip.lost { border: 1.5px solid var(--text-muted); }
+  .status { margin-left: auto; display: flex; align-items: center; gap: 6px; font-size: 0.8rem; font-weight: 800; }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #4ade80; }
+  .board-frame { position: relative; min-height: 0; display: grid; place-items: center; }
+  .board-frame canvas { height: 100%; max-width: 100%; aspect-ratio: 2 / 3; border-radius: 6px; box-shadow: 0 0 0 2px var(--board-ring), 0 1rem 3rem rgb(0 0 0 / 35%); }
+  .serve-hint { position: absolute; left: 50%; bottom: 18%; transform: translateX(-50%); white-space: nowrap; padding: 6px 12px;
+    border-radius: 999px; background: rgb(19 38 65 / 88%); color: var(--text-muted); font-size: 0.8rem; font-weight: 600; pointer-events: none; }
+  .control-bar { display: flex; gap: 10px; }
+  .control-bar button { min-height: 56px; border-radius: var(--radius-control); font: 800 0.95rem var(--font-ui); display: flex; align-items: center; justify-content: center; gap: 6px; }
+  .control-bar .move { flex: 1; background: var(--control-bg); border: 1px solid var(--control-border); color: var(--control-text); }
+  .control-bar .serve { flex: 1.2; background: var(--primary-bg); border: 1px solid var(--primary-bg); color: var(--primary-text); }
+  .control-bar .serve.focus { outline: 3px solid var(--focus); outline-offset: 2px; }
+  .legend { font-size: 12px; max-width: 360px; }
+  .legend td { padding: 2px 6px; vertical-align: top; }
+  .sw { display: inline-block; width: 14px; height: 14px; border-radius: 3px; vertical-align: middle; box-shadow: 0 0 0 1px #0003; }
+</style>
+</head>
+<body>
+<h1>Brick Burst - art direction reference (Classic)</h1>
+<p class="note">Every canvas below draws in logical units (field 384 x 576) through one transform, as <code>renderer.ts</code> will. Effects are frozen at the stated progress so they can be compared pixel-for-pixel during implementation.</p>
+
+<p>Active pace: 390 units/s base ball speed, 540 units/s held paddle speed. Ball-loss feedback: 400 ms. Level-clear feedback: 650 ms.</p>
+<h2>Game states</h2>
+<div class="row" id="states"></div>
+
+<h2>Recipe close-ups (3x)</h2>
+<div class="row" id="closeups"></div>
+
+<h2>Brick pop "Burst" sequence (240 ms)</h2>
+<div class="row" id="pop"></div>
+
+<h2>Level layouts</h2>
+<div class="row" id="layouts"></div>
+
+<h2>Phone mock, 390 x 844 (serving, level 3)</h2>
+<div class="row">
+  <div class="phone">
+    <header class="game-header"><h3>Brick Burst</h3><button class="session-action">❚❚ Pause</button></header>
+    <div class="hud">
+      <div class="hud-item hud-score"><span class="hud-label">Score</span><span class="hud-value">12,480</span></div>
+      <div class="hud-item"><span class="hud-label">Level</span><span class="hud-value">3</span></div>
+      <div class="hud-item"><span class="hud-label">Lives</span><span class="lives" role="img" aria-label="2 lives"><i class="pip live"></i><i class="pip live"></i><i class="pip lost"></i></span></div>
+      <div class="status"><span class="status-dot"></span>Ready</div>
+    </div>
+    <div class="board-frame"><canvas id="phone-canvas"></canvas><div class="serve-hint">Drag to move · tap to serve</div></div>
+    <div class="control-bar">
+      <button class="move" aria-label="Move paddle left">◀ Left</button>
+      <button class="serve focus" aria-label="Serve ball">Serve</button>
+      <button class="move" aria-label="Move paddle right">Right ▶</button>
+    </div>
+  </div>
+  <table class="legend" id="legend"></table>
+</div>
+
+<script>
+// ---- Geometry (design §2) ---------------------------------------------------
+const FW = 384, FH = 576, COLS = 12, ROWS = 8, BW = 32, BH = 16, TOP = 64
+const PW = 64, PH = 10, PTOP = 536, R = 5
+
+// ---- Palette (art-direction.md "Palette") ----------------------------------
+const P = {
+  field: '#07111f', fieldGlow: '#10223a', grid: 'rgb(148 163 184 / 6%)', danger: 'rgb(251 113 133 / 12%)',
+  pausedVeil: 'rgb(7 17 31 / 84%)', gameOverVeil: 'rgb(7 17 31 / 76%)',
+  paddleTop: '#a5f3fc', paddleMid: '#67e8f9', paddleBottom: '#22d3ee', paddleOutline: 'rgb(7 17 31 / 55%)', paddleGrip: 'rgb(7 17 31 / 35%)',
+  ball: '#f8fafc', ballHalo: 'rgb(103 232 249 / 35%)', trail: '#67e8f9', guide: '#67e8f9',
+  crack: 'rgb(248 250 252 / 85%)', rivet: 'rgb(248 250 252 / 70%)',
+}
+const ROW_COLORS = ['#fb7185', '#fb923c', '#facc15', '#4ade80', '#2dd4bf', '#38bdf8', '#818cf8', '#c084fc']
+const ROW_NAMES = ['Rose', 'Orange', 'Yellow', 'Green', 'Teal', 'Sky', 'Indigo', 'Violet']
+
+// ---- Layouts (design §3) ---------------------------------------------------
+const LAYOUTS = [
+  ['Stripes', ['............', 'nnnnnnnnnnnn', 'nnnnnnnnnnnn', 'nnnnnnnnnnnn', 'nnnnnnnnnnnn', 'nnnnnnnnnnnn', 'nnnnnnnnnnnn', '............']],
+  ['Pyramid', ['.....tt.....', '....nnnn....', '...nnnnnn...', '..nnnnnnnn..', '.nnnnnnnnnn.', 'nnnnnnnnnnnn', '............', '............']],
+  ['Checker', ['tntntnntntnt', 'ntntnttntntn', '............', 'nnnn....nnnn', 'nnnn....nnnn', '............', 'nn.nn..nn.nn', 'nn.nn..nn.nn']],
+  ['Fortress', ['tttttttttttt', 't..........t', 't.nnnnnnnn.t', 't.nnnnnnnn.t', 't.nnnnnnnn.t', 't..........t', 'tttt....tttt', '............']],
+  ['Invader', ['..t......t..', '...n....n...', '..nnnnnnnn..', '.nn.nnnn.nn.', 'nnnnnnnnnnnn', 'n.nnnnnnnn.n', 'n.n......n.n', '...nn..nn...']],
+]
+function layoutBricks(i) {
+  const out = []
+  LAYOUTS[i][1].forEach((line, row) => [...line].forEach((ch, col) => { if (ch !== '.') out.push({ row, col, kind: ch === 't' ? 'tough' : 'normal', damaged: false }) }))
+  return out
+}
+
+// ---- Shared helpers (ported from block-drop/theme-renderers/shared.ts) -----
+function hash(x, y, salt = 0) {
+  let h = (x * 374761393 + y * 668265263 + salt * 2147483647) | 0
+  h = Math.imul(h ^ (h >>> 13), 1274126177)
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296
+}
+function rgb(hex) { const n = parseInt(hex.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255] }
+function mix(hex, target, t) { const a = rgb(hex), b = rgb(target); return `rgb(${a.map((v, i) => Math.round(v * (1 - t) + b[i] * t)).join(' ')})` }
+function alpha(hex, a) { return `rgb(${rgb(hex).join(' ')} / ${a})` }
+const ease = (t) => 1 - Math.pow(1 - t, 3)
+const clamp01 = (t) => Math.max(0, Math.min(1, t))
+function roundRect(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.roundRect(x, y, w, h, Math.min(r, w / 2, h / 2)) }
+
+// ---- Recipes ----------------------------------------------------------------
+function drawBackground(ctx) {
+  const px = ctx.px
+  ctx.fillStyle = P.field; ctx.fillRect(0, 0, FW, FH)
+  const g = ctx.createRadialGradient(192, 172, 0, 192, 172, 400)
+  g.addColorStop(0, P.fieldGlow); g.addColorStop(1, P.field)
+  ctx.fillStyle = g; ctx.fillRect(0, 0, FW, FH)
+  ctx.strokeStyle = P.grid; ctx.lineWidth = px; ctx.beginPath()
+  for (let x = 32; x < FW; x += 32) { ctx.moveTo(x, 0); ctx.lineTo(x, FH) }
+  for (let y = 32; y < FH; y += 32) { ctx.moveTo(0, y); ctx.lineTo(FW, y) }
+  ctx.stroke()
+  const d = ctx.createLinearGradient(0, FH - 28, 0, FH)
+  d.addColorStop(0, 'rgb(251 113 133 / 0)'); d.addColorStop(1, P.danger)
+  ctx.fillStyle = d; ctx.fillRect(0, FH - 28, FW, 28)
+}
+
+function bevel(ctx, x, y, w, h) {
+  const e = Math.max(ctx.px, 1.6)
+  ctx.fillStyle = 'rgb(255 255 255 / 28%)'; ctx.fillRect(x, y, w, e); ctx.fillRect(x, y, e, h)
+  ctx.fillStyle = 'rgb(0 0 0 / 22%)'; ctx.fillRect(x, y + h - e, w, e); ctx.fillRect(x + w - e, y, e, h)
+  return e
+}
+
+function crackPath(ctx, b, x, y) {
+  const { row, col } = b
+  const ox = x + 16 + (hash(col, row, 1) - 0.5) * 8, oy = y + 8 + (hash(col, row, 2) - 0.5) * 4
+  const side = ox < x + 16 ? [x + 5, oy + (hash(col, row, 9) - 0.5) * 4] : [x + 27, oy + (hash(col, row, 9) - 0.5) * 4]
+  const ends = [[x + 6 + hash(col, row, 3) * 20, y + 1], [x + 6 + hash(col, row, 4) * 20, y + 15], side]
+  ctx.strokeStyle = P.crack; ctx.lineWidth = ctx.px; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.beginPath()
+  ends.forEach(([ex, ey], k) => {
+    const mx = (ox + ex) / 2, my = (oy + ey) / 2, len = Math.hypot(ex - ox, ey - oy) || 1
+    const off = (hash(col, row, 5 + k) - 0.5) * 3
+    ctx.moveTo(ox, oy); ctx.lineTo(mx - ((ey - oy) / len) * off, my + ((ex - ox) / len) * off); ctx.lineTo(ex, ey)
+  })
+  ctx.stroke()
+}
+
+function drawBrick(ctx, b, opt = {}) {
+  const color = ROW_COLORS[b.row]
+  const x = b.col * BW, y = TOP + b.row * BH, ix = x + 1, iy = y + 1, w = BW - 2, h = BH - 2
+  ctx.save()
+  if (opt.alpha !== undefined) ctx.globalAlpha = opt.alpha
+  if (opt.dy) ctx.translate(0, opt.dy)
+  if (opt.scale && opt.scale !== 1) { ctx.translate(x + BW / 2, y + BH / 2); ctx.scale(opt.scale, opt.scale); ctx.translate(-(x + BW / 2), -(y + BH / 2)) }
+  if (b.kind === 'normal') {
+    ctx.fillStyle = color; ctx.fillRect(ix, iy, w, h)
+    const e = bevel(ctx, ix, iy, w, h)
+    ctx.strokeStyle = 'rgb(255 255 255 / 18%)'; ctx.lineWidth = ctx.px
+    ctx.beginPath(); ctx.moveTo(x + 4, iy + e + 1.2); ctx.lineTo(x + 14, iy + e + 1.2); ctx.stroke()
+  } else {
+    ctx.fillStyle = mix(color, P.field, 0.45); ctx.fillRect(ix, iy, w, h)
+    ctx.strokeStyle = b.damaged ? alpha(color, 0.6) : color; ctx.lineWidth = 2.4
+    ctx.strokeRect(ix + 1.2, iy + 1.2, w - 2.4, h - 2.4)
+    bevel(ctx, ix, iy, w, h)
+    ctx.fillStyle = P.rivet
+    ctx.beginPath(); ctx.arc(x + 6, y + 8, 1.6, 0, Math.PI * 2); ctx.fill()
+    if (!b.damaged) { ctx.beginPath(); ctx.arc(x + 26, y + 8, 1.6, 0, Math.PI * 2); ctx.fill() }
+    if (b.damaged) crackPath(ctx, b, x, y)
+    if (opt.crackFlash) { ctx.strokeStyle = `rgb(255 255 255 / ${0.8 * (1 - opt.crackFlash)})`; ctx.lineWidth = 2.4; ctx.strokeRect(ix + 1.2, iy + 1.2, w - 2.4, h - 2.4) }
+  }
+  if (opt.flash) { ctx.fillStyle = `rgb(255 255 255 / ${opt.flash})`; ctx.fillRect(ix, iy, w, h) }
+  ctx.restore()
+}
+
+function drawPaddle(ctx, cx, opt = {}) {
+  const x = cx - PW / 2, px = ctx.px
+  ctx.save(); ctx.globalAlpha = opt.alpha ?? 1
+  const g = ctx.createLinearGradient(0, PTOP, 0, PTOP + PH)
+  g.addColorStop(0, P.paddleTop); g.addColorStop(0.5, P.paddleMid); g.addColorStop(1, P.paddleBottom)
+  roundRect(ctx, x, PTOP, PW, PH, PH / 2); ctx.fillStyle = g; ctx.fill()
+  ctx.strokeStyle = 'rgb(255 255 255 / 70%)'; ctx.lineWidth = 1.2; ctx.lineCap = 'round'
+  ctx.beginPath(); ctx.moveTo(x + 6, PTOP + 2.2); ctx.lineTo(x + PW - 6, PTOP + 2.2); ctx.stroke()
+  ctx.strokeStyle = P.paddleGrip; ctx.lineWidth = px; ctx.lineCap = 'butt'
+  ctx.beginPath(); for (const dx of [-3, 3]) { ctx.moveTo(cx + dx, PTOP + 3.5); ctx.lineTo(cx + dx, PTOP + 7.5) } ctx.stroke()
+  roundRect(ctx, x, PTOP, PW, PH, PH / 2); ctx.strokeStyle = P.paddleOutline; ctx.lineWidth = px; ctx.stroke()
+  if (opt.flash !== undefined) {
+    roundRect(ctx, x, PTOP, PW, PH, PH / 2); ctx.fillStyle = `rgb(255 255 255 / ${0.45 * (1 - opt.flash)})`; ctx.fill()
+    ctx.strokeStyle = alpha(P.paddleTop, 0.5 * (1 - opt.flash)); ctx.lineWidth = px
+    ctx.beginPath(); ctx.arc(opt.contactX, PTOP - 1, 3 + 7 * opt.flash, Math.PI, 0); ctx.stroke()
+  }
+  ctx.restore()
+}
+
+function drawBall(ctx, x, y, trail = []) {
+  trail.forEach(([tx, ty], i) => { ctx.fillStyle = alpha(P.trail, 0.30 - i * 0.045); ctx.beginPath(); ctx.arc(tx, ty, R * (0.85 - i * 0.12), 0, Math.PI * 2); ctx.fill() })
+  ctx.strokeStyle = P.ballHalo; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x, y, 6.5, 0, Math.PI * 2); ctx.stroke()
+  ctx.fillStyle = P.ball; ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI * 2); ctx.fill()
+  ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(x - 1.6, y - 1.6, 1.4, 0, Math.PI * 2); ctx.fill()
+}
+function trailFor(x, y, vx, vy) { const l = Math.hypot(vx, vy); return Array.from({ length: 6 }, (_, i) => [x - (vx / l) * 5 * (i + 1), y - (vy / l) * 5 * (i + 1)]) }
+
+function drawServeGuide(ctx, x, y, angle) {
+  const dx = Math.sin(angle), dy = -Math.cos(angle)
+  for (let i = 0; i < 7; i++) {
+    const d = 12 + i * 10
+    ctx.fillStyle = alpha(P.guide, 0.75 - (0.6 * i) / 6)
+    ctx.beginPath(); ctx.arc(x + dx * d, y + dy * d, 1.4, 0, Math.PI * 2); ctx.fill()
+  }
+}
+
+// Brick pop "Burst": b = broken brick, impact = ball position at hit, p in [0,1]
+function drawBrickPop(ctx, b, impact, ballVx, p) {
+  const x = b.col * BW, y = TOP + b.row * BH, color = ROW_COLORS[b.row], px = ctx.px
+  if (p < 0.2) { const t = p / 0.2; drawBrick(ctx, b, { flash: 0.85 * t, scale: 1 + 0.06 * t }) }
+  if (p < 0.5) {
+    const t = p / 0.5, grow = 4 * ease(t)
+    ctx.strokeStyle = `rgb(255 255 255 / ${0.5 * (1 - t)})`; ctx.lineWidth = px
+    ctx.strokeRect(x + 1 - grow, y + 1 - grow, BW - 2 + grow * 2, BH - 2 + grow * 2)
+  }
+  if (p < 0.2) return
+  const q = clamp01((p - 0.2) / 0.8), fw = (BW - 2) / 3, fh = (BH - 2) / 2
+  const fill = b.kind === 'tough' ? mix(mix(color, P.field, 0.45), '#ffffff', 0.15) : mix(color, '#ffffff', 0.15)
+  for (let k = 0; k < 6; k++) {
+    const cx = x + 1 + (k % 3) * fw + fw / 2, cy = y + 1 + Math.floor(k / 3) * fh + fh / 2
+    let ddx = cx - impact[0], ddy = cy - impact[1]; const l = Math.hypot(ddx, ddy) || 1; ddx /= l; ddy /= l
+    const dx = ddx * 14 * ease(q) + Math.sign(ballVx || 1) * 6 * q + (hash(b.col, b.row, k) - 0.5) * 8 * q
+    const dy = ddy * 10 * ease(q) + 26 * q * q - 6 * hash(b.col, b.row, k + 6) * q
+    ctx.save(); ctx.globalAlpha = 1 - q; ctx.translate(cx + dx, cy + dy)
+    ctx.rotate((hash(b.col, b.row, k + 12) - 0.5) * 2.4 * q); ctx.scale(1 - 0.35 * q, 1 - 0.35 * q)
+    ctx.fillStyle = b.kind === 'tough' && k === 0 ? color : fill; ctx.fillRect(-fw / 2, -fh / 2, fw, fh)
+    ctx.restore()
+  }
+}
+
+function drawBallLost(ctx, p) {
+  const g = ctx.createLinearGradient(0, FH - 80, 0, FH)
+  g.addColorStop(0, 'rgb(251 113 133 / 0)'); g.addColorStop(1, `rgb(251 113 133 / ${0.35 * Math.sin(p * Math.PI)})`)
+  ctx.fillStyle = g; ctx.fillRect(0, FH - 80, FW, 80)
+}
+
+function drawLevelSweep(ctx, p) {
+  const t = clamp01(p / 0.6); if (t >= 1) return
+  const y = -48 + t * (FH + 48)
+  const g = ctx.createLinearGradient(0, y, 0, y + 48)
+  g.addColorStop(0, 'rgb(165 243 252 / 0)'); g.addColorStop(0.5, 'rgb(165 243 252 / 28%)'); g.addColorStop(1, 'rgb(165 243 252 / 0)')
+  ctx.fillStyle = g; ctx.fillRect(0, y, FW, 48)
+}
+
+// ---- Canvas setup: draw in logical units, optional zoomed region ----------
+function setup(canvas, region = [0, 0, FW, FH]) {
+  const [rx, ry, rw, rh] = region, dpr = window.devicePixelRatio || 1
+  const cssW = canvas.clientWidth, cssH = cssW * (rh / rw), scale = cssW / rw
+  canvas.style.height = cssH + 'px'
+  canvas.width = Math.round(cssW * dpr); canvas.height = Math.round(cssH * dpr)
+  const ctx = canvas.getContext('2d')
+  ctx.setTransform(dpr * scale, 0, 0, dpr * scale, -rx * dpr * scale, -ry * dpr * scale)
+  ctx.px = 1 / scale
+  ctx.beginPath(); ctx.rect(0, 0, FW, FH); ctx.clip()
+  return ctx
+}
+
+function addFigure(parent, cls, caption, draw, region, width) {
+  const fig = document.createElement('figure'), c = document.createElement('canvas')
+  c.className = cls; if (width) c.style.width = width + 'px'
+  fig.append(c); const cap = document.createElement('figcaption'); cap.textContent = caption; fig.append(cap)
+  parent.append(fig)
+  draw(setup(c, region))
+}
+
+// ---- Scenes -----------------------------------------------------------------
+function withHoles(bricks, salt, keep) { return bricks.filter((b) => b.row < 2 || hash(b.col, b.row, salt) < keep) }
+
+const scenes = [
+  ['Serving (L1)', (ctx) => {
+    drawBackground(ctx); layoutBricks(0).forEach((b) => drawBrick(ctx, b))
+    drawPaddle(ctx, 192); drawBall(ctx, 192, PTOP - R); drawServeGuide(ctx, 192, PTOP - R, 0.35)
+  }],
+  ['Rally (L3, cracked tough)', (ctx) => {
+    drawBackground(ctx)
+    withHoles(layoutBricks(2), 3, 0.6).forEach((b) => drawBrick(ctx, b.kind === 'tough' && hash(b.col, b.row, 7) < 0.45 ? { ...b, damaged: true } : b))
+    drawPaddle(ctx, 140); drawBall(ctx, 250, 300, trailFor(250, 300, -0.5, -0.87))
+  }],
+  ['Brick pops 30% / 65%', (ctx) => {
+    drawBackground(ctx)
+    const all = layoutBricks(0), popped = [[6, 5], [6, 6]]
+    all.filter((b) => !popped.some(([r, c]) => b.row === r && b.col === c)).forEach((b) => drawBrick(ctx, b))
+    drawBrickPop(ctx, { row: 6, col: 5, kind: 'normal' }, [180, 180], 1, 0.65)
+    drawBrickPop(ctx, { row: 6, col: 6, kind: 'normal' }, [206, 180], 1, 0.3)
+    drawPaddle(ctx, 230, { flash: 0.4, contactX: 236 }); drawBall(ctx, 214, 200, trailFor(214, 200, 0.45, 0.89))
+  }],
+  [`Ball lost 50% (${400*0.5} / 400 ms)`, (ctx) => {
+    drawBackground(ctx); withHoles(layoutBricks(3), 5, 0.7).forEach((b) => drawBrick(ctx, b))
+    drawPaddle(ctx, 300, { alpha: 1 - 0.6 * Math.sin(0.5 * Math.PI) }); drawBallLost(ctx, 0.5)
+  }],
+  [`Level sweep 35% (${Math.round(650*0.35)} / 650 ms)`, (ctx) => { drawBackground(ctx); drawPaddle(ctx, 192); drawLevelSweep(ctx, 0.35) }],
+  ['Paused (L2 + veil)', (ctx) => {
+    drawBackground(ctx); layoutBricks(1).forEach((b) => drawBrick(ctx, b))
+    drawPaddle(ctx, 210); drawBall(ctx, 120, 330); ctx.fillStyle = P.pausedVeil; ctx.fillRect(0, 0, FW, FH)
+  }],
+]
+const states = document.getElementById('states')
+scenes.forEach(([cap, fn]) => addFigure(states, 'field', cap, fn))
+
+// Close-ups: brick region and paddle region at 3x
+const closeups = document.getElementById('closeups')
+addFigure(closeups, 'zoom', 'Normal, tough, tough cracked, crack flash', (ctx) => {
+  drawBackground(ctx)
+  drawBrick(ctx, { row: 0, col: 0, kind: 'normal' }); drawBrick(ctx, { row: 0, col: 1, kind: 'tough', damaged: false })
+  drawBrick(ctx, { row: 0, col: 2, kind: 'tough', damaged: true }); drawBrick(ctx, { row: 0, col: 3, kind: 'tough', damaged: true }, { crackFlash: 0.3 })
+  drawBrick(ctx, { row: 1, col: 0, kind: 'normal' }); drawBrick(ctx, { row: 1, col: 1, kind: 'tough', damaged: false })
+  drawBrick(ctx, { row: 1, col: 2, kind: 'tough', damaged: true }); drawBrick(ctx, { row: 1, col: 3, kind: 'normal' })
+}, [0, 60, 132, 40], 396)
+addFigure(closeups, 'zoom', 'Paddle, ball + trail, serve guide', (ctx) => {
+  drawBackground(ctx); drawPaddle(ctx, 60); drawServeGuide(ctx, 60, PTOP - R, -0.4)
+  drawBall(ctx, 112, 500, trailFor(112, 500, 0.5, -0.87))
+}, [20, 440, 132, 112], 396)
+addFigure(closeups, 'zoom', 'Paddle hit flash + ripple (40%)', (ctx) => {
+  drawBackground(ctx); drawPaddle(ctx, 60, { flash: 0.4, contactX: 74 }); drawBall(ctx, 74, 528)
+}, [20, 500, 80, 56], 240)
+
+// Pop sequence
+const pop = document.getElementById('pop')
+for (const p of [0, 0.1, 0.25, 0.45, 0.65, 0.85]) {
+  addFigure(pop, 'zoom', `p = ${p}`, (ctx) => {
+    drawBackground(ctx)
+    drawBrick(ctx, { row: 2, col: 4, kind: 'normal' }); drawBrick(ctx, { row: 2, col: 6, kind: 'normal' })
+    drawBrickPop(ctx, { row: 2, col: 5, kind: 'normal' }, [170, 110], 1, p)
+  }, [112, 84, 96, 64], 192)
+}
+addFigure(pop, 'zoom', 'tough, p = 0.45', (ctx) => {
+  drawBackground(ctx); drawBrickPop(ctx, { row: 0, col: 5, kind: 'tough' }, [170, 78], -1, 0.45)
+}, [112, 44, 96, 64], 192)
+
+// Layouts
+const layouts = document.getElementById('layouts')
+LAYOUTS.forEach(([name], i) => {
+  const n = layoutBricks(i)
+  addFigure(layouts, 'thumb', `L${i + 1} ${name} - ${n.length} bricks, ${n.filter((b) => b.kind === 'tough').length} tough`, (ctx) => {
+    drawBackground(ctx); n.forEach((b) => drawBrick(ctx, b)); drawPaddle(ctx, 192); drawBall(ctx, 192, PTOP - R)
+  })
+})
+
+// Phone mock canvas (sized by CSS height)
+function drawPhone() {
+  const c = document.getElementById('phone-canvas')
+  c.style.width = c.getBoundingClientRect().height * (2 / 3) + 'px'
+  const ctx = setup(c)
+  drawBackground(ctx)
+  withHoles(layoutBricks(2), 11, 0.75).forEach((b) => drawBrick(ctx, b.kind === 'tough' && hash(b.col, b.row, 2) < 0.4 ? { ...b, damaged: true } : b))
+  drawPaddle(ctx, 176); drawBall(ctx, 176, PTOP - R); drawServeGuide(ctx, 176, PTOP - R, -0.3)
+  const h = c.getBoundingClientRect().height
+  document.getElementById('legend').insertAdjacentHTML('afterbegin', `<tr><td colspan="2"><b>Board drawn at ${Math.round(h)} CSS px tall (spec: >= 520)</b></td></tr>`)
+}
+drawPhone()
+
+// Legend
+document.getElementById('legend').insertAdjacentHTML('beforeend',
+  ROW_COLORS.map((c, i) => `<tr><td><span class="sw" style="background:${c}"></span> Row ${i} ${ROW_NAMES[i]}</td><td>${c} · ${[40, 40, 30, 30, 20, 20, 10, 10][i]} pts</td></tr>`).join('') +
+  `<tr><td><span class="sw" style="background:linear-gradient(${P.paddleTop},${P.paddleMid},${P.paddleBottom})"></span> Paddle</td><td>${P.paddleTop} → ${P.paddleMid} → ${P.paddleBottom}</td></tr>` +
+  `<tr><td><span class="sw" style="background:${P.ball};box-shadow:0 0 0 2px rgb(103 232 249 / 35%)"></span> Ball</td><td>${P.ball}, halo ${P.ballHalo}</td></tr>`)
+</script>
+</body>
+</html>
