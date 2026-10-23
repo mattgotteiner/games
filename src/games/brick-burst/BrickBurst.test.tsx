@@ -23,7 +23,8 @@ describe('Brick Burst chrome', () => {
     expect(within(controls).getAllByRole('button').map((b) => b.getAttribute('aria-label'))).toEqual(['Move paddle left', 'Serve ball', 'Move paddle right'])
     t.publish({ status: 'playing' }); expect(screen.getByRole('button', { name: 'Serve ball' })).toBeDisabled()
     t.publish({ status: 'ball-lost', lives: 2 }); expect(screen.getByRole('img', { name: '2 lives' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Move paddle left' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Move paddle left' })).toHaveAttribute('aria-disabled', 'true')
+    expect(screen.getByRole('button', { name: 'Move paddle left' })).not.toBeDisabled()
   })
   it('uses the shared pause chrome, focuses Resume, and restores play focus', () => {
     setup(); fireEvent.click(screen.getByRole('button', { name: 'Pause game' }))

@@ -25,7 +25,9 @@
 .control-bar { display: flex; grid-area: controls; gap: 0.75rem; touch-action: none; -webkit-user-select: none; user-select: none; }
 .control-bar button { flex: 1; min-width: 56px; min-height: 56px; touch-action: none; display: flex; flex-direction: row; gap: 0.3rem; align-items: center; justify-content: center; }
 .control-bar button[data-serve] { flex: 1.2; }
-.control-bar.controls-inactive button { pointer-events: none; }
+/* Direction controls still receive holds; the rules freeze movement until active. */
+.control-bar.controls-inactive button[data-serve] { pointer-events: none; }
+.control-bar button[aria-disabled='true'] { opacity: 0.46; border-style: dashed; filter: saturate(0.35); }
 .brick-burst .line-clear-callout { animation-duration: 900ms; }
 .brick-burst .help-dialog-content { touch-action: pan-y; }
 .brick-burst .help-dialog table { width: 100%; margin-bottom: 0.8rem; border-collapse: collapse; color: var(--bd-text); text-align: left; font-size: 0.9rem; }

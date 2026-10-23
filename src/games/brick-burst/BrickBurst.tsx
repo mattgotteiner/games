@@ -138,9 +138,9 @@ export function BrickBurst({ controllerFactory = defaultFactory }: { readonly co
           <p class="keyboard-reference">← → / A D move · Space / ↑ serve · P pause · R restart</p>
         </aside>
         <div class={`control-bar${canMove ? '' : ' controls-inactive'}`} ref={controls} role="group" aria-label="Brick Burst controls">
-          <button class="button-control" type="button" data-direction="-1" disabled={!canMove} aria-label="Move paddle left" aria-keyshortcuts="ArrowLeft A"><span aria-hidden="true">◀</span> Left</button>
+          <button class="button-control" type="button" data-direction="-1" aria-disabled={!canMove || undefined} aria-label="Move paddle left" aria-keyshortcuts="ArrowLeft A"><span aria-hidden="true">◀</span> Left</button>
           <button class="button-primary" type="button" data-serve="" disabled={state.status !== 'serving'} aria-label="Serve ball" aria-keyshortcuts="Space ArrowUp">Serve</button>
-          <button class="button-control" type="button" data-direction="1" disabled={!canMove} aria-label="Move paddle right" aria-keyshortcuts="ArrowRight D">Right <span aria-hidden="true">▶</span></button>
+          <button class="button-control" type="button" data-direction="1" aria-disabled={!canMove || undefined} aria-label="Move paddle right" aria-keyshortcuts="ArrowRight D">Right <span aria-hidden="true">▶</span></button>
         </div>
       </div>
       <p class="visually-hidden" role="status" aria-live="polite" aria-atomic="true">{announcement}</p>

@@ -4,7 +4,7 @@ details are in `design.md` §0.
 
 ## 0. Review fixes (before any tuning)
 
-- [ ] 0.1 Held steering survives freezes. Record held keys and buttons regardless of status, and resend `steer` whenever the status enters `serving` or `playing`. Controller tests:
+- [x] 0.1 Held steering survives freezes. Record held keys and buttons regardless of status, and resend `steer` whenever the status enters `serving` or `playing`. Controller tests:
   - hold ← through `ball-lost` into `serving`: the paddle moves on the first serving step
   - the same through `level-clear`
   - press during the freeze or pause and keep holding: it moves once play allows

@@ -117,12 +117,14 @@ export class BrickBurstController {
       const previous = this.state
       this.state = applyAction(this.state, action)
       if (action.type === 'pause' || action.type === 'resume' || action.type === 'restart') {
-        this.clearInput()
+        const drag = this.drag; this.drag = null
+        if (drag) this.release(drag.surface, drag.id)
         this.accumulator = 0; this.lastFrame = null
       }
       if (action.type === 'restart') {
         this.effects = []; this.trail = []; this.effectTime = 0; this.levelStartedAt = 0; this.steps = 0
       }
+      if (active(this.state) && !active(previous)) this.steer()
       if (this.state !== previous) this.onState(this.state, action.type === 'restart' ? [{ type: 'level-started', level: 1 }] : [])
     }
   }
@@ -151,13 +153,13 @@ export class BrickBurstController {
     if (!['arrowleft', 'arrowright', 'a', 'd', 'arrowup', ' ', 'p', 'r'].includes(key)) return
     e.preventDefault()
     if (e.repeat) return
-    if (['arrowleft', 'arrowright', 'a', 'd'].includes(key)) { if (!active(this.state)) return; this.keys.add(key); this.steer() }
+    if (['arrowleft', 'arrowright', 'a', 'd'].includes(key)) { this.keys.add(key); this.steer() }
     else if (key === 'p') this.dispatch({ type: this.state.status === 'paused' ? 'resume' : 'pause' })
     else this.dispatch({ type: key === 'r' ? 'restart' : 'serve' })
   }
   private keyUp = (event: Event): void => { this.keys.delete((event as KeyboardEvent).key.toLowerCase()); this.steer() }
   private pointerDown(e: PointerEvent, surface: HTMLElement): void {
-    if (!active(this.state) || e.button !== 0) return
+    if (e.button !== 0) return
     const button = (e.target as Element).closest<HTMLButtonElement>('button')
     if (button) {
       if (button.disabled || !button.dataset.direction) return
@@ -166,7 +168,7 @@ export class BrickBurstController {
       try { button.setPointerCapture(e.pointerId) } catch { /* capture unavailable */ }
       this.steer(); return
     }
-    if (e.pointerType === 'mouse' || this.drag || e.isPrimary === false) return
+    if (!active(this.state) || e.pointerType === 'mouse' || this.drag || e.isPrimary === false) return
     e.preventDefault()
     this.lastTouchTime = this.now()
     this.drag = { id: e.pointerId, startX: e.clientX, startY: e.clientY, lastX: e.clientX, startedAt: this.now(), moved: false, canvas: surface === this.canvas, surface }
@@ -220,7 +222,9 @@ export class BrickBurstController {
       this.accumulator += dt
       while (this.accumulator + 1e-8 >= STEP_MS) {
         this.accumulator -= STEP_MS
-        const result = step(this.state); this.state = result.state; events.push(...result.events)
+        const previous = this.state
+        const result = step(previous); this.state = result.state; events.push(...result.events)
+        if (active(this.state) && !active(previous)) this.steer()
         this.effectTime += STEP_MS
         this.processEvents(result.events)
         if (++this.steps % 4 === 0 && this.state.status === 'playing' && !this.reducedMotion()) {

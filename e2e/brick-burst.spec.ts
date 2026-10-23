@@ -126,6 +126,21 @@ test('steers with real touch gestures without scrolling or accidental serves, th
   await expect(page.locator('.game-status')).toHaveText('Playing')
 })
 
+test('keeps held ArrowLeft steering through a seeded lost ball', async ({ page }) => {
+  await fixture(page, { status: 'playing', ball: { x: 80, y: 582, vx: 0, vy: 300, speed: 300 } })
+  await page.keyboard.down('ArrowLeft')
+  await advance(page, 0, 50)
+  await expect(page.locator('.game-status')).toHaveText('Ball lost')
+  const frozenX = await page.evaluate(() => window.__brickBurstController.getState().paddleX)
+  await advance(page, 50, 800)
+  await expect(page.getByRole('button', { name: 'Serve ball' })).toBeEnabled()
+  expect(await page.evaluate(() => window.__brickBurstController.getState().paddleX)).toBeLessThan(frozenX)
+  await page.keyboard.up('ArrowLeft')
+  const x = await page.evaluate(() => window.__brickBurstController.getState().paddleX)
+  await advance(page, 800, 850)
+  expect(await page.evaluate(() => window.__brickBurstController.getState().paddleX)).toBe(x)
+})
+
 test('persists difficulty and best score, loses all three balls, and plays again', async ({ page }) => {
   const initial = { score: 120 }
   await fixture(page, initial)

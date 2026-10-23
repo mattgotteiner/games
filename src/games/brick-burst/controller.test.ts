@@ -90,6 +90,47 @@ describe('Brick Burst controller', () => {
     vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden'); document.dispatchEvent(new Event('visibilitychange'))
     expect(t.controller.getState().status).toBe('paused')
   })
+  it.each(['ball-lost', 'level-clear'] as const)('keeps held keys through %s into the first serving step', (status) => {
+    const t = setup({ initialState: { ...createGame(41), status, feedbackMs: STEP_MS } })
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft' }))
+    t.frame(0); t.frame(STEP_MS)
+    const x = t.controller.getState().paddleX
+    expect(t.controller.getState().status).toBe('serving')
+    t.frame(2 * STEP_MS)
+    expect(t.controller.getState().paddleX).toBeLessThan(x)
+    window.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowLeft' }))
+    const stopped = t.controller.getState().paddleX
+    t.frame(3 * STEP_MS); expect(t.controller.getState().paddleX).toBe(stopped)
+  })
+  it.each(['ball-lost', 'level-clear'] as const)('keeps an existing hold across entry to %s', (status) => {
+    const initial = status === 'ball-lost'
+      ? { ...playing(), ball: { x: 80, y: 582, vx: 0, vy: 300, speed: 300 } }
+      : { ...playing(), bricks: Array.from({ length: 96 }, (_, i) => i === 77 ? { kind: 'normal' as const, damaged: false } : null), ball: { x: 176, y: 181.5, vx: 0, vy: -300, speed: 300 } }
+    const t = setup({ initialState: initial })
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft' }))
+    t.frame(0); t.frame(STEP_MS)
+    expect(t.controller.getState().status).toBe(status)
+    for (let i = 2; i < 300 && t.controller.getState().status !== 'serving'; i++) t.frame(i * STEP_MS)
+    const x = t.controller.getState().paddleX
+    expect(t.controller.getState().steer).toBe(-1)
+    // Continue from the last delivered time without adding a catch-up jump.
+    t.frame(300 * STEP_MS)
+    expect(t.controller.getState().paddleX).toBeLessThan(x)
+  })
+  it('records buttons during a freeze and keys during pause without moving until resumed', () => {
+    const t = setup({ initialState: { ...createGame(41), status: 'ball-lost', feedbackMs: STEP_MS } })
+    pointer(t.left, 'pointerdown', 10)
+    expect(t.controller.getState().paddleX).toBe(192)
+    t.frame(0); t.frame(STEP_MS); t.frame(2 * STEP_MS)
+    expect(t.controller.getState().paddleX).toBeLessThan(192)
+    pointer(t.left, 'pointerup', 10)
+    t.controller.dispatch({ type: 'pause' })
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }))
+    const x = t.controller.getState().paddleX
+    t.frame(1000); expect(t.controller.getState().paddleX).toBe(x)
+    t.controller.dispatch({ type: 'resume' }); t.frame(2000); t.frame(2000 + STEP_MS)
+    expect(t.controller.getState().paddleX).toBeGreaterThan(x)
+  })
   it('resizes the backing store when DPR changes without changing logical positions', () => {
     const t = setup({}, 192); expect(t.canvas.width).toBe(384); expect(t.canvas.height).toBe(576)
     t.controller.dispatch({ type: 'paddle-to', x: 100 }); t.setRatio(3); t.frame(0)
