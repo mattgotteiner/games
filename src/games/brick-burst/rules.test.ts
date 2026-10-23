@@ -69,14 +69,17 @@ describe('Brick Burst rules', () => {
   it('hits only one brick and resolves an equal distance toward the lower column', () => {
     const bricks = isolated(2, 5); bricks[2 * 12 + 6] = { kind: 'normal', damaged: false }
     const result = step(brickShot(2, 5, { bricks, ball: { x: 192, y: 116.5, vx: 0, vy: -300, speed: 300 } }))
-    expect(result.events.filter((e) => e.type === 'brick-hit')).toMatchObject([{ row: 2, col: 6 }])
-    expect(result.state.bricks[29]).not.toBeNull()
+    expect(result.events.filter((e) => e.type === 'brick-hit')).toMatchObject([{ row: 2, col: 5 }])
+    expect(result.state.bricks[29]).toBeNull()
+    expect(result.state.bricks[30]).toBe(bricks[30])
     expect(result.state.ball.vy).toBe(300)
   })
   it('resolves equal row distances toward the lower row and reflects the smaller x overlap', () => {
     const bricks = isolated(2, 5); bricks[3 * 12 + 5] = { kind: 'normal', damaged: false }
     const result = step(playing({ bricks, ball: { x: 154.5, y: 112, vx: 300, vy: 0, speed: 300 } }))
-    expect(result.events.filter((e) => e.type === 'brick-hit')).toMatchObject([{ row: 3, col: 5 }])
+    expect(result.events.filter((e) => e.type === 'brick-hit')).toMatchObject([{ row: 2, col: 5 }])
+    expect(result.state.bricks[29]).toBeNull()
+    expect(result.state.bricks[41]).toBe(bricks[41])
     expect(result.state.ball.vx).toBe(-300)
   })
   it.each(DIFFICULTY_ORDER)('scores all row bands and tough hits on %s', (difficulty) => {

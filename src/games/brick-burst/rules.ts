@@ -130,7 +130,7 @@ export function step(s: BrickBurstState): { state: BrickBurstState; events: Bric
     const dx = ball.x - clamp(ball.x, x, x + BRICK_W), dy = ball.y - clamp(ball.y, y, y + BRICK_H)
     if (dx * dx + dy * dy > BALL_R * BALL_R) continue
     const distance = (ball.x - x - BRICK_W / 2) ** 2 + (ball.y - y - BRICK_H / 2) ** 2
-    if (distance <= closest) { hit = i; closest = distance }
+    if (distance < closest) { hit = i; closest = distance }
   }
   let bricks = s.bricks, score = s.score, rallyHits = s.rallyHits
   if (hit !== -1) {
