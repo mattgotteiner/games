@@ -1,4 +1,5 @@
 import './app.css'
+import { BrickBurst, type BrickBurstControllerFactory } from './games/brick-burst/BrickBurst'
 import { useEffect, useState } from 'preact/hooks'
 import {
   type ApplicationUpdateController,
@@ -42,9 +43,11 @@ function useApplicationUpdateStatus(
 export function App({
   applicationUpdateController,
   blockDropControllerFactory,
+  brickBurstControllerFactory,
 }: {
   readonly applicationUpdateController?: ApplicationUpdateController
   readonly blockDropControllerFactory?: BlockDropControllerFactory
+  readonly brickBurstControllerFactory?: BrickBurstControllerFactory
 }) {
   const [view, setView] = useState<AppView>(
     () => parseGameUrl(currentUrl()).view,
@@ -75,6 +78,8 @@ export function App({
       <BlockDrop
         controllerFactory={blockDropControllerFactory}
       />
+    ) : view === 'brick-burst' ? (
+      <BrickBurst controllerFactory={brickBurstControllerFactory} />
     ) : (
       <>
         <header class="app-header">
@@ -90,10 +95,10 @@ export function App({
           <section class="catalog" aria-labelledby="catalog-heading">
             <div class="catalog-heading">
               <h2 id="catalog-heading">Game catalog</h2>
-              <span class="game-count">1 game</span>
+              <span class="game-count">2 games</span>
             </div>
 
-            <ul class="game-list">
+            <ul class="game-list" style={{ display: 'grid', gap: '1rem' }}>
               <li class="game-card">
                 <div>
                   <p class="game-card-kicker">Puzzle</p>
@@ -110,6 +115,16 @@ export function App({
                   Play Block Drop
                 </button>
               </li>
+              <li class="game-card">
+                <div>
+                  <p class="game-card-kicker">Arcade</p>
+                  <h3>Brick Burst</h3>
+                  <p>Bounce a bright ball through walls of candy-colored bricks.</p>
+                </div>
+                <button class="button-primary play-button" type="button" onClick={() => navigate('brick-burst')}>
+                  Play Brick Burst
+                </button>
+              </li>
             </ul>
           </section>
         </main>
@@ -118,7 +133,7 @@ export function App({
 
   return (
     <div
-      class={`app-shell${view === 'block-drop' ? ' game-shell' : ''}`}
+      class={`app-shell${view !== 'catalog' ? ' game-shell' : ''}`}
       data-application-build={import.meta.env.VITE_APPLICATION_BUILD || undefined}
     >
       <ApplicationUpdateNotice status={updateStatus} />

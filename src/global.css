@@ -46,3 +46,8 @@ textarea {
   outline-offset: 3px;
 }
 
+
+html[data-brick-burst-theme],
+html[data-brick-burst-theme] body {
+  background: var(--bd-page);
+}

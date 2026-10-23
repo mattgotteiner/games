@@ -1,0 +1,63 @@
+.brick-burst-layout {
+  display: grid;
+  min-height: 0;
+  grid-template-areas: "board hud" "controls hud";
+  grid-template-columns: minmax(0, 1fr) clamp(11rem, 20vw, 15rem);
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 0.75rem 1.25rem;
+}
+.brick-burst .board-frame { touch-action: none; }
+.brick-burst .board-surface { box-shadow: 0 0 0 1px var(--bd-panel-border), var(--bd-panel-shadow); }
+.brick-burst .board-surface canvas { touch-action: none; }
+.brick-burst .game-overlay, .brick-burst .game-overlay-card { touch-action: none; }
+.brick-burst .game-hud { display: flex; flex-direction: column; grid-template-columns: none; grid-template-rows: none; }
+.brick-burst .game-progress-item { display: block; margin: 0; }
+.brick-burst .game-progress-item .hud-label { display: block; }
+.brick-burst .game-progress-item strong { font-size: 1.5rem; }
+.brick-burst .game-status { margin: 0; }
+.brick-difficulty { margin: 0.3rem 0 0; color: var(--bd-text-muted); font-size: 0.75rem; }
+.brick-burst .keyboard-reference { color: var(--bd-text-muted); font-size: 0.8rem; line-height: 1.65; margin: 0; }
+.lives { display: flex; gap: 0.4rem; align-items: center; min-height: 1.2rem; }
+.life-pip { width: 0.7rem; height: 0.7rem; border: 1.5px solid var(--bd-text-muted); border-radius: 50%; transition: background-color 300ms, box-shadow 300ms; }
+.life-pip.alive { background: var(--bd-text); border-color: var(--bd-text); box-shadow: 0 0 0 2px color-mix(in srgb, var(--bd-accent) 35%, transparent); }
+.serve-hint { position: absolute; bottom: 18%; left: 50%; transform: translateX(-50%); width: max-content; max-width: calc(100% - 1rem); border-radius: 999px; padding: 0.4rem 0.7rem; color: var(--bd-text-muted); background: color-mix(in srgb, var(--bd-panel) 88%, transparent); font-size: 0.8rem; font-weight: 600; pointer-events: none; white-space: nowrap; }
+.touch-hint { display: none; }
+.control-bar { display: flex; grid-area: controls; gap: 0.75rem; touch-action: none; -webkit-user-select: none; user-select: none; }
+.control-bar button { flex: 1; min-width: 56px; min-height: 56px; touch-action: none; display: flex; flex-direction: row; gap: 0.3rem; align-items: center; justify-content: center; }
+.control-bar button[data-serve] { flex: 1.2; }
+.control-bar.controls-inactive button { pointer-events: none; }
+.brick-burst .line-clear-callout { animation-duration: 900ms; }
+.brick-burst .help-dialog-content { touch-action: pan-y; }
+.brick-burst .help-dialog table { width: 100%; margin-bottom: 0.8rem; border-collapse: collapse; color: var(--bd-text); text-align: left; font-size: 0.9rem; }
+.brick-burst .help-dialog th, .brick-burst .help-dialog td { padding: 0.35rem; border-bottom: 1px solid var(--bd-panel-border); }
+@media (pointer: coarse) { .touch-hint { display: inline; } .keyboard-hint { display: none; } }
+@media (max-width: 719px) and (orientation: portrait) {
+  .brick-burst-layout { grid-template-areas: "hud" "board" "controls"; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto; gap: 0.75rem; }
+  .brick-burst .game-hud { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; grid-template-rows: 1fr; gap: 0.7rem; padding: 0.55rem 0.65rem; align-items: center; }
+  .brick-burst .game-score { grid-area: auto; }
+  .brick-burst .game-score-value { font-size: clamp(1.35rem, 6vw, 1.9rem); }
+  .brick-burst .hud-label { font-size: 0.55rem; margin: 0 0 0.2rem; letter-spacing: 0.1em; }
+  .brick-burst .game-progress-item strong { font-size: 1rem; }
+  .brick-burst .game-status { font-size: 0.7rem; }
+  .brick-burst .brick-difficulty { font-size: 0.6rem; }
+  .brick-burst .keyboard-reference { display: none; }
+  .brick-burst .game-overlay-card { padding: 1rem; gap: 0.65rem; }
+  .brick-burst .lives { gap: 0.3rem; }
+}
+@media (max-height: 480px) and (orientation: landscape) {
+  .brick-burst { height: calc(100dvh - 1rem); gap: 0.35rem; }
+  .brick-burst-layout { grid-template-columns: minmax(0, 1fr) clamp(9rem, 26vw, 13rem); gap: 0.4rem 0.75rem; }
+  .brick-burst .game-hud { gap: 0.5rem; padding: 0.65rem; }
+  .brick-burst .game-score-value { font-size: 2rem; }
+  .brick-burst .game-progress-item strong { font-size: 1rem; }
+  .brick-burst .hud-label { font-size: 0.6rem; }
+  .brick-burst .keyboard-reference { display: none; }
+  .brick-burst .game-overlay-card { width: min(100%, 28rem); grid-template-columns: 1fr 1fr; align-items: center; padding: 0.5rem; }
+  .brick-burst .game-overlay-card h2 { grid-column: 1 / -1; }
+  .brick-burst .game-over-scores, .brick-burst .new-best-indicator, .brick-burst .game-over-actions { grid-column: 1 / -1; }
+  .brick-burst .serve-hint { font-size: 0.6rem; padding: 0.25rem 0.4rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .brick-burst .life-pip { transition: none; }
+  .brick-burst .line-clear-callout { animation: none; }
+}

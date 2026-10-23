@@ -9,6 +9,7 @@ describe('parseGameUrl', () => {
   it.each([
     ['https://example.test/games/', 'catalog', false],
     ['https://example.test/games/?game=block-drop', 'block-drop', false],
+    ['https://example.test/games/?game=brick-burst', 'brick-burst', false],
     ['https://example.test/games/?game=', 'catalog', true],
     ['https://example.test/games/?game=unknown', 'catalog', true],
   ] as const)(

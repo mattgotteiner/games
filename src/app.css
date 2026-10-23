@@ -258,7 +258,7 @@ button:disabled {
   touch-action: pinch-zoom;
 }
 
-.block-drop {
+:is(.block-drop, .brick-burst) {
   display: grid;
   height: calc(100dvh - 2rem);
   min-height: 0;
@@ -269,7 +269,7 @@ button:disabled {
   font-family: var(--bd-font-ui, Inter, ui-rounded, "SF Pro Rounded", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
 }
 
-.block-drop :focus-visible {
+:is(.block-drop, .brick-burst) :focus-visible {
   outline-color: var(--bd-focus, #fbbf24);
 }
 
@@ -1305,8 +1305,8 @@ button:disabled {
 
 .game-controls,
 .game-controls *,
-.block-drop button,
-.block-drop button * {
+:is(.block-drop, .brick-burst) button,
+:is(.block-drop, .brick-burst) button * {
   -webkit-touch-callout: none;
   -webkit-user-select: none;
   user-select: none;

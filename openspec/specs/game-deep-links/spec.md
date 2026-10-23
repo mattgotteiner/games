@@ -11,11 +11,16 @@ operation.
 ### Requirement: Stable game URLs
 The application SHALL represent an active game with its stable catalog
 identifier in the `game` query parameter and SHALL represent the catalog by
-omitting that parameter.
+omitting that parameter. The supported identifiers SHALL be `block-drop` and
+`brick-burst`.
 
 #### Scenario: Launch a game from the catalog
 - **WHEN** the user launches Block Drop from the catalog
 - **THEN** Block Drop starts and the current URL contains `game=block-drop`
+
+#### Scenario: Launch Brick Burst from the catalog
+- **WHEN** the user launches Brick Burst from the catalog
+- **THEN** Brick Burst starts and the current URL contains `game=brick-burst`
 
 #### Scenario: Return to the catalog
 - **WHEN** the user activates the catalog return control from a game
@@ -29,9 +34,13 @@ without requiring the catalog launch control to be activated first.
 - **WHEN** the application loads with `game=block-drop`
 - **THEN** a new Block Drop session is shown directly
 
+#### Scenario: Load a Brick Burst deep link
+- **WHEN** the application loads with `game=brick-burst`
+- **THEN** a new Brick Burst session is shown directly, waiting to serve
+
 #### Scenario: Load a deep link under the repository deployment path
-- **WHEN** the repository-scoped production URL loads with `game=block-drop`
-- **THEN** the application preserves its deployment path and shows Block Drop
+- **WHEN** the repository-scoped production URL loads with `game=block-drop` or `game=brick-burst`
+- **THEN** the application preserves its deployment path and shows that game
 
 ### Requirement: Browser history synchronization
 Game launches and catalog returns SHALL create browser history entries, and the
