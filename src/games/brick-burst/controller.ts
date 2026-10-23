@@ -39,7 +39,9 @@ export class BrickBurstController {
   private readonly requestFrame: typeof requestAnimationFrame
   private readonly cancelFrame: typeof cancelAnimationFrame
   private readonly devicePixelRatio: () => number
-  private readonly reducedMotion: () => boolean
+  private readonly readMotionOption?: () => boolean
+  private motionReduced = false
+  private dirty = true
   private readonly now: () => number
   private readonly observer: ResizeObserver
   private readonly cleanup: Array<() => void> = []
@@ -72,7 +74,18 @@ export class BrickBurstController {
     this.requestFrame = options.requestFrame ?? window.requestAnimationFrame.bind(window)
     this.cancelFrame = options.cancelFrame ?? window.cancelAnimationFrame.bind(window)
     this.devicePixelRatio = options.devicePixelRatio ?? (() => window.devicePixelRatio || 1)
-    this.reducedMotion = options.reducedMotion ?? (() => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false)
+    this.readMotionOption = options.reducedMotion
+    if (this.readMotionOption) this.motionReduced = this.readMotionOption()
+    else {
+      const preference = window.matchMedia?.('(prefers-reduced-motion: reduce)')
+      if (preference) {
+        this.motionReduced = preference.matches
+        this.listen(preference, 'change', () => {
+          this.motionReduced = preference.matches
+          this.dirty = true
+        })
+      }
+    }
     this.now = options.now ?? (() => performance.now())
     this.observer = (options.createResizeObserver ?? ((cb) => new ResizeObserver(cb)))(() => this.resize())
     this.observer.observe(container)
@@ -110,7 +123,7 @@ export class BrickBurstController {
     if (this.destroyed) return
     this.actions.push(action)
     this.flushActions()
-    this.draw()
+    if (this.dirty && this.frame === null) this.draw()
   }
   private flushActions(): void {
     for (const action of this.actions.splice(0)) {
@@ -125,6 +138,7 @@ export class BrickBurstController {
         this.effects = []; this.trail = []; this.effectTime = 0; this.levelStartedAt = 0; this.steps = 0
       }
       if (active(this.state) && !active(previous)) this.steer()
+      if (this.state !== previous) this.dirty = true
       if (this.state !== previous) this.onState(this.state, action.type === 'restart' ? [{ type: 'level-started', level: 1 }] : [])
     }
   }
@@ -217,6 +231,9 @@ export class BrickBurstController {
   }
   private tick = (time: number): void => {
     if (this.destroyed) return
+    this.frame = null
+    const reduced = this.readMotionOption?.() ?? this.motionReduced
+    if (reduced !== this.motionReduced) { this.motionReduced = reduced; this.dirty = true }
     if (this.effectiveRatio() !== this.ratio) this.resize()
     const dt = this.lastFrame === null ? 0 : Math.max(0, Math.min(100, time - this.lastFrame))
     this.lastFrame = time
@@ -230,24 +247,25 @@ export class BrickBurstController {
         const previous = this.state
         const result = step(previous); this.state = result.state; events.push(...result.events)
         if (active(this.state) && !active(previous)) this.steer()
+        if (this.state !== previous) this.dirty = true
         this.effectTime += STEP_MS
         this.processEvents(result.events)
-        if (++this.steps % 4 === 0 && this.state.status === 'playing' && !this.reducedMotion()) {
+        if (++this.steps % 4 === 0 && this.state.status === 'playing' && !this.motionReduced) {
           this.trail.unshift([this.state.ball.x, this.state.ball.y]); this.trail.length = Math.min(6, this.trail.length)
         }
       }
     } else this.accumulator = 0
     if (events.length || before.status !== this.state.status || before.level !== this.state.level || before.score !== this.state.score) this.onState(this.state, events)
-    if (this.reducedMotion()) { this.effects = []; this.trail = [] }
+    if (this.motionReduced) { this.effects = []; this.trail = [] }
     this.effects = this.effects.filter((effect) => this.effectTime - effect.startedAt < effect.durationMs)
-    this.draw()
+    if (this.dirty) this.draw()
     this.frame = this.requestFrame(this.tick)
   }
   private processEvents(events: readonly BrickBurstEvent[]): void {
     for (const event of events) {
       if (event.type === 'ball-lost' || event.type === 'level-started') this.trail = []
       if (event.type === 'level-started') this.levelStartedAt = this.effectTime
-      if (!this.reducedMotion() && (event.type === 'brick-hit' || event.type === 'paddle-hit')) {
+      if (!this.motionReduced && (event.type === 'brick-hit' || event.type === 'paddle-hit')) {
         this.effects.push({ event, startedAt: this.effectTime, durationMs: event.type === 'brick-hit' && event.broken ? 240 : 120 })
       }
     }
@@ -259,7 +277,7 @@ export class BrickBurstController {
     ctx.setTransform(scale, 0, 0, scale, 0, 0)
     ctx.save(); ctx.beginPath(); ctx.rect(0, 0, FIELD_WIDTH, FIELD_HEIGHT); ctx.clip()
     renderer.drawBackground(ctx, look)
-    const reduced = this.reducedMotion()
+    const reduced = this.motionReduced
     const brick: BrickDraw = { row: 0, col: 0, kind: 'normal', damaged: false, seed: 0 }
     const options = { alpha: 1, dy: 0 }
     for (let i = 0; i < s.bricks.length; i++) {
@@ -296,6 +314,7 @@ export class BrickBurstController {
     if (cleared && !reduced) renderer.drawLevelSweep(ctx, look, clearProgress)
     if (s.status === 'paused' || s.status === 'over') { ctx.fillStyle = s.status === 'paused' ? look.board.pausedVeil : look.board.gameOverVeil; ctx.fillRect(0, 0, FIELD_WIDTH, FIELD_HEIGHT) }
     ctx.restore()
+    this.dirty = false
   }
   destroy(): void {
     if (this.destroyed) return

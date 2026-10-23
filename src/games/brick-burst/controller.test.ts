@@ -4,7 +4,7 @@ import { applyAction, createGame, STEP_MS, type BrickBurstState } from './rules'
 import { classicRenderer } from './renderer'
 import { fakeObserver, pointer, recordingContext } from './test-support'
 const controllers: BrickBurstController[] = []
-afterEach(() => { controllers.splice(0).forEach((c) => c.destroy()); vi.restoreAllMocks(); document.body.innerHTML = '' })
+afterEach(() => { controllers.splice(0).forEach((c) => c.destroy()); vi.restoreAllMocks(); vi.unstubAllGlobals(); document.body.innerHTML = '' })
 function setup(options: BrickBurstControllerOptions = {}, width = 384) {
   const container = document.createElement('div'), canvas = document.createElement('canvas'), bar = document.createElement('div')
   const left = document.createElement('button'), right = document.createElement('button'), serve = document.createElement('button')
@@ -143,6 +143,34 @@ describe('Brick Burst controller', () => {
     for (let i = 0; i < 10; i++) t.frame(i * 16)
     window.dispatchEvent(new Event('resize'))
     expect(width).toHaveBeenCalledTimes(1); expect(height).toHaveBeenCalledTimes(1)
+  })
+  it('coalesces twenty paddle moves into one scheduled draw', () => {
+    const draw = vi.spyOn(classicRenderer, 'drawBackground')
+    const t = setup(); t.frame(0); draw.mockClear()
+    for (let i = 0; i < 20; i++) t.controller.dispatch({ type: 'paddle-to', x: 120 + i })
+    expect(draw).not.toHaveBeenCalled()
+    t.frame(16); expect(draw).toHaveBeenCalledTimes(1)
+    expect(t.controller.getState().paddleX).toBe(139)
+  })
+  it('caches motion preference and responds to changes, removing its listener on destroy', () => {
+    const query = Object.assign(new EventTarget(), { matches: false })
+    const add = vi.spyOn(query, 'addEventListener'), remove = vi.spyOn(query, 'removeEventListener')
+    const match = vi.fn(() => query as unknown as MediaQueryList)
+    vi.stubGlobal('matchMedia', match)
+    const ball = vi.spyOn(classicRenderer, 'drawBall')
+    const t = setup({ initialState: playing(), reducedMotion: undefined })
+    for (let i = 0; i < 30; i++) t.frame(i * 16)
+    expect(match).toHaveBeenCalledTimes(1)
+    expect(add).toHaveBeenCalledWith('change', expect.any(Function))
+    query.matches = true; query.dispatchEvent(new Event('change'))
+    ball.mockClear(); t.frame(500)
+    expect(ball).toHaveBeenCalled()
+    for (const call of ball.mock.calls) expect(call[4]).toEqual([])
+    query.matches = false; query.dispatchEvent(new Event('change'))
+    ball.mockClear(); t.frame(516)
+    expect(ball.mock.calls.some((call) => call[4]!.length > 0)).toBe(true)
+    t.controller.destroy()
+    expect(remove).toHaveBeenCalledWith('change', add.mock.calls[0][1])
   })
   it('draws no trail, pops, flash, sweep, or layout fade under reduced motion', () => {
     const renderer = Object.fromEntries(Object.entries(classicRenderer).map(([key, fn]) => [key, vi.fn(fn)])) as unknown as typeof classicRenderer

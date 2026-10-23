@@ -13,7 +13,7 @@ details are in `design.md` §0.
 - [x] 0.2 Compare the clamped `effectiveRatio()` in `tick()`. Test that `devicePixelRatio: () => 0.9` over 10 frames sizes the canvas once.
 - [x] 0.3 Change the tie-break to `distance < closest`. Add rules tests for exact horizontal-seam and vertical-seam ties, where the lower column or row is hit and the neighbor is unchanged.
 - [x] 0.4 Add `levelSpeedFor(level, multiplier)` as the single formula, used by `levelSpeed()` and the rally cap. Test that the cap after a mid-rally difficulty change uses the served multiplier.
-- [ ] 0.5 Cache the reduced-motion `MediaQueryList` with a `change` listener that is removed on destroy. Defer `dispatch()` drawing to the frame loop while it runs. Test that 20 mouse `paddle-to` dispatches within one frame cause one draw.
+- [x] 0.5 Cache the reduced-motion `MediaQueryList` with a `change` listener that is removed on destroy. Defer `dispatch()` drawing to the frame loop while it runs. Test that 20 mouse `paddle-to` dispatches within one frame cause one draw.
 - [ ] 0.6 Move `hash`, `ease`, `clamp01`, and `roundRect` (plus `mix`/`alpha` if used) to `src/games/shared/canvas.ts`, and update both games' imports. Block Drop renderer tests must pass unchanged.
 - [ ] 0.7 Cleanups (design §0.7):
   - move the `.game-list` style into `app.css`
