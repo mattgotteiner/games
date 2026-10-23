@@ -11,6 +11,32 @@ feel still needs a phone review.
 
 ## What Changes
 
+### Review fixes (implement these first)
+
+A code review of the committed implementation (`44efaa2`) found defects. They
+are part of this change, and they come **before** any tuning. Several of them
+make the faster pace worse (see `design.md` §0 and `tasks.md` section 0):
+
+1. A held Left/Right key or button stops steering after a ball-loss or
+   level-clear freeze, until it is released and pressed again.
+2. At browser zoom below 100% (`devicePixelRatio < 1`), the canvas is
+   resized and reallocated on every animation frame.
+3. The brick tie-break keeps the last tied candidate. The spec requires the
+   lower row, then the lower column.
+4. The rally speed cap repeats the level-speed formula instead of calling
+   `levelSpeed()`. This change edits exactly that formula.
+5. `matchMedia` runs on the simulation hot path, and every mouse
+   `pointermove` causes an extra full-canvas draw.
+6. Brick Burst imports math and canvas helpers from Block Drop's renderer
+   internals instead of `src/games/shared/`.
+7. Small cleanups:
+   - an inline catalog style
+   - a duplicated game-ID list
+   - an inaudible lives span
+   - an unused `crackFlash` path
+
+### Pace tuning
+
 | Setting | Current | Proposed |
 | --- | --- | --- |
 | Base ball speed | 300 units/s | 390 units/s (+30%) |
@@ -38,11 +64,16 @@ None.
 
 ### Modified Capabilities
 
-- `brick-burst`: faster ball and held steering, earlier rally acceleration,
+- `brick-burst`: held steering that survives feedback freezes, the brick
+  tie-break as specified, no per-frame resizing when zoomed out, faster ball
+  and held steering, earlier rally acceleration,
   shorter transition feedback, and collision coverage at the new maximum speed.
 
 ## Impact
 
+- Fixes review defects in `controller.ts`, `rules.ts`, `renderer.ts`,
+  `BrickBurst.tsx`, `App.tsx`, `app.css`, and `game-navigation.ts`. Moves the shared
+  helpers into `src/games/shared/`.
 - Updates the tuning constants and acceleration cadence in `rules.ts`.
 - Keeps the 240 Hz simulation; the proposed maximum speed is 1092 units/s,
   or 4.55 units per step. Collision tests must verify the new bound.

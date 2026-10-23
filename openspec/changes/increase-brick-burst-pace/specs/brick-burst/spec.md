@@ -1,5 +1,54 @@
 ## MODIFIED Requirements
 
+### Requirement: Ball physics and bounces
+The ball SHALL reflect off the left, right, and top walls. When the moving-down ball reaches the paddle's top surface, it SHALL bounce upward. Its new angle from vertical SHALL be proportional to where it hit, measured from the paddle center: from 0° at the center to 60° at either end, leaning toward the side it hit. The ball SHALL NOT bounce off the paddle once its center is below the paddle's top surface. When the ball hits a brick, it SHALL reflect on the axis where the overlap is smallest. At most one brick SHALL be hit per simulation step. When several bricks are candidates, the hit SHALL go to the brick whose center is closest to the ball. Exact ties SHALL go to the lower row index, then the lower column index; this is the first candidate in row-major order. The ball's path SHALL never be closer than 30° to horizontal. The ball SHALL NOT pass through a brick or the paddle at any reachable speed.
+
+#### Scenario: Ball hits the paddle center
+- **WHEN** a falling ball hits the middle of the paddle
+- **THEN** it leaves straight up
+
+#### Scenario: Ball hits the paddle edge
+- **WHEN** a falling ball hits the paddle at its right end
+- **THEN** it leaves up and to the right at 60° from vertical
+
+#### Scenario: Ball reaches maximum speed
+- **WHEN** the ball travels at the highest speed reachable on Hard in a repeated level
+- **THEN** it still collides with every brick and paddle edge it crosses
+
+#### Scenario: Ball passes the paddle
+- **WHEN** the ball's top edge passes the bottom of the playfield
+- **THEN** the ball is lost
+
+#### Scenario: Tie between horizontally adjacent bricks
+- **WHEN** the ball overlaps two bricks in the same row, and its center is the same distance from both brick centers (for example, exactly on their shared seam)
+- **THEN** the brick with the lower column index is hit, and the other brick is unchanged
+
+#### Scenario: Tie between vertically adjacent bricks
+- **WHEN** the ball overlaps two bricks in the same column, and its center is the same distance from both brick centers
+- **THEN** the brick with the lower row index is hit, and the other brick is unchanged
+
+
+### Requirement: Responsive and accessible presentation
+The playfield SHALL keep its 2:3 shape and render sharply at the device pixel ratio. It SHALL take the largest share of the viewport. At 390 by 844 CSS pixels in portrait, the score, level, lives, and state SHALL share one compact strip above the playfield. The playfield SHALL be at least 520 CSS pixels tall, and the page SHALL NOT scroll. When there is room, the HUD SHALL sit to the right of the playfield. No supported viewport SHALL require page scrolling. The score, level, lives, game state, and controls SHALL have readable text or accessible names that do not depend on Canvas pixels or color. Text SHALL have at least 4.5:1 contrast against its surface. Focus indicators and control boundaries SHALL have at least 3:1 contrast. The canvas backing store SHALL be resized only when the container size or effective device pixel ratio changes, never on frames where neither has changed.
+
+#### Scenario: Portrait phone
+- **WHEN** the game is shown at 390 by 844 CSS pixels
+- **THEN** the HUD strip, a playfield at least 520 CSS pixels tall, and the control bar are visible without scrolling
+
+#### Scenario: Lives are inspected
+- **WHEN** assistive technology reads the HUD
+- **THEN** the lives are read as text such as `2 lives`, not only shown as icons
+
+#### Scenario: Viewport changes
+- **WHEN** the container size or device pixel ratio changes
+- **THEN** the canvas backing size matches its displayed size, and the paddle stays in the same logical position
+
+#### Scenario: Browser zoomed below 100%
+- **WHEN** the device pixel ratio is below 1 (for example 0.9 at 90% browser zoom) and the container size does not change
+- **THEN** the canvas is resized at most once, not on every animation frame
+
+
+
 ### Requirement: Ball speed
 The ball SHALL start each serve at its level speed. Level speed SHALL be 390 units per second, times the difficulty speed, times `min(1.4, 1 + 0.06 × (level − 1))`. During a rally, every 4th brick hit SHALL raise the speed by 4%. Both velocity components SHALL be rescaled by the same factor when speed increases. Each brick hit SHALL count, including the first hit on a tough brick. The speed SHALL NOT exceed 1.6 times the level speed. The speed SHALL return to the level speed after a ball is lost.
 
@@ -58,6 +107,18 @@ The paddle SHALL be 64 units wide and 10 units tall. Its top surface SHALL be at
 #### Scenario: Held steering uses the faster pace
 - **WHEN** Left or Right is held for 100 milliseconds without reaching a wall
 - **THEN** the paddle moves 54 logical units in that direction
+
+#### Scenario: Held steering continues after a ball-loss freeze
+- **WHEN** the user holds ←, A, →, D, or a visible Left or Right control while a ball is lost, and keeps holding it until the game returns to serving
+- **THEN** the paddle starts moving in that direction as soon as serving begins, without a release and second press
+
+#### Scenario: Held steering continues after a level-clear freeze
+- **WHEN** the user holds a steering key or control through level-clear feedback
+- **THEN** the paddle moves in that direction as soon as the next level starts serving
+
+#### Scenario: Steering pressed during a freeze
+- **WHEN** the user presses and holds a steering key or control during ball-loss or level-clear feedback, or while paused, and is still holding it when play resumes or serving begins
+- **THEN** the paddle moves in that direction from the first serving or playing step, and stops when the input is released
 
 #### Scenario: Keyboard or assistive activation nudges
 - **WHEN** Left or Right is activated without a pointer hold

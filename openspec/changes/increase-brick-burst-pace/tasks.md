@@ -1,7 +1,31 @@
+**Complete section 0 before section 1.** Each fix needs a test that fails
+before it and passes after. Commit the fixes separately from the tuning. The
+details are in `design.md` §0.
+
+## 0. Review fixes (before any tuning)
+
+- [ ] 0.1 Held steering survives freezes. Record held keys and buttons regardless of status, and resend `steer` whenever the status enters `serving` or `playing`. Controller tests:
+  - hold ← through `ball-lost` into `serving`: the paddle moves on the first serving step
+  - the same through `level-clear`
+  - press during the freeze or pause and keep holding: it moves once play allows
+  - release stops it
+  - Brick Burst E2E: hold ArrowLeft across a seeded lost ball, and the paddle x decreases after serving resumes
+- [ ] 0.2 Compare the clamped `effectiveRatio()` in `tick()`. Test that `devicePixelRatio: () => 0.9` over 10 frames sizes the canvas once.
+- [ ] 0.3 Change the tie-break to `distance < closest`. Add rules tests for exact horizontal-seam and vertical-seam ties, where the lower column or row is hit and the neighbor is unchanged.
+- [ ] 0.4 Add `levelSpeedFor(level, multiplier)` as the single formula, used by `levelSpeed()` and the rally cap. Test that the cap after a mid-rally difficulty change uses the served multiplier.
+- [ ] 0.5 Cache the reduced-motion `MediaQueryList` with a `change` listener that is removed on destroy. Defer `dispatch()` drawing to the frame loop while it runs. Test that 20 mouse `paddle-to` dispatches within one frame cause one draw.
+- [ ] 0.6 Move `hash`, `ease`, `clamp01`, and `roundRect` (plus `mix`/`alpha` if used) to `src/games/shared/canvas.ts`, and update both games' imports. Block Drop renderer tests must pass unchanged.
+- [ ] 0.7 Cleanups (design §0.7):
+  - move the `.game-list` style into `app.css`
+  - derive `GameId` from a `GAME_IDS` const with an `isGameId` guard
+  - remove the inaudible lives span
+  - route the tough-brick flash through `crackFlash`, or delete it
+- [ ] 0.8 Run `npm run check`. All Block Drop and Brick Burst suites must pass before starting section 1.
+
 ## 1. Faster deterministic rules
 
 - [ ] 1.1 Set `BASE_SPEED` to 390 and held `PADDLE_SPEED` to 540. Preserve the level curve, difficulty multipliers, serve-angle rules, 24-unit nudge, and 1:1 touch movement.
-- [ ] 1.2 Introduce named rally constants: four brick hits per increase, 1.04 factor, 1.6× cap. Count tough-brick damage hits; preserve direction and the serve-locked speed/scoring multipliers.
+- [ ] 1.2 Introduce named rally constants, and keep using `levelSpeedFor` from 0.4 for the cap: four brick hits per increase, 1.04 factor, 1.6× cap. Count tough-brick damage hits; preserve direction and the serve-locked speed/scoring multipliers.
 - [ ] 1.3 Cover level 1 speeds 292.5/390/487.5, the level curve and 1092 units/s maximum, hit boundaries 3/4 and 7/8, the cap at hit 48, lost-ball reset, and difficulty changes during a paused rally.
 - [ ] 1.4 Run brick/paddle no-tunneling tests at 1092 units/s, including faces, corners, seams, and paddle edges. Retain tie-break, wall clamping, 200-seed no-flat-path coverage, and deterministic replay.
 

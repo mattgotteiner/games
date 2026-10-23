@@ -183,7 +183,13 @@ Start with `design.md`, `art-direction.md`, and the runnable reference
 `art-direction/preview.html`, then follow `tasks.md` in order.
 
 `increase-brick-burst-pace` is a proposal following the approved Brick Burst
-implementation (`44efaa2`). It recommends base ball speed 390 units/s, +4%
+implementation (`44efaa2`). **Start with its `tasks.md` section 0.** A code
+review found defects in `44efaa2`, and they must be fixed and tested before any
+tuning. A held steering key dies after a ball-loss or level-clear freeze. The
+canvas resizes every frame below 100% zoom. The brick tie-break is reversed.
+The level-speed formula is duplicated. There is also hot-path `matchMedia` and
+redraw work, Brick Burst imports Block Drop renderer internals, and there are
+small cleanups. See `design.md` §0 and the new spec scenarios. It recommends base ball speed 390 units/s, +4%
 every four brick hits, held paddle speed 540 units/s, and 400/650 ms loss/clear
 feedback. Difficulty multipliers, scoring, layouts, and touch gain retain their
 rules. The design compares additional pacing ideas and defines collision and
