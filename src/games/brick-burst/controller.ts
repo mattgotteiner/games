@@ -2,7 +2,7 @@ import { hash, ease, clamp01 } from '../shared/canvas'
 import { BRICK_BURST_LOOKS, type BrickBurstLook } from './palette'
 import { classicRenderer, type BrickBurstRenderer, type BrickDraw, type DrawContext } from './renderer'
 import {
-  applyAction, BALL_LOST_MS, BRICKS_TOP, BRICK_H, BRICK_W, COLUMNS, createGame,
+  applyAction, BALL_LOST_MS, COLUMNS, createGame,
   FIELD_HEIGHT, FIELD_WIDTH, LEVEL_CLEAR_MS, STEP_MS, step,
   type BrickBurstAction, type BrickBurstDifficulty, type BrickBurstEvent, type BrickBurstState,
 } from './rules'
@@ -291,10 +291,7 @@ export class BrickBurstController {
       const e = effect.event, p = clamp01((this.effectTime - effect.startedAt) / effect.durationMs)
       if (e.type !== 'brick-hit') continue
       if (e.broken) renderer.drawBrickPop(ctx, look, e, [e.impactX, e.impactY], e.ballVx, p)
-      else {
-        ctx.strokeStyle = `rgb(255 255 255 / ${0.8 * (1 - p)})`; ctx.lineWidth = 2.4
-        ctx.strokeRect(e.col * BRICK_W + 2.2, BRICKS_TOP + e.row * BRICK_H + 2.2, BRICK_W - 4.4, BRICK_H - 4.4)
-      }
+      else renderer.drawBrick(ctx, look, { row: e.row, col: e.col, kind: e.kind, damaged: true }, { crackFlash: p })
     }
     const status = s.status === 'paused' ? s.resumeStatus : s.status
     const lost = status === 'ball-lost', cleared = status === 'level-clear'

@@ -187,6 +187,13 @@ describe('Brick Burst controller', () => {
     expect(t.controller.getState().feedbackMs).toBeCloseTo(500)
     expect(sweep).not.toHaveBeenCalled()
   })
+  it('draws a tough-brick flash through the selected renderer', () => {
+    const draw = vi.spyOn(classicRenderer, 'drawBrick')
+    const initial = { ...playing(), bricks: Array.from({ length: 96 }, (_, i) => i === 77 ? { kind: 'tough' as const, damaged: false } : null), ball: { x: 176, y: 181.5, vx: 0, vy: -300, speed: 300 } }
+    const t = setup({ initialState: initial })
+    t.frame(0); draw.mockClear(); t.frame(STEP_MS)
+    expect(draw.mock.calls.some((call) => call[3]?.crackFlash === 0)).toBe(true)
+  })
   it('cancels the frame, disconnects observation, and removes every listener on destroy', () => {
     const add = vi.spyOn(EventTarget.prototype, 'addEventListener'), remove = vi.spyOn(EventTarget.prototype, 'removeEventListener')
     const t = setup(), registrations = [...add.mock.calls], targets = [...add.mock.contexts]

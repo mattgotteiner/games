@@ -159,6 +159,8 @@ h1 {
 }
 
 .game-list {
+  display: grid;
+  gap: 1rem;
   margin: 0;
   padding: 1.5rem 0 0;
   list-style: none;

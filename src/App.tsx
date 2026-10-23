@@ -98,7 +98,7 @@ export function App({
               <span class="game-count">2 games</span>
             </div>
 
-            <ul class="game-list" style={{ display: 'grid', gap: '1rem' }}>
+            <ul class="game-list">
               <li class="game-card">
                 <div>
                   <p class="game-card-kicker">Puzzle</p>

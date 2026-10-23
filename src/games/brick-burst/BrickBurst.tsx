@@ -132,7 +132,7 @@ export function BrickBurst({ controllerFactory = defaultFactory }: { readonly co
           <p class="game-progress-item brick-level"><span class="hud-label">Level</span><strong>{state.level}</strong></p>
           <div class="brick-lives"><span class="hud-label">Lives</span><span class="lives" role="img" aria-label={`${state.lives} ${state.lives === 1 ? 'life' : 'lives'}`}>
             {[0, 1, 2].map((i) => <i class={i < state.lives ? 'life-pip alive' : 'life-pip'} key={i} aria-hidden="true" />)}
-          </span><span class="visually-hidden" aria-hidden="true">{state.lives} lives</span></div>
+          </span></div>
           <div class="brick-state"><p class={`game-status status-${state.status === 'serving' ? 'playing' : state.status === 'over' ? 'game-over' : state.status === 'level-clear' || state.status === 'ball-lost' ? 'clearing' : state.status}`}><span class="status-dot" aria-hidden="true" />{statusNames[state.status]}</p>
             <p class="brick-difficulty" aria-label={`${difficulty.label} difficulty, ${difficulty.multiplier}× speed and score`}>{difficulty.label} · {difficulty.multiplier}×</p></div>
           <p class="keyboard-reference">← → / A D move · Space / ↑ serve · P pause · R restart</p>

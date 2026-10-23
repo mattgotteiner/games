@@ -26,6 +26,11 @@ describe('Brick Burst chrome', () => {
     expect(screen.getByRole('button', { name: 'Move paddle left' })).toHaveAttribute('aria-disabled', 'true')
     expect(screen.getByRole('button', { name: 'Move paddle left' })).not.toBeDisabled()
   })
+  it('exposes one correctly pluralized accessible lives label', () => {
+    const t = setup({ lives: 1 })
+    expect(screen.getByRole('img', { name: '1 life' })).toBeInTheDocument()
+    expect(t.container.querySelectorAll('.visually-hidden[aria-hidden="true"]')).toHaveLength(0)
+  })
   it('uses the shared pause chrome, focuses Resume, and restores play focus', () => {
     setup(); fireEvent.click(screen.getByRole('button', { name: 'Pause game' }))
     const card = screen.getByRole('group', { name: 'Paused' })

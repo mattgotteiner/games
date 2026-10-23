@@ -1,7 +1,10 @@
 export const GAME_QUERY_PARAMETER = 'game'
 
-export type GameId = 'block-drop' | 'brick-burst'
-const SUPPORTED_GAMES: ReadonlySet<string> = new Set(['block-drop', 'brick-burst'])
+export const GAME_IDS = ['block-drop', 'brick-burst'] as const
+export type GameId = (typeof GAME_IDS)[number]
+export function isGameId(value: unknown): value is GameId {
+  return typeof value === 'string' && GAME_IDS.some((id) => id === value)
+}
 export type AppView = 'catalog' | GameId
 
 export interface ParsedGameUrl {
@@ -15,8 +18,8 @@ export function parseGameUrl(url: URL): ParsedGameUrl {
   }
 
   const game = url.searchParams.get(GAME_QUERY_PARAMETER)
-  if (game !== null && SUPPORTED_GAMES.has(game)) {
-    return { view: game as GameId, hasInvalidGame: false }
+  if (isGameId(game)) {
+    return { view: game, hasInvalidGame: false }
   }
 
   return { view: 'catalog', hasInvalidGame: true }

@@ -63,7 +63,7 @@ function drawBrick(ctx: DrawContext, look: BrickBurstLook, b: BrickDraw, opt: Br
     ctx.beginPath(); ctx.arc(x + 6, y + 8, 1.6, 0, Math.PI * 2); ctx.fill()
     if (!b.damaged) { ctx.beginPath(); ctx.arc(x + 26, y + 8, 1.6, 0, Math.PI * 2); ctx.fill() }
     if (b.damaged) crackPath(ctx, look, b, x, y)
-    if (opt.crackFlash) { ctx.strokeStyle = `rgb(255 255 255 / ${0.8 * (1 - opt.crackFlash)})`; ctx.lineWidth = 2.4; ctx.strokeRect(ix + 1.2, iy + 1.2, w - 2.4, h - 2.4) }
+    if (opt.crackFlash !== undefined) { ctx.strokeStyle = `rgb(255 255 255 / ${0.8 * (1 - opt.crackFlash)})`; ctx.lineWidth = 2.4; ctx.strokeRect(ix + 1.2, iy + 1.2, w - 2.4, h - 2.4) }
   }
   if (opt.flash) { ctx.fillStyle = `rgb(255 255 255 / ${opt.flash})`; ctx.fillRect(ix, iy, w, h) }
   ctx.restore()

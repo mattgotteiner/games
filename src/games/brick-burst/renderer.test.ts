@@ -32,3 +32,9 @@ it('draws damage as a crack and one rivet, regardless of motion preference', () 
   expect(damaged.calls.filter((c) => (c as string[])[0] === 'arc')).toHaveLength(1)
   expect(damaged.calls.filter((c) => (c as string[])[0] === 'lineTo')).toHaveLength(6)
 })
+
+it('shows a tough-brick crack flash from its first progress frame', () => {
+  const { context, calls } = recordingContext()
+  r.drawBrick(context, look, { row: 1, col: 5, kind: 'tough', damaged: true }, { crackFlash: 0 })
+  expect(calls).toContainEqual(['strokeStyle', 'rgb(255 255 255 / 0.8)'])
+})
