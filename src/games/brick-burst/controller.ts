@@ -137,7 +137,7 @@ export class BrickBurstController {
       if (action.type === 'restart') {
         this.effects = []; this.trail = []; this.effectTime = 0; this.levelStartedAt = 0; this.steps = 0
       }
-      if (active(this.state) && !active(previous)) this.steer()
+      if (active(this.state) && (this.state.status !== previous.status || action.type === 'restart')) this.steer()
       if (this.state !== previous) this.dirty = true
       if (this.state !== previous) this.onState(this.state, action.type === 'restart' ? [{ type: 'level-started', level: 1 }] : [])
     }
@@ -246,7 +246,7 @@ export class BrickBurstController {
         this.accumulator -= STEP_MS
         const previous = this.state
         const result = step(previous); this.state = result.state; events.push(...result.events)
-        if (active(this.state) && !active(previous)) this.steer()
+        if (active(this.state) && this.state.status !== previous.status) this.steer()
         if (this.state !== previous) this.dirty = true
         this.effectTime += STEP_MS
         this.processEvents(result.events)
