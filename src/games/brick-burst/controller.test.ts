@@ -136,6 +136,14 @@ describe('Brick Burst controller', () => {
     t.controller.dispatch({ type: 'paddle-to', x: 100 }); t.setRatio(3); t.frame(0)
     expect(t.canvas.width).toBe(576); expect(t.canvas.height).toBe(864); expect(t.controller.getState().paddleX).toBe(100)
   })
+  it('allocates the backing store only once at sub-1 DPR over ten frames', () => {
+    const width = vi.spyOn(HTMLCanvasElement.prototype, 'width', 'set')
+    const height = vi.spyOn(HTMLCanvasElement.prototype, 'height', 'set')
+    const t = setup({ devicePixelRatio: () => 0.9 })
+    for (let i = 0; i < 10; i++) t.frame(i * 16)
+    window.dispatchEvent(new Event('resize'))
+    expect(width).toHaveBeenCalledTimes(1); expect(height).toHaveBeenCalledTimes(1)
+  })
   it('draws no trail, pops, flash, sweep, or layout fade under reduced motion', () => {
     const renderer = Object.fromEntries(Object.entries(classicRenderer).map(([key, fn]) => [key, vi.fn(fn)])) as unknown as typeof classicRenderer
     const t = setup({ initialState: playing(), reducedMotion: () => true, renderer })

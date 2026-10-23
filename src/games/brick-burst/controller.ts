@@ -195,11 +195,16 @@ export class BrickBurstController {
     if (!cancelled && !drag.moved && Math.hypot(e.clientX - drag.startX, e.clientY - drag.startY) < 10 && this.now() - drag.startedAt < 300 && drag.canvas) this.dispatch({ type: 'serve' })
     this.release(drag.surface, drag.id)
   }
+  private effectiveRatio(): number {
+    return Math.max(1, this.devicePixelRatio())
+  }
   private resize = (): void => {
     if (this.destroyed) return
     const rect = this.container.getBoundingClientRect()
     const width = Math.max(1, Math.min(rect.width || FIELD_WIDTH, (rect.height || FIELD_HEIGHT) * FIELD_WIDTH / FIELD_HEIGHT))
-    this.boardWidth = width; this.ratio = Math.max(1, this.devicePixelRatio())
+    const ratio = this.effectiveRatio()
+    if (width === this.boardWidth && ratio === this.ratio) return
+    this.boardWidth = width; this.ratio = ratio
     const height = width * FIELD_HEIGHT / FIELD_WIDTH
     this.canvas.style.width = `${width}px`; this.canvas.style.height = `${height}px`
     const surface = this.canvas.parentElement
@@ -212,7 +217,7 @@ export class BrickBurstController {
   }
   private tick = (time: number): void => {
     if (this.destroyed) return
-    if (this.devicePixelRatio() !== this.ratio) this.resize()
+    if (this.effectiveRatio() !== this.ratio) this.resize()
     const dt = this.lastFrame === null ? 0 : Math.max(0, Math.min(100, time - this.lastFrame))
     this.lastFrame = time
     this.flushActions()
