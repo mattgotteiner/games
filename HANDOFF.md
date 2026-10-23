@@ -162,8 +162,10 @@ A generalized game registry/runtime remains deferred.
 Introduce shared platform abstractions only after another game exposes
 concrete duplication.
 
-The active changes are `remove-block-drop-catalog-buttons` and
-`add-block-drop-themes`, described below.
+The active changes are `remove-block-drop-catalog-buttons`,
+`add-block-drop-themes`, and `add-brick-burst`, described below.
+`add-brick-burst` is the second game, so it extracts only the small helpers
+that both games duplicate. The game registry and runtime stay deferred.
 
 ## Active OpenSpec Change
 
@@ -179,6 +181,19 @@ line-clear animation. A Theme picker in the pause menu saves the choice under
 `games.block-drop.theme`. Only the spec and art direction are written so far.
 Start with `design.md`, `art-direction.md`, and the runnable reference
 `art-direction/preview.html`, then follow `tasks.md` in order.
+
+`add-brick-burst` adds Brick Burst, a brick breaker and the catalog's second
+game (`?game=brick-burst`). It has:
+
+- deterministic fixed-step rules and five repeating layouts
+- tough bricks and three lives
+- Easy, Medium, and Hard difficulty
+- relative thumb-drag steering
+- the Block Drop Classic chrome
+
+Only the spec and art direction are written so far. Start with `design.md`,
+`art-direction.md`, and the runnable reference `art-direction/preview.html`,
+then follow `tasks.md` in order. Brick Burst themes are a planned follow-up.
 
 ## Most Recent OpenSpec Change
 
