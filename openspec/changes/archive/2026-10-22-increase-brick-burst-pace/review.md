@@ -1,8 +1,10 @@
 # Faster Brick Burst implementation review
 
-Implementation and automated validation are complete. Physical phone acceptance
-of the tuning remains pending; tasks 3.4 and 3.5 stay open for that review and
-subsequent spec synchronization/archival.
+Implementation and automated validation are complete. After the native drag
+fix, the user said "Good. Approved, merge" on 2026-10-23 UTC. This accepts the
+reviewed build and closes acceptance for specification synchronization and
+archival. The user did not supply a per-difficulty physical-device review matrix;
+automated results do not establish that coverage.
 
 ## Implemented behavior
 
@@ -69,7 +71,8 @@ Review the live build at
 [Brick Burst](https://matt-srv.tail18ced3.ts.net:10000/games/?game=brick-burst).
 Check the first serve and late-rally control on all three difficulties, held
 Left/Right and keyboard steering, and feedback readability with reduced motion.
-The physical review and any requested numerical adjustment remain open.
+The user accepted the reviewed build after the drag fix, without requesting
+further numerical adjustments.
 
 ## Dragging the page during phone play
 
@@ -94,4 +97,5 @@ scroll/zoom, and no accidental serve. Native drag cancellation, a real-touch
 difficulty slider, and Help scrolling also pass. All 10 applicable Brick Burst
 phone flows passed through Tailscale; the production-only offline flow is skipped
 on that dev server and checked in the desktop production suite. Physical iPhone
-verification remains open.
+verification was not performed by the agent. The user's subsequent approval is
+the acceptance decision.

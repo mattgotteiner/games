@@ -21,3 +21,5 @@ Brick Burst supports touch dragging, mouse steering, and ←/→ or A/D.
 Tap, click, Space, or ↑ serves; P pauses and R restarts. Difficulty and
 best score are saved on the device. Its implementation record and phone
 review checklist are in `openspec/changes/archive/2026-10-22-add-brick-burst/`.
+The accepted pace tuning and touch fixes are recorded in
+`openspec/changes/archive/2026-10-22-increase-brick-burst-pace/review.md`.

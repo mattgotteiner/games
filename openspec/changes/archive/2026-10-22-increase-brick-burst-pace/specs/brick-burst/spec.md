@@ -133,6 +133,13 @@ The paddle SHALL be 64 units wide and 10 units tall. Its top surface SHALL be at
 - **THEN** the paddle moves one 24-unit step in that direction
 
 
+### Requirement: Touch gestures do not move the page
+While Brick Burst is open, one-finger drags and double-taps that begin on the playfield, its surrounding padding, layout gaps, HUD, control bar, or overlays SHALL NOT pan or zoom the page. Pinch zoom SHALL remain available over the header. Native difficulty controls SHALL remain usable, and Help SHALL scroll internally.
+
+#### Scenario: Fast steering drag
+- **WHEN** the user drags quickly back and forth across the playfield or surrounding non-interactive play area
+- **THEN** only the paddle moves, and the page does not scroll, bounce, select text, start a native drag, or zoom
+
 ### Requirement: Lives, ball loss, and game over
 A game SHALL start with three lives. When the ball is lost, one life SHALL be removed. Ball-lost feedback SHALL then play for 400 milliseconds, and the simulation SHALL NOT advance during that time. If lives remain, the game SHALL then return to serving. When the last life is lost, the game SHALL end. A game-over card SHALL show the final score and the best score, mark a new best when there is one, and focus `Play again`. The best score SHALL be saved on the device under `games.brick-burst.best-score`.
 

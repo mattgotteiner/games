@@ -41,18 +41,18 @@ details are in `design.md` §0.
 - [x] 3.1 Verify 60/120 Hz state equivalence, the 100 ms frame cap, pause timing, continuous button/keyboard steering, and touch mapping at two board sizes.
 - [x] 3.2 Run `npm run check`, including the full Block Drop regression suite, production/offline checks, and 4× CPU frame-budget coverage below 16 ms.
 - [x] 3.3 Run the phone Chromium Brick Burst flows and smoke-test the Tailscale review URL. Preserve baseline captures outside the test runner's cleared output directory; save new serving, sustained/capped rally, ball-loss, and level-clear phone captures under ignored `test-results/brick-burst/pace/`.
-- [ ] 3.4 Compare identical seeds/inputs at the first serve and during a reproducible rally segment; record timing observations and review Easy, Medium, and Hard on a physical phone, including held controls and reduced motion.
-- [ ] 3.5 Record phone review and any accepted tuning adjustment, then synchronize the capability spec and archive the change after implementation is accepted.
+- [x] 3.4 Compare identical seeds/inputs at the first serve and during a reproducible rally segment; record timing observations and user acceptance of the reviewed build. The user approved the build after the touch fix on 2026-10-23 UTC. A physical review matrix for every difficulty, held control, and reduced-motion combination was not supplied; no such coverage is claimed.
+- [x] 3.5 Record review acceptance and the drag fix, synchronize the capability spec, and archive the accepted change.
 
 ## Implementation validation
 
 Sections 0–2 and automated integration are complete. The review fixes were
-committed separately from tuning. The final full check passed 351 unit/component
-tests, the production build, and 37 Chromium flows. All 9 Brick Burst phone
-flows passed; 3 additional phone flows against Tailscale HTTPS passed. Updated
-sustained-rally captures are also verified on Chromium and phone Chromium.
+committed separately from tuning. After the drag fix, validation passed 353
+unit/component tests, the production build, and all 39 Chromium flows. All 10
+applicable Brick Burst phone flows passed against Tailscale HTTPS; the
+production-only offline flow passed in the desktop suite. Updated sustained-rally
+captures are also verified on Chromium and phone Chromium.
 
 See `review.md` for collision/performance results, seeded before/after timing,
-new captures, and the preserved baseline location. Task 3.4's seeded comparison
-is complete; its physical phone review and task 3.5's acceptance/archival remain
-pending. No physical review is claimed by the automated checks.
+new captures, the preserved baseline location, and the user's approval to merge.
+Automated checks do not establish physical-device coverage.

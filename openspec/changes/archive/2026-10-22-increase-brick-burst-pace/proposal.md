@@ -1,8 +1,8 @@
 ## Implementation status
 
-The review fixes and faster tuning are implemented locally for phone review.
-The comparison below records the previous approved values and the new tuning.
-Physical phone acceptance is pending; the change remains active.
+The review fixes, faster tuning, and native drag fix are implemented. The user
+approved the reviewed build and requested a merge on 2026-10-23 UTC. The
+comparison below records the previous values and accepted tuning.
 
 ## Why
 
@@ -12,8 +12,8 @@ gained only 2% after every eight brick hits. Losing a ball added a 600 ms pause,
 and clearing a level added a 900 ms pause.
 
 Raise the pace from the first serve, let successful rallies build speed sooner,
-and reduce the waits between rallies. These tuning values remain provisional; their
-feel still needs a phone review.
+and reduce the waits between rallies. The user accepted these tuning values after
+reviewing the build and its touch fix.
 
 ## What Changes
 
@@ -87,5 +87,4 @@ None.
   durations; updates the active art reference for those effects.
 - Updates rules, controller, and browser tests and captures fresh phone states.
 - Adds no dependencies, assets, storage keys, or settings.
-- The faster build is available for review on the existing Tailscale test server.
-  Physical phone acceptance is pending.
+- The accepted build remains available on the existing Tailscale test server.
