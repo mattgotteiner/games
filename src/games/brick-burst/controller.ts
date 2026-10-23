@@ -18,6 +18,7 @@ export interface BrickBurstControllerOptions {
   readonly reducedMotion?: () => boolean
   readonly now?: () => number
   readonly controlBar?: HTMLElement
+  readonly inputSurface?: HTMLElement
   readonly look?: BrickBurstLook
   readonly renderer?: BrickBurstRenderer
 }
@@ -94,14 +95,19 @@ export class BrickBurstController {
     this.listen(window, 'blur', this.clearInput)
     this.listen(window, 'resize', this.resize)
     this.listen(document, 'visibilitychange', () => { if (document.visibilityState === 'hidden') this.dispatch({ type: 'pause' }) })
-    for (const surface of [canvas, options.controlBar]) {
+    for (const surface of options.inputSurface ? [options.inputSurface] : [container, options.controlBar]) {
       if (!surface) continue
       this.listen(surface, 'pointerdown', (e) => this.pointerDown(e as PointerEvent, surface))
-      this.listen(surface, 'pointermove', (e) => this.pointerMove(e as PointerEvent, surface))
+      this.listen(surface, 'pointermove', (e) => this.pointerMove(e as PointerEvent))
       this.listen(surface, 'pointerup', (e) => this.pointerEnd(e as PointerEvent, false))
       this.listen(surface, 'pointercancel', (e) => this.pointerEnd(e as PointerEvent, true))
       this.listen(surface, 'lostpointercapture', (e) => this.pointerEnd(e as PointerEvent, true))
       this.listen(surface, 'dblclick', (e) => e.preventDefault())
+      // Pointer cancellation alone does not cancel native touch scrolling in Safari.
+      // Keep these listeners local so Help and the rest of the page can still scroll.
+      this.listen(surface, 'touchstart', this.preventTouchGesture, { passive: false })
+      this.listen(surface, 'touchmove', this.preventTouchGesture, { passive: false })
+      this.listen(surface, 'dragstart', (e) => e.preventDefault())
     }
     this.listen(canvas, 'click', (e) => { if ((e as MouseEvent).detail && this.now() - this.lastTouchTime > 800 && !(e as PointerEvent).pointerType?.match(/touch|pen/)) this.dispatch({ type: 'serve' }) })
     if (options.controlBar) this.listen(options.controlBar, 'click', (e) => {
@@ -115,9 +121,16 @@ export class BrickBurstController {
     this.frame = this.requestFrame(this.tick)
   }
   getState(): BrickBurstState { return this.state }
-  private listen(target: EventTarget, type: string, callback: EventListener): void {
-    target.addEventListener(type, callback)
-    this.cleanup.push(() => target.removeEventListener(type, callback))
+  private listen(target: EventTarget, type: string, callback: EventListener, options?: AddEventListenerOptions): void {
+    target.addEventListener(type, callback, options)
+    this.cleanup.push(() => target.removeEventListener(type, callback, options))
+  }
+  private preventTouchGesture = (e: Event): void => {
+    const target = e.target as Element
+    if (target.closest('input, textarea, select, dialog')) return
+    // Preserve native activation of Serve and the overlay buttons.
+    if (e.type === 'touchstart' && target.closest('button, a')) return
+    if (e.cancelable) e.preventDefault()
   }
   dispatch(action: BrickBurstAction): void {
     if (this.destroyed) return
@@ -174,6 +187,7 @@ export class BrickBurstController {
   private keyUp = (event: Event): void => { this.keys.delete((event as KeyboardEvent).key.toLowerCase()); this.steer() }
   private pointerDown(e: PointerEvent, surface: HTMLElement): void {
     if (e.button !== 0) return
+    if ((e.target as Element).closest('input, textarea, select, dialog, .game-overlay')) return
     const button = (e.target as Element).closest<HTMLButtonElement>('button')
     if (button) {
       if (button.disabled || !button.dataset.direction) return
@@ -185,12 +199,12 @@ export class BrickBurstController {
     if (!active(this.state) || e.pointerType === 'mouse' || this.drag || e.isPrimary === false) return
     e.preventDefault()
     this.lastTouchTime = this.now()
-    this.drag = { id: e.pointerId, startX: e.clientX, startY: e.clientY, lastX: e.clientX, startedAt: this.now(), moved: false, canvas: surface === this.canvas, surface }
+    this.drag = { id: e.pointerId, startX: e.clientX, startY: e.clientY, lastX: e.clientX, startedAt: this.now(), moved: false, canvas: this.container.contains(e.target as Node), surface }
     try { surface.setPointerCapture(e.pointerId) } catch { /* capture unavailable */ }
   }
-  private pointerMove(e: PointerEvent, surface: HTMLElement): void {
+  private pointerMove(e: PointerEvent): void {
     if (!active(this.state)) return
-    if (e.pointerType === 'mouse' && surface === this.canvas && this.buttons.size === 0) {
+    if (e.pointerType === 'mouse' && e.target === this.canvas && this.buttons.size === 0) {
       this.dispatch({ type: 'paddle-to', x: (e.clientX - this.canvas.getBoundingClientRect().left) * FIELD_WIDTH / this.boardWidth }); return
     }
     const drag = this.drag

@@ -46,11 +46,11 @@ async function capture(page: Page, name: string) {
   await mkdir(output, { recursive: true })
   await page.screenshot({ path: `${output}/${name}.png` })
 }
-async function touchDrag(page: Page, startX: number, y: number, dx: number) {
+async function touchDrag(page: Page, startX: number, y: number, dx: number, dy = 0) {
   const cdp = await page.context().newCDPSession(page)
   try {
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: startX, y }] })
-    for (let i = 1; i <= 5; i++) await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: startX + dx * i / 5, y }] })
+    for (let i = 1; i <= 5; i++) await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: startX + dx * i / 5, y: y + dy * i / 5 }] })
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
   } finally { await cdp.detach() }
 }
@@ -124,6 +124,55 @@ test('steers with real touch gestures without scrolling or accidental serves, th
   expect(await page.evaluate(() => window.__brickBurstController.getState())).toEqual(frozen)
   await page.getByRole('group', { name: 'Paused' }).getByRole('button', { name: 'Resume game' }).click()
   await expect(page.locator('.game-status')).toHaveText('Playing')
+})
+
+test('keeps the board fixed while dragging from play-area padding and gaps', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await fixture(page, {})
+  const canvas = page.locator('canvas'), layout = page.locator('.brick-burst-layout')
+  // Make panning observable even when the normal phone layout fits the viewport.
+  await page.evaluate(() => {
+    document.documentElement.style.overflow = 'auto'
+    document.body.style.overflow = 'visible'
+    const overflow = document.createElement('div')
+    overflow.setAttribute('aria-hidden', 'true')
+    overflow.style.cssText = 'position:absolute;left:0;top:0;width:2000px;height:3000px;pointer-events:none'
+    document.body.append(overflow)
+  })
+  const box = (await canvas.boundingBox())!, frame = (await page.locator('.board-frame').boundingBox())!
+  const hud = (await page.locator('.game-hud').boundingBox())!
+  const start = await page.evaluate(() => ({ x: scrollX, y: scrollY, scale: visualViewport!.scale }))
+  for (const y of [(frame.y + box.y) / 2, (hud.y + hud.height + frame.y) / 2, box.y + 250]) {
+    await page.evaluate(() => window.__brickBurstController.dispatch({ type: 'paddle-to', x: 192 }))
+    await touchDrag(page, box.x + 80, y, 50, 60)
+    const paddle = await page.evaluate(() => window.__brickBurstController.getState().paddleX)
+    expect((paddle - 192) * box.width / 384, `drag at y=${y}`).toBeCloseTo(50, 0)
+    expect(await canvas.boundingBox()).toEqual(box)
+    expect(await page.evaluate(() => ({ x: scrollX, y: scrollY, scale: visualViewport!.scale }))).toEqual(start)
+    await expect(page.getByRole('button', { name: 'Serve ball' })).toBeEnabled()
+  }
+  expect(await layout.evaluate(el => ({ touch: getComputedStyle(el).touchAction, select: getComputedStyle(el).userSelect }))).toEqual({ touch: 'none', select: 'none' })
+  // A native image/selection drag must never claim the board gesture.
+  expect(await canvas.evaluate(el => el.dispatchEvent(new Event('dragstart', { bubbles: true, cancelable: true })))).toBe(false)
+  const serve = (await page.getByRole('button', { name: 'Serve ball' }).boundingBox())!
+  await touchDrag(page, serve.x + serve.width / 2, serve.y + serve.height / 2, 0)
+  await expect(page.locator('.game-status')).toHaveText('Playing')
+})
+
+test('preserves the difficulty slider and Help scrolling with the play area locked', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 568 })
+  await fixture(page, {})
+  await page.getByRole('button', { name: 'Pause game' }).click()
+  const slider = page.getByRole('slider', { name: 'Difficulty' }), range = (await slider.boundingBox())!
+  await touchDrag(page, range.x + 4, range.y + range.height / 2, range.width - 8)
+  await expect(slider).toHaveValue('2')
+  await page.getByRole('group', { name: 'Paused' }).getByRole('button', { name: 'Help' }).click()
+  const content = page.locator('.help-dialog-content'), box = (await content.boundingBox())!
+  await touchDrag(page, box.x + box.width / 2, box.y + box.height - 30, 0, -100)
+  await expect.poll(() => content.evaluate(el => el.scrollTop)).toBeGreaterThan(0)
+  expect(await page.evaluate(() => ({ x: scrollX, y: scrollY }))).toEqual({ x: 0, y: 0 })
+  await page.getByRole('button', { name: 'Close help' }).click()
+  await expect(page.getByRole('group', { name: 'Paused' })).toBeVisible()
 })
 
 test('keeps held ArrowLeft steering through a seeded lost ball', async ({ page }) => {

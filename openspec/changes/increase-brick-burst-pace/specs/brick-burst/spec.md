@@ -86,7 +86,7 @@ The ball SHALL start each serve at its level speed. Level speed SHALL be 390 uni
 
 
 ### Requirement: Paddle steering
-The paddle SHALL be 64 units wide and 10 units tall. Its top surface SHALL be at y = 536, and it SHALL stay inside the playfield. Steering input SHALL move it at 540 units per second while Left or Right is held. A touch or pen drag that begins on the playfield or the control bar SHALL move the paddle by the same horizontal distance as the finger, at 1:1 on screen. A mouse pointer moving over the playfield SHALL center the paddle under the pointer. Steering SHALL work in the serving and playing states. Steering SHALL have no effect while the game is paused, during level-clear or ball-lost feedback, or after game over.
+The paddle SHALL be 64 units wide and 10 units tall. Its top surface SHALL be at y = 536, and it SHALL stay inside the playfield. Steering input SHALL move it at 540 units per second while Left or Right is held. A touch or pen drag that begins on the non-interactive play area, including the playfield, surrounding padding, layout gaps, or control bar gaps, SHALL move the paddle by the same horizontal distance as the finger, at 1:1 on screen. Gameplay gestures SHALL suppress browser panning, rubber-band overscroll, text selection, and native board dragging. The difficulty slider SHALL remain usable, and Help content SHALL remain scrollable. A mouse pointer moving over the playfield SHALL center the paddle under the pointer. Steering SHALL work in the serving and playing states. Steering SHALL have no effect while the game is paused, during level-clear or ball-lost feedback, or after game over.
 
 #### Scenario: Thumb drag steers
 - **WHEN** the user drags a finger 50 CSS pixels to the right, starting anywhere on the playfield
@@ -95,6 +95,14 @@ The paddle SHALL be 64 units wide and 10 units tall. Its top surface SHALL be at
 #### Scenario: Drag does not need to start on the paddle
 - **WHEN** the user drags from a point well above or beside the paddle
 - **THEN** the paddle moves by the drag distance and does not jump to the finger
+
+#### Scenario: Browser does not grab a gameplay drag
+- **WHEN** the user drags horizontally or diagonally from the playfield, its surrounding padding, or a non-interactive layout gap
+- **THEN** the paddle follows the horizontal drag distance while the page and board stay fixed, without native dragging or text selection
+
+#### Scenario: Native controls remain usable
+- **WHEN** the user drags the paused difficulty slider or swipes through Help on a small phone
+- **THEN** the difficulty changes or Help content scrolls, without moving the underlying page
 
 #### Scenario: Keyboard or button steering
 - **WHEN** the user holds ← or A, → or D, or the visible Left or Right control

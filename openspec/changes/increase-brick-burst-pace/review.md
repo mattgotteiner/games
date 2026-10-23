@@ -70,3 +70,28 @@ Review the live build at
 Check the first serve and late-rally control on all three difficulties, held
 Left/Right and keyboard steering, and feedback readability with reduced motion.
 The physical review and any requested numerical adjustment remain open.
+
+## Dragging the page during phone play
+
+Phone feedback reported the page or board moving under the finger. Gesture
+listeners previously covered only the Canvas and control bar; blank space around
+the board did not steer, and native touch/drag defaults were not explicitly
+cancelled. Two controller regressions and a real-touch padding regression failed
+before the fix.
+
+The layout now provides one captured gesture surface, including board padding
+and layout gaps. Local non-passive touch listeners cancel browser gestures, and
+CSS disables gameplay selection, callouts, native Canvas dragging, and root
+overscroll while Brick Burst is open. The slider and buttons retain native
+activation; Help remains outside the gesture surface.
+
+Validation: 353 unit/component tests, all 39 desktop browser flows, typecheck,
+production/PWA build, and strict OpenSpec validation passed. Horizontal/diagonal
+real-touch checks cover the field,
+padding, and a layout gap with deliberate document overflow so page panning is
+observable. They verify paddle displacement, fixed board bounds, unchanged
+scroll/zoom, and no accidental serve. Native drag cancellation, a real-touch
+difficulty slider, and Help scrolling also pass. All 10 applicable Brick Burst
+phone flows passed through Tailscale; the production-only offline flow is skipped
+on that dev server and checked in the desktop production suite. Physical iPhone
+verification remains open.

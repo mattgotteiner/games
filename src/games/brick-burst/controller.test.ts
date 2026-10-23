@@ -21,7 +21,7 @@ function setup(options: BrickBurstControllerOptions = {}, width = 384) {
     controlBar: bar, ...options,
   })
   controllers.push(controller)
-  return { controller, canvas, bar, left, right, serve, listener, calls, observer, cancel,
+  return { controller, container, canvas, bar, left, right, serve, listener, calls, observer, cancel,
     frame: (time: number) => { now = time; frame(time) }, setRatio: (value: number) => { ratio = value } }
 }
 const playing = (): BrickBurstState => applyAction(createGame(41), { type: 'serve' })
@@ -49,6 +49,34 @@ describe('Brick Burst controller', () => {
     expect(controller.getState().paddleX).toBeCloseTo(192 + 50 * 384 / width)
     pointer(canvas, 'pointerup', 90)
     expect(controller.getState().status).toBe('serving')
+  })
+  it('steers from blank space surrounding the canvas and captures the full play area', () => {
+    const { container, controller } = setup()
+    const capture = vi.fn(); container.setPointerCapture = capture
+    pointer(container, 'pointerdown', 40)
+    pointer(container, 'pointermove', 90)
+    expect(controller.getState().paddleX).toBe(242)
+    expect(capture).toHaveBeenCalledWith(1)
+    pointer(container, 'pointerup', 90)
+    expect(controller.getState().status).toBe('serving')
+  })
+  it('cancels native touch dragging on the play area while preserving button taps and sliders', () => {
+    const t = setup()
+    const send = (target: HTMLElement, type: string) => {
+      const event = new Event(type, { bubbles: true, cancelable: true })
+      target.dispatchEvent(event)
+      return event.defaultPrevented
+    }
+    expect(send(t.canvas, 'touchstart')).toBe(true)
+    expect(send(t.container, 'touchmove')).toBe(true)
+    expect(send(t.canvas, 'dragstart')).toBe(true)
+    expect(send(t.serve, 'touchstart')).toBe(false)
+    expect(send(t.serve, 'touchmove')).toBe(true)
+    const slider = document.createElement('input'); slider.type = 'range'; t.container.append(slider)
+    expect(send(slider, 'touchstart')).toBe(false)
+    expect(send(slider, 'touchmove')).toBe(false)
+    t.controller.destroy()
+    expect(send(t.canvas, 'touchmove')).toBe(false)
   })
   it('serves on a short tap without moving, never after a drag that returns to its start', () => {
     const a = setup(); pointer(a.canvas, 'pointerdown', 60); pointer(a.canvas, 'pointermove', 66); pointer(a.canvas, 'pointerup', 66)
@@ -161,7 +189,7 @@ describe('Brick Burst controller', () => {
     const t = setup({ initialState: playing(), reducedMotion: undefined })
     for (let i = 0; i < 30; i++) t.frame(i * 16)
     expect(match).toHaveBeenCalledTimes(1)
-    expect(add).toHaveBeenCalledWith('change', expect.any(Function))
+    expect(add).toHaveBeenCalledWith('change', expect.any(Function), undefined)
     query.matches = true; query.dispatchEvent(new Event('change'))
     ball.mockClear(); t.frame(500)
     expect(ball).toHaveBeenCalled()
@@ -170,7 +198,7 @@ describe('Brick Burst controller', () => {
     ball.mockClear(); t.frame(532)
     expect(ball.mock.calls.some((call) => call[4]!.length > 0)).toBe(true)
     t.controller.destroy()
-    expect(remove).toHaveBeenCalledWith('change', add.mock.calls[0][1])
+    expect(remove).toHaveBeenCalledWith('change', add.mock.calls[0][1], undefined)
   })
   it('draws no trail, pops, flash, sweep, or layout fade under reduced motion', () => {
     const renderer = Object.fromEntries(Object.entries(classicRenderer).map(([key, fn]) => [key, vi.fn(fn)])) as unknown as typeof classicRenderer

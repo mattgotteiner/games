@@ -23,6 +23,7 @@ const statusNames = { serving: 'Ready', playing: 'Playing', paused: 'Paused', 'b
 
 export function BrickBurst({ controllerFactory = defaultFactory }: { readonly controllerFactory?: BrickBurstControllerFactory }) {
   const canvas = useRef<HTMLCanvasElement>(null), board = useRef<HTMLDivElement>(null), controls = useRef<HTMLDivElement>(null)
+  const inputSurface = useRef<HTMLDivElement>(null)
   const controller = useRef<ReturnType<BrickBurstControllerFactory> | null>(null)
   const resume = useRef<HTMLButtonElement>(null), again = useRef<HTMLButtonElement>(null), help = useRef<HTMLButtonElement>(null)
   const dialog = useRef<HTMLDialogElement>(null), surface = useRef<HTMLDivElement>(null)
@@ -33,7 +34,7 @@ export function BrickBurst({ controllerFactory = defaultFactory }: { readonly co
   usePageColor('data-brick-burst-theme', look.id, look.tokens.page, look.metaThemeColor)
 
   useEffect(() => {
-    if (!canvas.current || !board.current || !controls.current) return
+    if (!canvas.current || !board.current || !controls.current || !inputSurface.current) return
     const receive: BrickBurstStateListener = (next, events) => {
       const prev = previous.current
       setState(next)
@@ -56,7 +57,7 @@ export function BrickBurst({ controllerFactory = defaultFactory }: { readonly co
       if (message) setAnnouncement(message)
       previous.current = next
     }
-    const instance = controllerFactory(canvas.current, board.current, receive, { difficulty: state.difficulty, controlBar: controls.current })
+    const instance = controllerFactory(canvas.current, board.current, receive, { difficulty: state.difficulty, controlBar: controls.current, inputSurface: inputSurface.current })
     controller.current = instance
     if (!previous.current) receive(instance.getState(), [])
     return () => { controller.current = null; previous.current = null; instance.destroy() }
@@ -94,10 +95,10 @@ export function BrickBurst({ controllerFactory = defaultFactory }: { readonly co
           </button>
         </div>
       </header>
-      <div class="brick-burst-layout">
+      <div class="brick-burst-layout" ref={inputSurface}>
         <div class="board-frame" ref={board}>
           <div class="board-surface" ref={surface} tabIndex={-1} role="region" aria-label="Brick Burst playfield">
-            <canvas ref={canvas} role="img" aria-label="Brick Burst board" />
+            <canvas ref={canvas} role="img" aria-label="Brick Burst board" draggable={false} />
             {state.status === 'serving' && <div class="serve-hint" aria-hidden="true"><span class="touch-hint">Drag to move · tap to serve</span><span class="keyboard-hint">← → to move · Space to serve</span></div>}
             {state.status === 'level-clear' && <div class="line-clear-callout" aria-hidden="true">Level {state.level} cleared</div>}
           </div>
