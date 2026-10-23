@@ -162,8 +162,8 @@ A generalized game registry/runtime remains deferred.
 Introduce shared platform abstractions only after another game exposes
 concrete duplication.
 
-The remaining active changes are `remove-block-drop-catalog-buttons` and
-`add-block-drop-themes`, described below. Brick Burst is complete and archived.
+The remaining active change folders are `remove-block-drop-catalog-buttons`,
+`add-block-drop-themes`, and `increase-brick-burst-pace`, described below. Brick Burst is complete and archived.
 It extracts only the small helpers that both games duplicate. The game registry
 and runtime stay deferred.
 
@@ -181,6 +181,15 @@ line-clear animation. A Theme picker in the pause menu saves the choice under
 `games.block-drop.theme`. Only the spec and art direction are written so far.
 Start with `design.md`, `art-direction.md`, and the runnable reference
 `art-direction/preview.html`, then follow `tasks.md` in order.
+
+`increase-brick-burst-pace` is a proposal following the approved Brick Burst
+implementation (`44efaa2`). It recommends base ball speed 390 units/s, +4%
+every four brick hits, held paddle speed 540 units/s, and 400/650 ms loss/clear
+feedback. Difficulty multipliers, scoring, layouts, and touch gain retain their
+rules. The design compares additional pacing ideas and defines collision and
+phone-review checks at the proposed 1092 units/s maximum. The proposal passes
+strict OpenSpec validation; its implementation tasks are all unchecked. The
+Tailscale server still runs the approved original tuning.
 
 ## Completed Brick Burst
 
@@ -209,8 +218,8 @@ on 2026-10-22. The completed change is archived at
 `openspec/changes/archive/2026-10-22-add-brick-burst/`, and the canonical
 capability is `openspec/specs/brick-burst/spec.md`. The last full check passed
 323 unit/component tests, the production build, and all 34 Chromium flows; all
-6 Brick Burst phone flows also passed. Faster pacing is a requested follow-up
-proposal. Brick Burst themes are a separate follow-up.
+6 Brick Burst phone flows also passed. Faster pacing is specified in the active
+`increase-brick-burst-pace` proposal. Brick Burst themes are a separate follow-up.
 
 ## Most Recent OpenSpec Change
 
