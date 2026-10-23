@@ -49,8 +49,10 @@ export type BrickBurstEvent =
 
 export const isDifficulty = (raw: string): raw is BrickBurstDifficulty => raw === 'easy' || raw === 'medium' || raw === 'hard'
 const clamp = (n: number, low: number, high: number) => Math.max(low, Math.min(high, n))
+export const levelSpeedFor = (level: number, multiplier: number): number =>
+  BASE_SPEED * multiplier * Math.min(1.4, 1 + 0.06 * (level - 1))
 export const levelSpeed = (level: number, difficulty: BrickBurstDifficulty): number =>
-  BASE_SPEED * DIFFICULTIES[difficulty].multiplier * Math.min(1.4, 1 + 0.06 * (level - 1))
+  levelSpeedFor(level, DIFFICULTIES[difficulty].multiplier)
 function bricksForLevel(level: number): (Brick | null)[] {
   return layoutForLevel(level).join('').split('').map((char) => char === '.' ? null : { kind: char === 't' ? 'tough' : 'normal', damaged: false })
 }
@@ -147,7 +149,7 @@ export function step(s: BrickBurstState): { state: BrickBurstState; events: Bric
     score += points; rallyHits++
     events.push({ type: 'brick-hit', row, col, kind: brick.kind, broken, points, impactX, impactY, ballVx, ballVy })
     if (rallyHits % 8 === 0) {
-      const base = BASE_SPEED * s.activeSpeedMultiplier * Math.min(1.4, 1 + 0.06 * (s.level - 1))
+      const base = levelSpeedFor(s.level, s.activeSpeedMultiplier)
       const speed = Math.min(ball.speed * 1.02, base * 1.6), factor = speed / ball.speed
       ball.speed = speed; ball.vx *= factor; ball.vy *= factor
     }

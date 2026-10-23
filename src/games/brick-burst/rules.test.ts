@@ -1,3 +1,4 @@
+import * as rules from './rules'
 import { describe, expect, it } from 'vitest'
 import { LAYOUTS, layoutForLevel, ROW_POINTS } from './levels'
 import {
@@ -124,6 +125,17 @@ describe('Brick Burst rules', () => {
     expect(shot.events[0]).toMatchObject({ points: 80 })
     s = advance(step({ ...s, ball: { ...s.ball, y: 582, vy: 300 } }).state, 144)
     s = applyAction(s, { type: 'serve' }); expect(s.ball.speed).toBe(375); expect(s.activeSpeedMultiplier).toBe(1.25)
+  })
+  it('uses one level-speed formula for selected and serve-locked multipliers', () => {
+    for (const level of [1, 4, 8, 100]) for (const d of DIFFICULTY_ORDER) {
+      expect(rules.levelSpeedFor(level, DIFFICULTIES[d].multiplier)).toBe(levelSpeed(level, d))
+    }
+    const speed = levelSpeed(4, 'medium') * 1.6
+    let s = brickShot(2, 5, { level: 4, rallyHits: 7, ball: { ...brickShot().ball, speed } })
+    s = applyAction(s, { type: 'pause' })
+    s = applyAction(s, { type: 'set-difficulty', difficulty: 'hard' })
+    s = applyAction(s, { type: 'resume' })
+    expect(step(s).state.ball.speed).toBeCloseTo(speed)
   })
   it('ends on the third loss and restarts at level one with chosen difficulty', () => {
     const result = step(playing({ lives: 1, score: 100, ball: { x: 50, y: 582, vx: 0, vy: 300, speed: 300 } }))
